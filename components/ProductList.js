@@ -24,7 +24,7 @@ const ITEM_WIDTH = width / 3 - 15;
 const LIMIT = 10; // items per fetch
 
 export default function ShopPage({ refreshTrigger, setRefreshing }) {
-	const { t } = useTranslation(); 
+	const { t } = useTranslation();
 	const router = useRouter();
 	const [products, setProducts] = useState([]);
 	const [loading, setLoading] = useState(true);
@@ -39,38 +39,35 @@ export default function ShopPage({ refreshTrigger, setRefreshing }) {
 	const [quantities, setQuantities] = useState({});
 	const [showQty, setShowQty] = useState({}); // track which products show quantity
 
-const increaseQty = (product) => {
-	const currentQty = quantities[product._id] || 0;
+	const increaseQty = (product) => {
+		const currentQty = quantities[product._id] || 0;
 
-	// ✅ STOP IF REACH STOCK LIMIT
-	if (currentQty >= product.stock) {
-		return; // or Alert.alert("Stock limit reached")
-	}
+		// ✅ STOP IF REACH STOCK LIMIT
+		if (currentQty >= product.stock) {
+			return; // or Alert.alert("Stock limit reached")
+		}
 
-	const newQty = currentQty + 1;
-	setQuantities({ ...quantities, [product._id]: newQty });
-	addToCart(product, newQty);
-	setShowQty({ ...showQty, [product._id]: true });
-};
-
-
-const decreaseQty = (product) => {
-	const currentQty = quantities[product._id] || 0;
-
-	if (currentQty <= 1) {
-		const updatedQuantities = { ...quantities };
-		delete updatedQuantities[product._id];
-		setQuantities(updatedQuantities);
-		removeFromCart(product._id);
-		setShowQty({ ...showQty, [product._id]: false });
-	} else {
-		const newQty = currentQty - 1;
+		const newQty = currentQty + 1;
 		setQuantities({ ...quantities, [product._id]: newQty });
 		addToCart(product, newQty);
-	}
-};
+		setShowQty({ ...showQty, [product._id]: true });
+	};
 
+	const decreaseQty = (product) => {
+		const currentQty = quantities[product._id] || 0;
 
+		if (currentQty <= 1) {
+			const updatedQuantities = { ...quantities };
+			delete updatedQuantities[product._id];
+			setQuantities(updatedQuantities);
+			removeFromCart(product._id);
+			setShowQty({ ...showQty, [product._id]: false });
+		} else {
+			const newQty = currentQty - 1;
+			setQuantities({ ...quantities, [product._id]: newQty });
+			addToCart(product, newQty);
+		}
+	};
 
 	const token =
 		Constants.expoConfig?.extra?.jwtToken || process.env.EXPO_PUBLIC_JWT_TOKEN;
@@ -159,7 +156,7 @@ const decreaseQty = (product) => {
 		const discountAmount = (basePrice * discountPercent) / 100;
 		const priceAfterDiscount = basePrice - discountAmount;
 		const taxAmount = (priceAfterDiscount * taxPercent) / 100;
-		const finalPrice = basePrice
+		const finalPrice = priceAfterDiscount;
 
 		return (
 			<TouchableOpacity
@@ -188,35 +185,49 @@ const decreaseQty = (product) => {
 					{item.name}
 				</Text>
 
-				<View style={styles.priceRow}>
-					<Text style={styles.finalPrice}>€{finalPrice.toFixed(2)}</Text>
-				</View>
+				{basePrice !== finalPrice ? (
+					<View style={styles.priceRow}>
+						<Text style={styles.basePrice}>€{basePrice.toFixed(2)}</Text>
+						<Text style={styles.finalPrice}>€{finalPrice.toFixed(2)}</Text>
+					</View>
+				) : (
+					<View style={styles.priceRow}>
+						<Text style={styles.finalPrice}>€{finalPrice.toFixed(2)}</Text>
+					</View>
+				)}
 
-{/* Quantity buttons only if product is in stock */}
-{item.stock > 0 && (
-	<View style={styles.qtyRow}>
-		{showQty[item._id] ? (
-			<>
-				<TouchableOpacity onPress={() => decreaseQty(item)} style={styles.qtyBtn}>
-					<Text style={styles.qtyText}>-</Text>
-				</TouchableOpacity>
-				<Text style={styles.qtyValue}>{quantities[item._id] || 1}</Text>
-				<TouchableOpacity onPress={() => increaseQty(item)} style={styles.qtyBtn}>
-					<Text style={styles.qtyText}>+</Text>
-				</TouchableOpacity>
-			</>
-		) : (
-			<TouchableOpacity
-				onPress={() => increaseQty(item)}
-				style={[styles.qtyBtn, { paddingHorizontal: 12, paddingVertical: 6 }]}
-			>
-				<Feather name="shopping-cart" size={20} color="#fff" />
-			</TouchableOpacity>
-		)}
-	</View>
-)}
-
-
+				{/* Quantity buttons only if product is in stock */}
+				{item.stock > 0 && (
+					<View style={styles.qtyRow}>
+						{showQty[item._id] ? (
+							<>
+								<TouchableOpacity
+									onPress={() => decreaseQty(item)}
+									style={styles.qtyBtn}
+								>
+									<Text style={styles.qtyText}>-</Text>
+								</TouchableOpacity>
+								<Text style={styles.qtyValue}>{quantities[item._id] || 1}</Text>
+								<TouchableOpacity
+									onPress={() => increaseQty(item)}
+									style={styles.qtyBtn}
+								>
+									<Text style={styles.qtyText}>+</Text>
+								</TouchableOpacity>
+							</>
+						) : (
+							<TouchableOpacity
+								onPress={() => increaseQty(item)}
+								style={[
+									styles.qtyBtn,
+									{ paddingHorizontal: 12, paddingVertical: 6 },
+								]}
+							>
+								<Feather name="shopping-cart" size={20} color="#fff" />
+							</TouchableOpacity>
+						)}
+					</View>
+				)}
 			</TouchableOpacity>
 		);
 	};
@@ -259,7 +270,6 @@ const decreaseQty = (product) => {
 					</>
 				}
 			/>
-
 		</View>
 	);
 }
@@ -301,6 +311,13 @@ const styles = StyleSheet.create({
 	discountText: { color: "#fff", fontSize: 12, fontWeight: "700" },
 	name: { fontSize: 13, fontWeight: "500", marginBottom: 4, color: "#777" },
 	finalPrice: { fontSize: 15, fontWeight: "700", color: "#333" },
+	basePrice: {
+		textDecorationLine: "line-through",
+		color: "#777",
+		marginRight: 6,
+		fontSize: 13,
+	},
+	priceRow: { flexDirection: "row", alignItems: "center" },
 	loader: {
 		flex: 1,
 		justifyContent: "center",
@@ -331,6 +348,10 @@ const styles = StyleSheet.create({
 		borderRadius: 4,
 	},
 	qtyText: { fontSize: 14, fontWeight: "700", color: "#fff" },
-	qtyValue: { marginHorizontal: 6, fontSize: 14, fontWeight: "500", color: "#000" },
-
+	qtyValue: {
+		marginHorizontal: 6,
+		fontSize: 14,
+		fontWeight: "500",
+		color: "#000",
+	},
 });

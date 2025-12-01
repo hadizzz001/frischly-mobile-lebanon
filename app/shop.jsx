@@ -27,7 +27,6 @@ import { useCart } from "@/contexts/CartContext";
 const { width } = Dimensions.get("window");
 const ITEM_WIDTH = width / 3 - 12; // 3 items per row, adjust margin
 
-
 export default function ShopPage() {
 	const { t } = useTranslation();
 
@@ -35,7 +34,10 @@ export default function ShopPage() {
 	const searchParams = useLocalSearchParams();
 
 	console.log("Sear ", searchParams);
+<<<<<<< HEAD
 
+=======
+>>>>>>> ea771ff8bb4bab615644b749d7e6f664553f32cc
 
 	// ✅ discount & category from query params
 	const discountParam = searchParams.discount ?? "";
@@ -87,10 +89,15 @@ export default function ShopPage() {
 		setShowQty({ ...showQty, [product._id]: true });
 	};
 
-
 	const decreaseQty = (product) => {
 		const currentQty = quantities[product._id] || 0;
 
+<<<<<<< HEAD
+	const decreaseQty = (product) => {
+		const currentQty = quantities[product._id] || 0;
+
+=======
+>>>>>>> ea771ff8bb4bab615644b749d7e6f664553f32cc
 		if (currentQty <= 1) {
 			const updatedQuantities = { ...quantities };
 			delete updatedQuantities[product._id];
@@ -100,12 +107,18 @@ export default function ShopPage() {
 		} else {
 			const newQty = currentQty - 1;
 			setQuantities({ ...quantities, [product._id]: newQty });
+<<<<<<< HEAD
 
 			addToCart(product, newQty);
 		}
 	};
 
+=======
+>>>>>>> ea771ff8bb4bab615644b749d7e6f664553f32cc
 
+			addToCart(product, newQty);
+		}
+	};
 
 	const token =
 		Constants.expoConfig?.extra?.jwtToken || process.env.EXPO_PUBLIC_JWT_TOKEN;
@@ -147,9 +160,16 @@ export default function ShopPage() {
 			params.append("page", nextPage);
 			params.append("limit", 12);
 
+<<<<<<< HEAD
 			// include filters
 			if (filters.search) params.append("search", filters.search);
 			if (filters.subcategory) params.append("subcategory", filters.subcategory);
+=======
+			// include filters (NO MANUAL ENCODING)
+			if (filters.search) params.append("search", filters.search);
+			if (filters.subcategory)
+				params.append("subcategory", filters.subcategory);
+>>>>>>> ea771ff8bb4bab615644b749d7e6f664553f32cc
 
 			if (filters.sortBy) {
 				params.append("sortBy", filters.sortBy);
@@ -159,6 +179,7 @@ export default function ShopPage() {
 			if (filters.priceRange) params.append("priceRange", filters.priceRange);
 			if (filters.stockLevel) params.append("stockLevel", filters.stockLevel);
 
+<<<<<<< HEAD
 			// category
 			if (categoryParam) params.append("category", categoryParam);
 
@@ -168,6 +189,18 @@ export default function ShopPage() {
 			}
 
 			const url = `https://frischlyshop-server.onrender.com/api/products?${params.toString()}`;
+=======
+			// include category & discount param from query
+			if (categoryParam) params.append("category", categoryParam);
+
+			let url;
+
+			if (discountParam === "true") {
+				url = `https://frischlyshop-server.onrender.com/api/products/discount?limit=1000`;
+			} else {
+				url = `https://frischlyshop-server.onrender.com/api/products?${params.toString()}`;
+			}
+>>>>>>> ea771ff8bb4bab615644b749d7e6f664553f32cc
 
 			console.log("URL:", url);
 
@@ -176,9 +209,19 @@ export default function ShopPage() {
 
 			const newData = Array.isArray(json.data) ? json.data : [];
 
+<<<<<<< HEAD
 			setProducts((prev) => (replace ? newData : [...prev, ...newData]));
 			setHasNextPage(json.pagination?.hasNextPage ?? false);
 
+=======
+			setProducts((prev) => {
+				if (replace) return newData;
+				const existingIds = new Set(prev.map((p) => p._id));
+				const uniqueNewData = newData.filter((p) => !existingIds.has(p._id));
+				return [...prev, ...uniqueNewData];
+			});
+			setHasNextPage(json.pagination?.hasNextPage ?? false);
+>>>>>>> ea771ff8bb4bab615644b749d7e6f664553f32cc
 		} catch (err) {
 			console.error("fetchProducts error:", err);
 		} finally {
@@ -186,7 +229,10 @@ export default function ShopPage() {
 			setIsFetchingMore(false);
 		}
 	};
+<<<<<<< HEAD
 
+=======
+>>>>>>> ea771ff8bb4bab615644b749d7e6f664553f32cc
 
 	useEffect(() => {
 		setPage(1);
@@ -239,11 +285,21 @@ export default function ShopPage() {
 	const renderProduct = ({ item }) => {
 		const basePrice = item.price || 0;
 		const discountPercent = item.discount || 0;
+<<<<<<< HEAD
 
 		const finalPrice =
 			discountPercent > 0
 				? basePrice - (basePrice * discountPercent) / 100
 				: basePrice;
+=======
+		const taxPercent = item.tax || 0;
+		const bottleRefund = item.bottlerefund || 0;
+
+		const discountAmount = (basePrice * discountPercent) / 100;
+		const priceAfterDiscount = basePrice - discountAmount;
+		const taxAmount = (priceAfterDiscount * taxPercent) / 100;
+		const finalPrice = priceAfterDiscount;
+>>>>>>> ea771ff8bb4bab615644b749d7e6f664553f32cc
 
 		const isQtyVisible = showQty[item._id] || false;
 
@@ -276,10 +332,23 @@ export default function ShopPage() {
 						{item.name}
 					</Text>
 
+<<<<<<< HEAD
 					<View style={styles.priceRow}>
 						<Text style={styles.basePrice}>€{basePrice.toFixed(2)}</Text>
 						<Text style={styles.finalPrice}>€{finalPrice.toFixed(2)}</Text>
 					</View>
+=======
+					{basePrice !== finalPrice ? (
+						<View style={styles.priceRow}>
+							<Text style={styles.basePrice}>€{basePrice.toFixed(2)}</Text>
+							<Text style={styles.finalPrice}>€{finalPrice.toFixed(2)}</Text>
+						</View>
+					) : (
+						<View style={styles.priceRow}>
+							<Text style={styles.newPrice}>€{finalPrice.toFixed(2)}</Text>
+						</View>
+					)}
+>>>>>>> ea771ff8bb4bab615644b749d7e6f664553f32cc
 				</TouchableOpacity>
 
 				{/* Add to Cart / Quantity Selector */}
@@ -287,6 +356,7 @@ export default function ShopPage() {
 					<View style={styles.qtyRow}>
 						{isQtyVisible ? (
 							<View style={styles.qtyContainer}>
+<<<<<<< HEAD
 								<TouchableOpacity onPress={() => decreaseQty(item)} style={styles.qtyBtn}>
 									<Text style={styles.qtyText}>-</Text>
 								</TouchableOpacity>
@@ -313,6 +383,40 @@ export default function ShopPage() {
 	};
 
 
+=======
+								<TouchableOpacity
+									onPress={() => decreaseQty(item)}
+									style={styles.qtyBtn}
+								>
+									<Text style={styles.qtyText}>-</Text>
+								</TouchableOpacity>
+
+								<Text style={styles.qtyValue}>{quantities[item._id] || 1}</Text>
+
+								<TouchableOpacity
+									onPress={() => increaseQty(item)}
+									style={styles.qtyBtn}
+								>
+									<Text style={styles.qtyText}>+</Text>
+								</TouchableOpacity>
+							</View>
+						) : (
+							<TouchableOpacity
+								onPress={() => increaseQty(item)}
+								style={[
+									styles.qtyBtn,
+									{ paddingHorizontal: 12, paddingVertical: 6 },
+								]}
+							>
+								<Feather name="shopping-cart" size={20} color="#fff" />
+							</TouchableOpacity>
+						)}
+					</View>
+				)}
+			</View>
+		);
+	};
+>>>>>>> ea771ff8bb4bab615644b749d7e6f664553f32cc
 
 	if (loading) {
 		return (
@@ -323,7 +427,10 @@ export default function ShopPage() {
 	}
 
 	return (
+<<<<<<< HEAD
 
+=======
+>>>>>>> ea771ff8bb4bab615644b749d7e6f664553f32cc
 		<SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
 			<View style={styles.container}>
 				{/* Back arrow + Categories */}
@@ -346,6 +453,7 @@ export default function ShopPage() {
 							style={[
 								styles.categoryBtn,
 								!categoryParam &&
+<<<<<<< HEAD
 								discountParam !== "true" && {
 									backgroundColor: "#ffc300",
 								},
@@ -356,10 +464,25 @@ export default function ShopPage() {
 								style={[
 									styles.categoryText,
 									!categoryParam &&
+=======
+>>>>>>> ea771ff8bb4bab615644b749d7e6f664553f32cc
 									discountParam !== "true" && {
-										color: "#000",
-										fontWeight: "700",
+										backgroundColor: "#ffc300",
 									},
+<<<<<<< HEAD
+=======
+							]}
+							onPress={() => router.push("/shop")}
+						>
+							<Text
+								style={[
+									styles.categoryText,
+									!categoryParam &&
+										discountParam !== "true" && {
+											color: "#000",
+											fontWeight: "700",
+										},
+>>>>>>> ea771ff8bb4bab615644b749d7e6f664553f32cc
 								]}
 							>
 								{t("all")}
@@ -376,7 +499,15 @@ export default function ShopPage() {
 										styles.categoryBtn,
 										isSelected && { backgroundColor: "#ffc300" },
 									]}
+<<<<<<< HEAD
 									onPress={() => router.push(`/shop?category=${encodeURIComponent(cat.name)}`)}
+=======
+									onPress={() =>
+										router.push(
+											`/shop?category=${encodeURIComponent(cat.name)}`
+										)
+									}
+>>>>>>> ea771ff8bb4bab615644b749d7e6f664553f32cc
 								>
 									<Text
 										style={[
@@ -415,11 +546,17 @@ export default function ShopPage() {
 					}
 				/>
 
+<<<<<<< HEAD
 
 				{/* ✅ Filter Overlay */}
 				{filterOpen && (
 					<View style={[styles.filterOverlay, { left: width * 0.3 }]}>
 
+=======
+				{/* ✅ Filter Overlay */}
+				{filterOpen && (
+					<View style={[styles.filterOverlay, { left: width * 0.3 }]}>
+>>>>>>> ea771ff8bb4bab615644b749d7e6f664553f32cc
 						{/* Close button */}
 						<TouchableOpacity
 							style={styles.closeBtn}
@@ -440,7 +577,13 @@ export default function ShopPage() {
 							/>
 
 							{/* Subcategory Picker */}
+<<<<<<< HEAD
 							<Text style={{ marginTop: 20, marginBottom: 5 }}>Subcategory</Text>
+=======
+							<Text style={{ marginTop: 20, marginBottom: 5 }}>
+								Subcategory
+							</Text>
+>>>>>>> ea771ff8bb4bab615644b749d7e6f664553f32cc
 							<View style={styles.input}>
 								<Picker
 									selectedValue={filters.subcategory}
@@ -460,7 +603,13 @@ export default function ShopPage() {
 							</View>
 
 							{/* Sort Dropdown */}
+<<<<<<< HEAD
 							<Text style={{ marginTop: 20, marginBottom: 5 }}>{t("sortBy")}</Text>
+=======
+							<Text style={{ marginTop: 20, marginBottom: 5 }}>
+								{t("sortBy")}
+							</Text>
+>>>>>>> ea771ff8bb4bab615644b749d7e6f664553f32cc
 							<View style={styles.input}>
 								<Picker
 									selectedValue={`${filters.sortBy}_${filters.sortOrder}`}
@@ -601,6 +750,13 @@ const styles = StyleSheet.create({
 		fontSize: 13,
 	},
 	newPrice: { fontSize: 15, fontWeight: "700", color: "#000000" },
+	basePrice: {
+		textDecorationLine: "line-through",
+		color: "#000000",
+		marginRight: 6,
+		fontSize: 13,
+	},
+	finalPrice: { fontSize: 15, fontWeight: "700", color: "#000000" },
 	pagination: {
 		flexDirection: "row",
 		justifyContent: "center",
@@ -813,6 +969,7 @@ const styles = StyleSheet.create({
 		zIndex: 100,
 		paddingTop: 50,
 	},
+<<<<<<< HEAD
 
 	safeArea: {
 		flex: 1,
@@ -836,5 +993,11 @@ const styles = StyleSheet.create({
 		fontWeight: "bold",
 		fontSize: 13,
 	},
+=======
+>>>>>>> ea771ff8bb4bab615644b749d7e6f664553f32cc
 
+	safeArea: {
+		flex: 1,
+		backgroundColor: "#fff",
+	},
 });
