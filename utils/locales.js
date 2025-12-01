@@ -78,6 +78,7 @@ export const translations = {
     aBag: "Add to Bag",
     forget: "Forgot Password?",
     out: "Out of Stock",
+    germany: "Germany",
 
   },
 
@@ -159,5 +160,6 @@ export const translations = {
     aBag: "In den Warenkorb",
     forget: "Passwort vergessen?",
     out: "Nicht vorrätig",
+    germany: "Deutschland",
   },
 };

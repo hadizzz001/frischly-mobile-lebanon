@@ -225,7 +225,7 @@ const handleRegister = async () => {
 		phoneNumber: sanitizedPhone,
 		email: email.toLowerCase(),
 		password,
-		address: { street, city, state: stateVal, zipCode, country },
+		address: { street, city, state: stateVal, zipCode, country: "DE" },
 	};
 
 	try {
@@ -472,29 +472,13 @@ const handleRegister = async () => {
 						</Picker>
 					</View>
 
-					<View
-						style={{
-							marginBottom: 12,
-							width: "100%",
-							minHeight: 55,
-							borderWidth: 1,
-							borderColor: "#000000",
-							borderRadius: 12,
-							backgroundColor: inputBg,
-							justifyContent: "center",
-						}}
-					>
-						<Picker
-							selectedValue={country}
-							onValueChange={(itemValue) => setCountry(itemValue)}
-							style={{ color: inputText }}
-						>
-							<Picker.Item label={t("country")} value="" />
-							{Object.entries(countryMap).map(([name, code]) => (
-								<Picker.Item key={code} label={name} value={code} />
-							))}
-						</Picker>
-					</View>
+					<InputBox 
+						value={t("germany")}
+						inputBg={inputBg}
+						inputText={inputText}  
+						editable={false}
+
+					/>
 
 
 					{/* Register Button */}

@@ -24,8 +24,9 @@ export default function Header() {
   };
  
   const languages = [
-    { code: "en", name: "English", flag: "https://flagcdn.com/w40/gb.png" },
     { code: "de", name: "Deutsch", flag: "https://flagcdn.com/w40/de.png" },
+    { code: "en", name: "English", flag: "https://flagcdn.com/w40/gb.png" },
+
   ];
 
   const selectedLang = languages.find((l) => l.code === language);

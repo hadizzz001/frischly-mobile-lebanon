@@ -30,12 +30,12 @@ const ITEM_WIDTH = width / 3 - 12; // 3 items per row, adjust margin
 
 export default function ShopPage() {
 	const { t } = useTranslation();
- 
+
 	const router = useRouter();
 	const searchParams = useLocalSearchParams();
 
 	console.log("Sear ", searchParams);
-	
+
 
 	// ✅ discount & category from query params
 	const discountParam = searchParams.discount ?? "";
@@ -45,7 +45,7 @@ export default function ShopPage() {
 	const [profileOpen, setProfileOpen] = useState(false);
 	const [categories, setCategories] = useState([]);
 	const [products, setProducts] = useState([]);
-	const [loading, setLoading] = useState(true); 
+	const [loading, setLoading] = useState(true);
 	const { isBooleanValue, setBooleanValue } = useBooleanValue();
 	const [user, setUser] = useState(null);
 	const [filterOpen, setFilterOpen] = useState(false);
@@ -68,42 +68,42 @@ export default function ShopPage() {
 	});
 	// Inside ShopPage component
 
-const { cart, addToCart, removeFromCart } = useCart();
-const [quantities, setQuantities] = useState({});
-const [showQty, setShowQty] = useState({}); // Track which products show qty
+	const { cart, addToCart, removeFromCart } = useCart();
+	const [quantities, setQuantities] = useState({});
+	const [showQty, setShowQty] = useState({}); // Track which products show qty
 
-const increaseQty = (product) => {
-    const currentQty = quantities[product._id] || 0;
+	const increaseQty = (product) => {
+		const currentQty = quantities[product._id] || 0;
 
-    // ✅ Do not allow exceeding stock
-    if (currentQty >= product.stock) {
-        return; // Stop here if qty == stock
-    }
+		// ✅ Do not allow exceeding stock
+		if (currentQty >= product.stock) {
+			return; // Stop here if qty == stock
+		}
 
-    const newQty = currentQty + 1;
-    setQuantities({ ...quantities, [product._id]: newQty });
+		const newQty = currentQty + 1;
+		setQuantities({ ...quantities, [product._id]: newQty });
 
-    addToCart(product, newQty);
-    setShowQty({ ...showQty, [product._id]: true });
-};
+		addToCart(product, newQty);
+		setShowQty({ ...showQty, [product._id]: true });
+	};
 
 
-const decreaseQty = (product) => {
-    const currentQty = quantities[product._id] || 0;
+	const decreaseQty = (product) => {
+		const currentQty = quantities[product._id] || 0;
 
-    if (currentQty <= 1) {
-        const updatedQuantities = { ...quantities };
-        delete updatedQuantities[product._id];
-        setQuantities(updatedQuantities);
-        removeFromCart(product._id);
-        setShowQty({ ...showQty, [product._id]: false });
-    } else {
-        const newQty = currentQty - 1;
-        setQuantities({ ...quantities, [product._id]: newQty });
+		if (currentQty <= 1) {
+			const updatedQuantities = { ...quantities };
+			delete updatedQuantities[product._id];
+			setQuantities(updatedQuantities);
+			removeFromCart(product._id);
+			setShowQty({ ...showQty, [product._id]: false });
+		} else {
+			const newQty = currentQty - 1;
+			setQuantities({ ...quantities, [product._id]: newQty });
 
-        addToCart(product, newQty);
-    }
-};
+			addToCart(product, newQty);
+		}
+	};
 
 
 
@@ -138,55 +138,55 @@ const decreaseQty = (product) => {
 		getSubcategories();
 	}, []);
 
-const fetchProducts = async (nextPage = 1, replace = false) => {
-	try {
-		if (nextPage === 1) setLoading(true);
-		else setIsFetchingMore(true);
+	const fetchProducts = async (nextPage = 1, replace = false) => {
+		try {
+			if (nextPage === 1) setLoading(true);
+			else setIsFetchingMore(true);
 
-		const params = new URLSearchParams();
-		params.append("page", nextPage);
-		params.append("limit", 12);
+			const params = new URLSearchParams();
+			params.append("page", nextPage);
+			params.append("limit", 12);
 
-		// include filters (NO MANUAL ENCODING)
-		if (filters.search) params.append("search", filters.search);
-		if (filters.subcategory) params.append("subcategory", filters.subcategory);
+			// include filters
+			if (filters.search) params.append("search", filters.search);
+			if (filters.subcategory) params.append("subcategory", filters.subcategory);
 
-		if (filters.sortBy) {
-			params.append("sortBy", filters.sortBy);
-			params.append("sortOrder", filters.sortOrder);
+			if (filters.sortBy) {
+				params.append("sortBy", filters.sortBy);
+				params.append("sortOrder", filters.sortOrder);
+			}
+
+			if (filters.priceRange) params.append("priceRange", filters.priceRange);
+			if (filters.stockLevel) params.append("stockLevel", filters.stockLevel);
+
+			// category
+			if (categoryParam) params.append("category", categoryParam);
+
+			// discount filter (MERGED TOGETHER)
+			if (discountParam === "true") {
+				params.append("discount", "true");
+			}
+
+			const url = `https://frischlyshop-server.onrender.com/api/products?${params.toString()}`;
+
+			console.log("URL:", url);
+
+			const res = await fetch(url);
+			const json = await res.json();
+
+			const newData = Array.isArray(json.data) ? json.data : [];
+
+			setProducts((prev) => (replace ? newData : [...prev, ...newData]));
+			setHasNextPage(json.pagination?.hasNextPage ?? false);
+
+		} catch (err) {
+			console.error("fetchProducts error:", err);
+		} finally {
+			setLoading(false);
+			setIsFetchingMore(false);
 		}
+	};
 
-		if (filters.priceRange) params.append("priceRange", filters.priceRange);
-		if (filters.stockLevel) params.append("stockLevel", filters.stockLevel);
-
-		// include category & discount param from query
-		if (categoryParam) params.append("category", categoryParam);
-
-		let url;
-
-		if (discountParam === "true") {
-			url = `https://frischlyshop-server.onrender.com/api/products/discount?limit=1000`;
-		} else {
-			url = `https://frischlyshop-server.onrender.com/api/products?${params.toString()}`;
-		}
-
-		console.log("URL:", url);
-
-		const res = await fetch(url);
-		const json = await res.json();
-
-		const newData = Array.isArray(json.data) ? json.data : [];
-
-		setProducts((prev) => (replace ? newData : [...prev, ...newData]));
-		setHasNextPage(json.pagination?.hasNextPage ?? false);
-
-	} catch (err) {
-		console.error("fetchProducts error:", err);
-	} finally {
-		setLoading(false);
-		setIsFetchingMore(false);
-	}
-};
 
 	useEffect(() => {
 		setPage(1);
@@ -236,82 +236,81 @@ const fetchProducts = async (nextPage = 1, replace = false) => {
 		fetchProducts(nextPage, false); // append instead of replace
 	};
 
-const renderProduct = ({ item }) => {
-    const basePrice = item.price || 0;
-    const discountPercent = item.discount || 0;
-    const taxPercent = item.tax || 0;
-    const bottleRefund = item.bottlerefund || 0;
+	const renderProduct = ({ item }) => {
+		const basePrice = item.price || 0;
+		const discountPercent = item.discount || 0;
 
-    const discountAmount = (basePrice * discountPercent) / 100;
-    const priceAfterDiscount = basePrice - discountAmount;
-    const taxAmount = (priceAfterDiscount * taxPercent) / 100;
-    const finalPrice = basePrice
+		const finalPrice =
+			discountPercent > 0
+				? basePrice - (basePrice * discountPercent) / 100
+				: basePrice;
 
-    const isQtyVisible = showQty[item._id] || false;
+		const isQtyVisible = showQty[item._id] || false;
 
-    return (
-        <View style={styles.card}>
-            <TouchableOpacity
-                onPress={() => router.push(`/product/${item._id}`)}
-                activeOpacity={0.8}
-            >
-                <View style={styles.imageWrapper}>
-                    <Image
-                        source={{ uri: item.picture   }}
-                        style={styles.image}
-                        resizeMode="contain"
-                    />
-{item.stock === 0 && (
-    <View style={styles.outOfStockOverlay}>
-        <Text style={styles.outOfStockText}>{t("out")}</Text>
-    </View>
-)}
+		return (
+			<View style={styles.card}>
+				<TouchableOpacity
+					onPress={() => router.push(`/product/${item._id}`)}
+					activeOpacity={0.8}
+				>
+					<View style={styles.imageWrapper}>
+						<Image
+							source={{ uri: item.picture }}
+							style={styles.image}
+							resizeMode="contain"
+						/>
+						{item.stock === 0 && (
+							<View style={styles.outOfStockOverlay}>
+								<Text style={styles.outOfStockText}>{t("out")}</Text>
+							</View>
+						)}
 
-                    {discountPercent > 0 && (
-                        <View style={styles.discountBadge}>
-                            <Text style={styles.discountText}>-{discountPercent}%</Text>
-                        </View>
-                    )}
-                </View>
+						{discountPercent > 0 && (
+							<View style={styles.discountBadge}>
+								<Text style={styles.discountText}>-{discountPercent}%</Text>
+							</View>
+						)}
+					</View>
 
-                <Text style={styles.name} numberOfLines={2}>
-                    {item.name}
-                </Text>
+					<Text style={styles.name} numberOfLines={2}>
+						{item.name}
+					</Text>
 
-                <View style={styles.priceRow}>
-                    <Text style={styles.newPrice}>€{finalPrice.toFixed(2)}</Text>
-                </View>
-            </TouchableOpacity>
-
-{/* Add to Cart / Quantity Selector */}
-{item.stock > 0 && (
-	<View style={styles.qtyRow}>
-		{isQtyVisible ? (
-			<View style={styles.qtyContainer}>
-				<TouchableOpacity onPress={() => decreaseQty(item)} style={styles.qtyBtn}>
-					<Text style={styles.qtyText}>-</Text>
+					<View style={styles.priceRow}>
+						<Text style={styles.basePrice}>€{basePrice.toFixed(2)}</Text>
+						<Text style={styles.finalPrice}>€{finalPrice.toFixed(2)}</Text>
+					</View>
 				</TouchableOpacity>
 
-				<Text style={styles.qtyValue}>{quantities[item._id] || 1}</Text>
+				{/* Add to Cart / Quantity Selector */}
+				{item.stock > 0 && (
+					<View style={styles.qtyRow}>
+						{isQtyVisible ? (
+							<View style={styles.qtyContainer}>
+								<TouchableOpacity onPress={() => decreaseQty(item)} style={styles.qtyBtn}>
+									<Text style={styles.qtyText}>-</Text>
+								</TouchableOpacity>
 
-				<TouchableOpacity onPress={() => increaseQty(item)} style={styles.qtyBtn}>
-					<Text style={styles.qtyText}>+</Text>
-				</TouchableOpacity>
+								<Text style={styles.qtyValue}>{quantities[item._id] || 1}</Text>
+
+								<TouchableOpacity onPress={() => increaseQty(item)} style={styles.qtyBtn}>
+									<Text style={styles.qtyText}>+</Text>
+								</TouchableOpacity>
+							</View>
+						) : (
+							<TouchableOpacity
+								onPress={() => increaseQty(item)}
+								style={[styles.qtyBtn, { paddingHorizontal: 12, paddingVertical: 6 }]}
+							>
+								<Feather name="shopping-cart" size={20} color="#fff" />
+							</TouchableOpacity>
+						)}
+					</View>
+				)}
+
 			</View>
-		) : (
-			<TouchableOpacity
-				onPress={() => increaseQty(item)}
-				style={[styles.qtyBtn, { paddingHorizontal: 12, paddingVertical: 6 }]}
-			>
-				<Feather name="shopping-cart" size={20} color="#fff" />
-			</TouchableOpacity>
-		)}
-	</View>
-)}
-
-        </View>
-    );
-};
+		);
+	};
 
 
 
@@ -325,211 +324,211 @@ const renderProduct = ({ item }) => {
 
 	return (
 
-<SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
-		<View style={styles.container}>
-			{/* Back arrow + Categories */}
-			<View style={styles.categoryHeader}>
-				<TouchableOpacity
-					onPress={() => router.back()}
-					style={styles.backButton}
-				>
-					<Feather name="chevron-left" size={24} color="#000000" />
-				</TouchableOpacity>
-
-				<ScrollView
-					horizontal
-					showsHorizontalScrollIndicator={false}
-					style={styles.categoryBar}
-					contentContainerStyle={{ alignItems: "center" }}
-				>
-					{/* All button */}
+		<SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
+			<View style={styles.container}>
+				{/* Back arrow + Categories */}
+				<View style={styles.categoryHeader}>
 					<TouchableOpacity
-						style={[
-							styles.categoryBtn,
-							!categoryParam &&
+						onPress={() => router.back()}
+						style={styles.backButton}
+					>
+						<Feather name="chevron-left" size={24} color="#000000" />
+					</TouchableOpacity>
+
+					<ScrollView
+						horizontal
+						showsHorizontalScrollIndicator={false}
+						style={styles.categoryBar}
+						contentContainerStyle={{ alignItems: "center" }}
+					>
+						{/* All button */}
+						<TouchableOpacity
+							style={[
+								styles.categoryBtn,
+								!categoryParam &&
 								discountParam !== "true" && {
 									backgroundColor: "#ffc300",
 								},
-						]}
-						onPress={() => router.push("/shop")}
-					>
-						<Text
-							style={[
-								styles.categoryText,
-								!categoryParam &&
+							]}
+							onPress={() => router.push("/shop")}
+						>
+							<Text
+								style={[
+									styles.categoryText,
+									!categoryParam &&
 									discountParam !== "true" && {
 										color: "#000",
 										fontWeight: "700",
 									},
-							]}
-						>
-							{t("all")}
-						</Text>
-					</TouchableOpacity>
-
-					{/* Dynamic categories */}
-					{categories.map((cat) => {
-						const isSelected = categoryParam === cat.name;
-						return (
-							<TouchableOpacity
-								key={cat._id}
-								style={[
-									styles.categoryBtn,
-									isSelected && { backgroundColor: "#ffc300" },
 								]}
-								onPress={() => router.push(`/shop?category=${encodeURIComponent(cat.name)}`)}
-							> 
-								<Text
-									style={[
-										styles.categoryText,
-										isSelected && { color: "#000", fontWeight: "700" },
-									]}
-								>
-									{cat.name}
-								</Text>
-							</TouchableOpacity>
-						);
-					})}
-				</ScrollView>
-
-				<TouchableOpacity
-					style={[styles.categoryBtn, { backgroundColor: "#ddd" }]}
-					onPress={() => setFilterOpen(true)}
-				>
-					<Feather name="sliders" size={18} color="#000" />
-				</TouchableOpacity>
-			</View>
-
-			{/* Products Grid */}
-<FlatList
-contentContainerStyle={{ paddingBottom: 120 }}
-    data={products}
-    keyExtractor={(item) => item._id}
-    renderItem={renderProduct}
-    numColumns={3} // <-- 3 items per row
-    onEndReached={loadMore}
-    onEndReachedThreshold={0.3}
-    ListFooterComponent={
-        isFetchingMore ? (
-            <ActivityIndicator size="small" color="#ffc300" />
-        ) : null
-    } 
-/>
-
-
-			{/* ✅ Filter Overlay */}
-{filterOpen && (
-	<View style={[styles.filterOverlay, { left: width * 0.3 }]}>
-
-					{/* Close button */}
-					<TouchableOpacity
-						style={styles.closeBtn}
-						onPress={() => setFilterOpen(false)}
-					>
-						<Feather name="x" size={28} color="#000" />
-					</TouchableOpacity>
-
-					<ScrollView contentContainerStyle={{ padding: 20 }}>
-						<Text style={styles.title}>{t("filterProducts")}</Text>
-
-						{/* Search Field */}
-						<TextInput
-							placeholder={t("searchPlaceholder")}
-							value={filters.search}
-							onChangeText={(v) => setFilters((p) => ({ ...p, search: v }))}
-							style={styles.input}
-						/>
-
-						{/* Subcategory Picker */}
-						<Text style={{ marginTop: 20, marginBottom: 5 }}>Subcategory</Text>
-						<View style={styles.input}>
-							<Picker
-								selectedValue={filters.subcategory}
-								onValueChange={(v) =>
-									setFilters((p) => ({ ...p, subcategory: v }))
-								}
 							>
-								<Picker.Item label={t("subcategory")} value="" />
-								{subcategories.map((sub) => (
-									<Picker.Item
-										key={sub._id}
-										label={sub.name}
-										value={sub.name}
-									/>
-								))}
-							</Picker>
-						</View>
+								{t("all")}
+							</Text>
+						</TouchableOpacity>
 
-						{/* Sort Dropdown */}
-						<Text style={{ marginTop: 20, marginBottom: 5 }}>{t("sortBy")}</Text>
-						<View style={styles.input}>
-							<Picker
-								selectedValue={`${filters.sortBy}_${filters.sortOrder}`}
-								onValueChange={(v) => {
-									const [sortBy, sortOrder] = v.split("_");
-									setFilters((p) => ({ ...p, sortBy, sortOrder }));
+						{/* Dynamic categories */}
+						{categories.map((cat) => {
+							const isSelected = categoryParam === cat.name;
+							return (
+								<TouchableOpacity
+									key={cat._id}
+									style={[
+										styles.categoryBtn,
+										isSelected && { backgroundColor: "#ffc300" },
+									]}
+									onPress={() => router.push(`/shop?category=${encodeURIComponent(cat.name)}`)}
+								>
+									<Text
+										style={[
+											styles.categoryText,
+											isSelected && { color: "#000", fontWeight: "700" },
+										]}
+									>
+										{cat.name}
+									</Text>
+								</TouchableOpacity>
+							);
+						})}
+					</ScrollView>
+
+					<TouchableOpacity
+						style={[styles.categoryBtn, { backgroundColor: "#ddd" }]}
+						onPress={() => setFilterOpen(true)}
+					>
+						<Feather name="sliders" size={18} color="#000" />
+					</TouchableOpacity>
+				</View>
+
+				{/* Products Grid */}
+				<FlatList
+					contentContainerStyle={{ paddingBottom: 120 }}
+					data={products}
+					keyExtractor={(item) => item._id}
+					renderItem={renderProduct}
+					numColumns={3} // <-- 3 items per row
+					onEndReached={loadMore}
+					onEndReachedThreshold={0.3}
+					ListFooterComponent={
+						isFetchingMore ? (
+							<ActivityIndicator size="small" color="#ffc300" />
+						) : null
+					}
+				/>
+
+
+				{/* ✅ Filter Overlay */}
+				{filterOpen && (
+					<View style={[styles.filterOverlay, { left: width * 0.3 }]}>
+
+						{/* Close button */}
+						<TouchableOpacity
+							style={styles.closeBtn}
+							onPress={() => setFilterOpen(false)}
+						>
+							<Feather name="x" size={28} color="#000" />
+						</TouchableOpacity>
+
+						<ScrollView contentContainerStyle={{ padding: 20 }}>
+							<Text style={styles.title}>{t("filterProducts")}</Text>
+
+							{/* Search Field */}
+							<TextInput
+								placeholder={t("searchPlaceholder")}
+								value={filters.search}
+								onChangeText={(v) => setFilters((p) => ({ ...p, search: v }))}
+								style={styles.input}
+							/>
+
+							{/* Subcategory Picker */}
+							<Text style={{ marginTop: 20, marginBottom: 5 }}>Subcategory</Text>
+							<View style={styles.input}>
+								<Picker
+									selectedValue={filters.subcategory}
+									onValueChange={(v) =>
+										setFilters((p) => ({ ...p, subcategory: v }))
+									}
+								>
+									<Picker.Item label={t("subcategory")} value="" />
+									{subcategories.map((sub) => (
+										<Picker.Item
+											key={sub._id}
+											label={sub.name}
+											value={sub.name}
+										/>
+									))}
+								</Picker>
+							</View>
+
+							{/* Sort Dropdown */}
+							<Text style={{ marginTop: 20, marginBottom: 5 }}>{t("sortBy")}</Text>
+							<View style={styles.input}>
+								<Picker
+									selectedValue={`${filters.sortBy}_${filters.sortOrder}`}
+									onValueChange={(v) => {
+										const [sortBy, sortOrder] = v.split("_");
+										setFilters((p) => ({ ...p, sortBy, sortOrder }));
+									}}
+								>
+									<Picker.Item label="Price: Low to High" value="price_asc" />
+									<Picker.Item label="Price: High to Low" value="price_desc" />
+									<Picker.Item label="Name: A to Z" value="name_asc" />
+									<Picker.Item label="Name: Z to A" value="name_desc" />
+									<Picker.Item label="Newest First" value="createdAt_desc" />
+									<Picker.Item label="Oldest First" value="createdAt_asc" />
+								</Picker>
+							</View>
+
+							{/* Discount Toggle */}
+							<TouchableOpacity
+								onPress={() =>
+									setFilters((p) => ({ ...p, discount: !p.discount }))
+								}
+								style={styles.checkboxRow}
+							>
+								<Text style={{ color: "#000" }}>{t("onlyDiscounted")}</Text>
+								<View
+									style={[
+										styles.checkbox,
+										filters.discount && styles.checkboxActive,
+									]}
+								/>
+							</TouchableOpacity>
+
+							{/* Price Range Picker */}
+							<Text style={{ marginTop: 20, marginBottom: 5 }}>
+								{t("priceRange")}
+							</Text>
+							<View style={styles.input}>
+								<Picker
+									selectedValue={filters.priceRange}
+									onValueChange={(v) =>
+										setFilters((p) => ({ ...p, priceRange: v }))
+									}
+								>
+									<Picker.Item label="All Prices" value="" />
+									<Picker.Item label="€1 - €20" value="1-20" />
+									<Picker.Item label="€21 - €50" value="21-50" />
+									<Picker.Item label="€51 - €100" value="51-100" />
+									<Picker.Item label="€101 - €200" value="101-200" />
+									<Picker.Item label="€201+" value="201-10000" />
+								</Picker>
+							</View>
+
+							{/* Apply Filters Button */}
+							<TouchableOpacity
+								style={styles.button}
+								onPress={() => {
+									setFilterOpen(false);
+									setPage(1);
+									fetchProducts(1, true); // replace products with new filter results
 								}}
 							>
-								<Picker.Item label="Price: Low to High" value="price_asc" />
-								<Picker.Item label="Price: High to Low" value="price_desc" />
-								<Picker.Item label="Name: A to Z" value="name_asc" />
-								<Picker.Item label="Name: Z to A" value="name_desc" />
-								<Picker.Item label="Newest First" value="createdAt_desc" />
-								<Picker.Item label="Oldest First" value="createdAt_asc" />
-							</Picker>
-						</View>
-
-						{/* Discount Toggle */}
-						<TouchableOpacity
-							onPress={() =>
-								setFilters((p) => ({ ...p, discount: !p.discount }))
-							}
-							style={styles.checkboxRow}
-						>
-							<Text style={{ color: "#000" }}>{t("onlyDiscounted")}</Text>
-							<View
-								style={[
-									styles.checkbox,
-									filters.discount && styles.checkboxActive,
-								]}
-							/>
-						</TouchableOpacity>
-
-						{/* Price Range Picker */}
-						<Text style={{ marginTop: 20, marginBottom: 5 }}>
-							{t("priceRange")}
-						</Text>
-						<View style={styles.input}>
-							<Picker
-								selectedValue={filters.priceRange}
-								onValueChange={(v) =>
-									setFilters((p) => ({ ...p, priceRange: v }))
-								}
-							>
-								<Picker.Item label="All Prices" value="" />
-								<Picker.Item label="€1 - €20" value="1-20" />
-								<Picker.Item label="€21 - €50" value="21-50" />
-								<Picker.Item label="€51 - €100" value="51-100" />
-								<Picker.Item label="€101 - €200" value="101-200" />
-								<Picker.Item label="€201+" value="201-10000" />
-							</Picker>
-						</View>
-
-						{/* Apply Filters Button */}
-						<TouchableOpacity
-							style={styles.button}
-							onPress={() => {
-								setFilterOpen(false);
-								setPage(1);
-								fetchProducts(1, true); // replace products with new filter results
-							}}
-						>
-							<Text style={styles.buttonText}>{t("applyFilter")}</Text>
-						</TouchableOpacity>
-					</ScrollView>
-				</View>
-			)}
-		</View>
+								<Text style={styles.buttonText}>{t("applyFilter")}</Text>
+							</TouchableOpacity>
+						</ScrollView>
+					</View>
+				)}
+			</View>
 		</SafeAreaView>
 	);
 }
@@ -558,12 +557,12 @@ const styles = StyleSheet.create({
 	},
 	categoryText: { fontSize: 14, fontWeight: "500", color: "#000000" },
 	grid: { padding: 10 },
-card: { 
-    width: ITEM_WIDTH,
-    margin: 4, // smaller margin for 3 items per row
-    backgroundColor: "#FFFFFF",
-    padding: 8, 
-},
+	card: {
+		width: ITEM_WIDTH,
+		margin: 4, // smaller margin for 3 items per row
+		backgroundColor: "#FFFFFF",
+		padding: 8,
+	},
 
 	imageWrapper: {
 		position: "relative",
@@ -582,7 +581,7 @@ card: {
 		zIndex: 100,
 		paddingTop: 60,
 	},
- 
+
 	discountBadge: {
 		position: "absolute",
 		top: 8,
@@ -751,73 +750,91 @@ card: {
 		borderColor: "#ffc300",
 	},
 	qtyRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 6,
-},
+		flexDirection: "row",
+		justifyContent: "center",
+		alignItems: "center",
+		marginTop: 6,
+	},
 
-qtyContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-},
+	qtyContainer: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
+	},
 
-qtyBtn: {
-    backgroundColor: "#ffc300",
-    borderRadius: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-    marginHorizontal: 4,
-},
+	qtyBtn: {
+		backgroundColor: "#ffc300",
+		borderRadius: 4,
+		paddingHorizontal: 6,
+		paddingVertical: 4,
+		marginHorizontal: 4,
+	},
 
-qtyText: { color: "#000", fontSize: 16, fontWeight: "700" },
-qtyValue: { marginHorizontal: 4, fontSize: 14, fontWeight: "700" },
+	qtyText: { color: "#000", fontSize: 16, fontWeight: "700" },
+	qtyValue: { marginHorizontal: 4, fontSize: 14, fontWeight: "700" },
 
-imageWrapper: {
-	position: "relative",
-	width: "100%",
-	height: 150,
-	marginBottom: 6,
-},
+	imageWrapper: {
+		position: "relative",
+		width: "100%",
+		height: 150,
+		marginBottom: 6,
+	},
 
-image: { width: "100%", height: "100%" },
+	image: { width: "100%", height: "100%" },
 
-// ✅ Overlay on product image (transparent dark layer)
-outOfStockOverlay: {
-	position: "absolute",
-	top: 0,
-	left: 0,
-	right: 0,
-	bottom: 0,
-	backgroundColor: "rgba(0,0,0,0.55)",
-	justifyContent: "center",
-	alignItems: "center",
-	zIndex: 10,
-},
+	// ✅ Overlay on product image (transparent dark layer)
+	outOfStockOverlay: {
+		position: "absolute",
+		top: 0,
+		left: 0,
+		right: 0,
+		bottom: 0,
+		backgroundColor: "rgba(0,0,0,0.55)",
+		justifyContent: "center",
+		alignItems: "center",
+		zIndex: 10,
+	},
 
-outOfStockText: {
-	color: "#fff",
-	fontWeight: "700",
-	fontSize: 16,
-	textAlign: "center",
-},
+	outOfStockText: {
+		color: "#fff",
+		fontWeight: "700",
+		fontSize: 16,
+		textAlign: "center",
+	},
 
-// ✅ Overlay for filter screen (white background)
-filterOverlay: {
-	position: "absolute",
-	top: 0,
-	left: 0,
-	right: 0,
-	bottom: 0,
-	backgroundColor: "rgba(255,255,255,1)",
-	zIndex: 100,
-	paddingTop: 50,
-},
+	// ✅ Overlay for filter screen (white background)
+	filterOverlay: {
+		position: "absolute",
+		top: 0,
+		left: 0,
+		right: 0,
+		bottom: 0,
+		backgroundColor: "rgba(255,255,255,1)",
+		zIndex: 100,
+		paddingTop: 50,
+	},
 
-safeArea: {
-  flex: 1,
-  backgroundColor: "#fff",
-}
+	safeArea: {
+		flex: 1,
+		backgroundColor: "#fff",
+	},
+
+	priceRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 10, // or marginRight on basePrice
+	},
+
+	basePrice: {
+		color: "#b3b3b3ff",
+		textDecorationLine: "line-through",
+		fontSize: 13,
+	},
+
+	finalPrice: {
+		color: "#000",
+		fontWeight: "bold",
+		fontSize: 13,
+	},
 
 });

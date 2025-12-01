@@ -6,16 +6,18 @@ import { createContext, useContext, useEffect, useState } from "react";
 const TranslationContext = createContext();
 
 export const TranslationProvider = ({ children }) => {
-  const [language, setLanguage] = useState("en");
+ 
 
-  // Load saved language from local storage
-  useEffect(() => {
-    const loadLang = async () => {
-      const savedLang = await AsyncStorage.getItem("appLanguage");
-      if (savedLang) setLanguage(savedLang);
-    };
-    loadLang();
-  }, []);
+  const [language, setLanguage] = useState("de");
+
+useEffect(() => {
+  const loadLang = async () => {
+    const savedLang = await AsyncStorage.getItem("appLanguage");
+    setLanguage(savedLang || "de");
+  };
+  loadLang();
+}, []);
+
 
   // Save language when changed
   const switchLanguage = async (lang) => {

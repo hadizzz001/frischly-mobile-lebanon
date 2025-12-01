@@ -245,7 +245,7 @@ setForm({
   city: data.data.user.address?.city || "",
   state: data.data.user.address?.state || "",
   zipCode: data.data.user.address?.zipCode || "",
-  country: shortCode,
+  country: "DE",
 });
 
           } else {
@@ -371,27 +371,16 @@ setForm({
         </Picker>
       </View>
  
-{/* Country Dropdown */}
-<View
-  style={{
-    marginBottom: 12,
-    width: "100%",
-    minHeight: 55,
-    justifyContent: "center",
-  }}
->
-  <Text style={[styles.label, { marginLeft: 10 }]}>{t("country")}</Text>
-  <Picker
-    selectedValue={form.country}
-    onValueChange={(itemValue) => setForm({ ...form, country: itemValue })}
-    style={{ color: "#000" }}
-  >
-    <Picker.Item label="Select Country" value="" />
-    {Object.entries(countryMap).map(([name, code]) => (
-      <Picker.Item key={code} label={name} value={code} />
-    ))}
-  </Picker>
-</View>
+ 
+
+            <View  style={{ marginBottom: 12 }}>
+    <Text style={styles.label}>{t("country")}</Text>
+    <TextInput
+      style={styles.input}
+      value={t("germany")} 
+      editable={false}
+    />
+  </View>
 
 
       <TouchableOpacity style={styles.saveBtn} onPress={handleUpdate}>

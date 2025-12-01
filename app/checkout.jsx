@@ -18,98 +18,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import OrderComponent from "../components/CreateOrderButton";
-const countryMap = {
-	Afghanistan: "AF",
-	Albania: "AL",
-	Algeria: "DZ",
-	Andorra: "AD",
-	Angola: "AO",
-	Argentina: "AR",
-	Armenia: "AM",
-	Australia: "AU",
-	Austria: "AT",
-	Azerbaijan: "AZ",
-	Bahamas: "BS",
-	Bahrain: "BH",
-	Bangladesh: "BD",
-	Barbados: "BB",
-	Belarus: "BY",
-	Belgium: "BE",
-	Belize: "BZ",
-	Benin: "BJ",
-	Bhutan: "BT",
-	Bolivia: "BO",
-	BosniaAndHerzegovina: "BA",
-	Botswana: "BW",
-	Brazil: "BR",
-	Brunei: "BN",
-	Bulgaria: "BG",
-	BurkinaFaso: "BF",
-	Burundi: "BI",
-	Cambodia: "KH",
-	Cameroon: "CM",
-	Canada: "CA",
-	CapeVerde: "CV",
-	CentralAfricanRepublic: "CF",
-	Chad: "TD",
-	Chile: "CL",
-	China: "CN",
-	Colombia: "CO",
-	Comoros: "KM",
-	Congo: "CG",
-	CongoDR: "CD",
-	CostaRica: "CR",
-	Croatia: "HR",
-	Cuba: "CU",
-	Cyprus: "CY",
-	CzechRepublic: "CZ",
-	Denmark: "DK",
-	Djibouti: "DJ",
-	Dominica: "DM",
-	DominicanRepublic: "DO",
-	Ecuador: "EC",
-	Egypt: "EG",
-	ElSalvador: "SV",
-	Estonia: "EE",
-	Eswatini: "SZ",
-	Ethiopia: "ET",
-	Fiji: "FJ",
-	Finland: "FI",
-	France: "FR",
-	Gabon: "GA",
-	Gambia: "GM",
-	Georgia: "GE",
-	Germany: "DE",
-	Ghana: "GH",
-	Greece: "GR",
-	Grenada: "GD",
-	Guatemala: "GT",
-	Guinea: "GN",
-	GuineaBissau: "GW",
-	Guyana: "GY",
-	Haiti: "HT",
-	Honduras: "HN",
-	Hungary: "HU",
-	Iceland: "IS",
-	India: "IN",
-	Indonesia: "ID",
-	Iran: "IR",
-	Iraq: "IQ",
-	Ireland: "IE",
-	Israel: "IL",
-	Italy: "IT",
-	IvoryCoast: "CI",
-	Jamaica: "JM",
-	Japan: "JP",
-	Jordan: "JO",
-	Kazakhstan: "KZ",
-	Kenya: "KE",
-	Kuwait: "KW",
-	Kyrgyzstan: "KG",
-	Laos: "LA",
-	Latvia: "LV",
-	Lebanon: "LB",
-};
+ 
 
 const CheckoutScreen = () => {
 	const { t } = useTranslation();
@@ -359,29 +268,13 @@ const CheckoutScreen = () => {
 					onChangeText={(v) => handleInput("name", v)}
 				/>
 
-				<View
-					style={{
-						marginBottom: 12,
-						width: "100%",
-						minHeight: 55,
-						borderWidth: 1,
-						borderColor: "#000000",
-						borderRadius: 12,
-						backgroundColor: inputBg,
-						justifyContent: "center",
-					}}
-				>
-					<Picker
-						selectedValue={state.inputs.country}
-						onValueChange={(itemValue) => setCountry(itemValue)}
-						style={{ color: inputText }}
-					>
-						<Picker.Item label={t("country")} value="" />
-						{Object.entries(countryMap).map(([name, code]) => (
-							<Picker.Item key={code} label={name} value={code} />
-						))}
-					</Picker>
-				</View>
+			<View  style={{ marginBottom: 12 }}> 
+	<TextInput
+	  style={styles.input}
+	  value={t("germany")} 
+	  editable={false}
+	/>
+  </View>
 
 				<TextInput
 					style={styles.input}
