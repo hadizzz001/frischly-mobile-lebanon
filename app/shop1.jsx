@@ -43,7 +43,7 @@ export default function ShopPage() {
 		try {
 			setLoading(true);
 			const res = await fetch(
-				`https://frischlyshop-server.onrender.com/api/products?limit=200&category=${encodeURIComponent(
+				`https://frischlyshop-server.onrender.com/api/products?limit=200&sortBy=categorySortOrder&sortOrder=asc&category=${encodeURIComponent(
 					category
 				)}`
 			);
