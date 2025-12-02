@@ -88,7 +88,7 @@ export const translations = {
 		registerValidationFailed:
 			"Check email if correct or password is strong (uppercase, lowercase, numbers and special characters required)",
 		registerFailed: "Registration failed",
-		countryFixed: "Registration is currently only available in Germany",
+		countryFixed: "Delivery is currently only available in Germany",
 	},
 
 	de: {
@@ -180,6 +180,6 @@ export const translations = {
 		registerValidationFailed:
 			"Überprüfen Sie, ob die E-Mail korrekt ist oder das Passwort stark genug ist (Großbuchstaben, Kleinbuchstaben, Zahlen und Sonderzeichen erforderlich)",
 		registerFailed: "Registrierung fehlgeschlagen",
-		countryFixed: "Die Registrierung ist derzeit nur in Deutschland möglich",
+		countryFixed: "Die Lieferung ist derzeit nur in Deutschland möglich",
 	},
 };
