@@ -125,6 +125,7 @@ const InputBox = ({
 	inputBg,
 	inputText,
 	placeholderColor,
+	...props
 }) => (
 	<View
 		style={{
@@ -146,6 +147,7 @@ const InputBox = ({
 			keyboardType={keyboardType}
 			style={{ padding: 15, color: inputText }}
 			placeholderTextColor={placeholderColor}
+			{...props}
 		/>
 	</View>
 );
@@ -478,12 +480,18 @@ export default function Register() {
 						</Picker>
 					</View>
 
-					<InputBox
-						value={t("germany")}
-						inputBg={inputBg}
-						inputText={inputText}
-						editable={false}
-					/>
+					<TouchableOpacity
+						onPress={() => Alert.alert(t("errorTitle"), t("countryFixed"))}
+					>
+						<View pointerEvents="none">
+							<InputBox
+								value={t("germany")}
+								inputBg={inputBg}
+								inputText={inputText}
+								editable={false}
+							/>
+						</View>
+					</TouchableOpacity>
 
 					{/* Register Button */}
 					<TouchableOpacity
