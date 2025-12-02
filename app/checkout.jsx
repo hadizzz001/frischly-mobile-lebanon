@@ -8,6 +8,7 @@ import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
+	Alert,
 	Image,
 	ScrollView,
 	StyleSheet,
@@ -18,7 +19,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import OrderComponent from "../components/CreateOrderButton";
- 
 
 const CheckoutScreen = () => {
 	const { t } = useTranslation();
@@ -257,8 +257,9 @@ const CheckoutScreen = () => {
 					style={styles.input}
 					placeholder="Email (optional)"
 					value={state.inputs.email}
-					onChangeText={(v) => handleInput("email", v)}
+					//onChangeText={(v) => handleInput("email", v)}
 					keyboardType="email-address"
+					editable={false}
 				/>
 
 				<TextInput
@@ -268,13 +269,19 @@ const CheckoutScreen = () => {
 					onChangeText={(v) => handleInput("name", v)}
 				/>
 
-			<View  style={{ marginBottom: 12 }}> 
-	<TextInput
-	  style={styles.input}
-	  value={t("germany")} 
-	  editable={false}
-	/>
-  </View>
+				<View style={{ marginBottom: 12 }}>
+					<TouchableOpacity
+						onPress={() => Alert.alert(t("errorTitle"), t("countryFixed"))}
+					>
+						<View pointerEvents="none">
+							<TextInput
+								style={styles.input}
+								value={t("germany")}
+								editable={false}
+							/>
+						</View>
+					</TouchableOpacity>
+				</View>
 
 				<TextInput
 					style={styles.input}

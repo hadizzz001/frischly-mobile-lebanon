@@ -83,7 +83,7 @@ export const translations = {
 		confirmEmailTitle: "Please confirm your email",
 		confirmEmailBody:
 			"We have sent a confirmation email. You must verify your email before logging in. You may find the email in your junk folder.",
-		errorTitle: "Error",
+		errorTitle: "Note",
 		registerMissingFields: "Name, phone, zip code and password are required",
 		registerValidationFailed:
 			"Check email if correct or password is strong (uppercase, lowercase, numbers and special characters required)",
@@ -174,7 +174,7 @@ export const translations = {
 		confirmEmailTitle: "Bitte bestätigen Sie Ihre E-Mail",
 		confirmEmailBody:
 			"Wir haben eine Bestätigungs-E-Mail gesendet. Sie müssen Ihre E-Mail verifizieren, bevor Sie sich anmelden können. Die E-Mail befindet sich möglicherweise in Ihrem JUNK/SPAM-Ordner.",
-		errorTitle: "Fehler",
+		errorTitle: "Hinweis",
 		registerMissingFields:
 			"Name, Telefon, Postleitzahl und Passwort sind erforderlich",
 		registerValidationFailed:
