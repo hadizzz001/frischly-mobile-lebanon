@@ -172,7 +172,7 @@ export const translations = {
 		germany: "Deutschland",
 		confirmEmailTitle: "Bitte bestätigen Sie Ihre E-Mail",
 		confirmEmailBody:
-			"Wir haben eine Bestätigungs-E-Mail gesendet. Sie müssen Ihre E-Mail verifizieren, bevor Sie sich anmelden können. Die E-Mail befindet sich möglicherweise in Ihrem Spam-Ordner.",
+			"Wir haben eine Bestätigungs-E-Mail gesendet. Sie müssen Ihre E-Mail verifizieren, bevor Sie sich anmelden können. Die E-Mail befindet sich möglicherweise in Ihrem JUNK/SPAM-Ordner.",
 		errorTitle: "Fehler",
 		registerMissingFields:
 			"Name, Telefon, Postleitzahl und Passwort sind erforderlich",
