@@ -10,8 +10,8 @@ import { useEffect, useState } from "react";
 import {
 	ActivityIndicator,
 	Dimensions,
+	FlatList,
 	Image,
-	ScrollView,
 	StyleSheet,
 	Text,
 	TouchableOpacity,
@@ -31,7 +31,7 @@ export default function ShopPage() {
 
 	const [user, setUser] = useState(null);
 	const [loading, setLoading] = useState(true);
-	const [groupedProducts, setGroupedProducts] = useState({});
+	const [products, setProducts] = useState([]);
 	const [quantities, setQuantities] = useState({});
 	const [showQty, setShowQty] = useState({}); // track which products show qty
 
@@ -49,13 +49,7 @@ export default function ShopPage() {
 			);
 			const json = await res.json();
 			if (json?.success && json?.data) {
-				const grouped = {};
-				json.data.forEach((item) => {
-					const sub = item?.subcategory?.name || "Other";
-					if (!grouped[sub]) grouped[sub] = [];
-					grouped[sub].push(item);
-				});
-				setGroupedProducts(grouped);
+				setProducts(json.data);
 			}
 		} catch (err) {
 			console.error("fetchProducts error:", err);
@@ -225,31 +219,25 @@ export default function ShopPage() {
 
 	return (
 		<SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
-			<ScrollView
-				style={styles.container}
+			<FlatList
+				data={products}
+				renderItem={({ item }) => renderProduct(item)}
+				keyExtractor={(item) => item._id}
+				numColumns={3}
 				contentContainerStyle={{ paddingBottom: 120 }}
-			>
-				{/* Back Button */}
-				<View style={styles.header}>
-					<TouchableOpacity
-						onPress={() => router.back()}
-						style={styles.backButton}
-					>
-						<Feather name="chevron-left" size={24} color="#000" />
-					</TouchableOpacity>
-					<Text style={styles.headerTitle}>{category}</Text>
-				</View>
-
-				{/* Grouped Products */}
-				{Object.keys(groupedProducts).map((subName) => (
-					<View key={subName} style={{ marginBottom: 20 }}>
-						<Text style={styles.subcategoryTitle}>{subName}</Text>
-						<View style={styles.grid}>
-							{groupedProducts[subName].map((item) => renderProduct(item))}
-						</View>
+				style={styles.container}
+				ListHeaderComponent={
+					<View style={styles.header}>
+						<TouchableOpacity
+							onPress={() => router.back()}
+							style={styles.backButton}
+						>
+							<Feather name="chevron-left" size={24} color="#000" />
+						</TouchableOpacity>
+						<Text style={styles.headerTitle}>{category}</Text>
 					</View>
-				))}
-			</ScrollView>
+				}
+			/>
 		</SafeAreaView>
 	);
 }
