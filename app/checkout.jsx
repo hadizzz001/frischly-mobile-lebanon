@@ -16,15 +16,15 @@ import {
 	Text,
 	TextInput,
 	TouchableOpacity,
-	View
+	View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import OrderComponent from "../components/CreateOrderButton";
 
 const CheckoutScreen = () => {
 	const { t } = useTranslation();
-	  const [showModal, setShowModal] = useState(false);
-const [modalResponse, setModalResponse] = useState(null);
+	const [showModal, setShowModal] = useState(false);
+	const [modalResponse, setModalResponse] = useState(null);
 
 	const { cart, removeFromCart, subtotal, calculatePriceDetails } = useCart();
 	const [deliveryFee, setDeliveryFee] = useState(0);
@@ -210,19 +210,17 @@ const [modalResponse, setModalResponse] = useState(null);
 		}));
 	};
 
- 
-const handleModalResponse = (response) => {
-  setShowModal(false);
-  setModalResponse(response); // trigger child effect
-};
-
+	const handleModalResponse = (response) => {
+		setShowModal(false);
+		setModalResponse(response); // trigger child effect
+	};
 
 	const handleRemoveFromCart = (id) => removeFromCart(id);
 
 	if (state.loading) {
 		return (
 			<View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-				<Text>Loading user info...</Text>
+				<Text>{t("loadingUserInfo")}</Text>
 			</View>
 		);
 	}
@@ -231,19 +229,15 @@ const handleModalResponse = (response) => {
 	const inputText = "#000000";
 	const placeholderColor = "#666666";
 
-	
-
 	if (!cart || cart.length === 0) {
 		return (
 			<View style={styles.emptyContainer}>
-				<Text style={styles.emptyText}>
-					You have no items in your shopping bag.
-				</Text>
+				<Text style={styles.emptyText}>{t("noItemsInBag")}</Text>
 				<TouchableOpacity
 					style={styles.button}
 					onPress={() => router.push("/shop")}
 				>
-					<Text style={styles.buttonText}>Continue shopping</Text>
+					<Text style={styles.buttonText}>{t("continueShopping")}</Text>
 				</TouchableOpacity>
 			</View>
 		);
@@ -262,11 +256,11 @@ const handleModalResponse = (response) => {
 					<Feather name="chevron-left" size={24} color="#000000" />
 				</TouchableOpacity>
 
-				<Text style={styles.heading}>Shipping Information</Text>
+				<Text style={styles.heading}>{t("shippingInformation")}</Text>
 
 				<TextInput
 					style={styles.input}
-					placeholder="Email (optional)"
+					placeholder={t("emailOptional")}
 					value={state.inputs.email}
 					//onChangeText={(v) => handleInput("email", v)}
 					keyboardType="email-address"
@@ -275,7 +269,7 @@ const handleModalResponse = (response) => {
 
 				<TextInput
 					style={styles.input}
-					placeholder="Full Name *"
+					placeholder={t("fullNameRequired")}
 					value={state.inputs.name}
 					onChangeText={(v) => handleInput("name", v)}
 				/>
@@ -296,14 +290,14 @@ const handleModalResponse = (response) => {
 
 				<TextInput
 					style={styles.input}
-					placeholder="City *"
+					placeholder={t("cityRequired")}
 					value={state.inputs.city}
 					onChangeText={(v) => handleInput("city", v)}
 				/>
 
 				<TextInput
 					style={styles.input}
-					placeholder="State / Region *"
+					placeholder={t("stateRequired")}
 					value={state.inputs.state}
 					onChangeText={(v) => handleInput("state", v)}
 				/>
@@ -325,7 +319,7 @@ const handleModalResponse = (response) => {
 						onValueChange={(itemValue) => handleInput("zipCode", itemValue)}
 						style={{ color: "#000" }}
 					>
-						<Picker.Item label="Select Zip Code" value="" />
+						<Picker.Item label={t("selectZipCode")} value="" />
 						{zones.map((zone) => (
 							<Picker.Item
 								key={zone._id}
@@ -339,7 +333,7 @@ const handleModalResponse = (response) => {
 				<View style={styles.row}>
 					<TextInput
 						style={[styles.input, { flex: 1 }]}
-						placeholder="Phone *"
+						placeholder={t("phoneRequired")}
 						value={state.inputs.phone}
 						keyboardType="phone-pad"
 						onChangeText={(v) => handleInput("phone", v)}
@@ -348,7 +342,7 @@ const handleModalResponse = (response) => {
 
 				<TextInput
 					style={styles.input}
-					placeholder="Street *"
+					placeholder={t("streetRequired")}
 					value={state.inputs.street}
 					onChangeText={(v) => handleInput("street", v)}
 				/>
@@ -369,7 +363,9 @@ const handleModalResponse = (response) => {
 								/>
 								<View style={{ flex: 1 }}>
 									<Text>{item.title}</Text>
-									<Text>Qty: {quantity}</Text>
+									<Text>
+										{t("quantity")} {quantity}
+									</Text>
 									<Text style={styles.price}>
 										€{priceDetails.finalPrice.toFixed(2)}
 									</Text>
@@ -393,7 +389,7 @@ const handleModalResponse = (response) => {
 					<Text>€{deliveryFee.toFixed(2)}</Text>
 				</View>
 				<View style={styles.summaryRow}>
-					<Text>{t("Process fees")}</Text>
+					<Text>{t("processFees")}</Text>
 					<Text> 0</Text>
 				</View>
 				<View style={styles.summaryRow}>
@@ -401,46 +397,63 @@ const handleModalResponse = (response) => {
 					<Text style={{ fontWeight: "bold" }}>€{total}</Text>
 				</View>
 
-				<OrderComponent items={cart} customer={state.user}  setShowModal={setShowModal} modalResponse={modalResponse}/>
+				<OrderComponent
+					items={cart}
+					customer={state.user}
+					setShowModal={setShowModal}
+					modalResponse={modalResponse}
+				/>
 			</ScrollView>
 			<Modal visible={showModal} transparent animationType="slide">
-  <View style={styles.modalBackground}>
-    <View style={styles.modalContainer}>
-      <Text style={{ marginBottom: 20 }}>
-        Are your age 18+? (Driver will check the ID)
-      </Text>
-      <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-        <TouchableOpacity
-          onPress={() => handleModalResponse("yes")}
-          style={{
-            backgroundColor: "#ffc300",
-            paddingVertical: 10,
-            paddingHorizontal: 20,
-            borderRadius: 5,
-            marginRight: 10,
-          }}
-        >
-          <Text style={{ color: "black", textAlign: "center", fontWeight: "bold" }}>
-            Yes
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => handleModalResponse("no")}
-          style={{
-            backgroundColor: "#ffc300",
-            paddingVertical: 10,
-            paddingHorizontal: 20,
-            borderRadius: 5,
-          }}
-        >
-          <Text style={{ color: "black", textAlign: "center", fontWeight: "bold" }}>
-            No
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  </View>
-</Modal>
+				<View style={styles.modalBackground}>
+					<View style={styles.modalContainer}>
+						<Text style={{ marginBottom: 20 }}>{t("ageVerification")}</Text>
+						<View
+							style={{ flexDirection: "row", justifyContent: "space-between" }}
+						>
+							<TouchableOpacity
+								onPress={() => handleModalResponse("yes")}
+								style={{
+									backgroundColor: "#ffc300",
+									paddingVertical: 10,
+									paddingHorizontal: 20,
+									borderRadius: 5,
+									marginRight: 10,
+								}}
+							>
+								<Text
+									style={{
+										color: "black",
+										textAlign: "center",
+										fontWeight: "bold",
+									}}
+								>
+									{t("yes")}
+								</Text>
+							</TouchableOpacity>
+							<TouchableOpacity
+								onPress={() => handleModalResponse("no")}
+								style={{
+									backgroundColor: "#ffc300",
+									paddingVertical: 10,
+									paddingHorizontal: 20,
+									borderRadius: 5,
+								}}
+							>
+								<Text
+									style={{
+										color: "black",
+										textAlign: "center",
+										fontWeight: "bold",
+									}}
+								>
+									{t("no")}
+								</Text>
+							</TouchableOpacity>
+						</View>
+					</View>
+				</View>
+			</Modal>
 		</SafeAreaView>
 	);
 };
@@ -491,18 +504,18 @@ const styles = StyleSheet.create({
 	},
 	emptyText: { fontSize: 18, marginBottom: 20 },
 	safeArea: { flex: 1, backgroundColor: "#FFFFFF" },
-		  modalBackground: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContainer: {
-    backgroundColor: "#fff",
-    padding: 20,
-    borderRadius: 10,
-    width: "80%",
-  },
+	modalBackground: {
+		flex: 1,
+		backgroundColor: "rgba(0,0,0,0.5)",
+		justifyContent: "center",
+		alignItems: "center",
+	},
+	modalContainer: {
+		backgroundColor: "#fff",
+		padding: 20,
+		borderRadius: 10,
+		width: "80%",
+	},
 });
 
 export default CheckoutScreen;

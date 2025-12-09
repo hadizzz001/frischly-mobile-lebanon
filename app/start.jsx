@@ -18,20 +18,19 @@ import {
 	Text,
 	TextInput,
 	TouchableOpacity,
-	View
+	View,
 } from "react-native";
 
-export default function Start() { 
+export default function Start() {
+	const { t, language, switchLanguage } = useTranslation();
+	const [dropdownOpen, setDropdownOpen] = useState(false);
 
-		const { t, language, switchLanguage } = useTranslation(); 
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-
-	const router = useRouter(); 
+	const router = useRouter();
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [showPassword, setShowPassword] = useState(false);
 	const [loading, setLoading] = useState(false);
-		const languages = [
+	const languages = [
 		{ code: "en", name: "English", flag: "https://flagcdn.com/w40/gb.png" },
 		{ code: "de", name: "Deutsch", flag: "https://flagcdn.com/w40/de.png" },
 	];
@@ -42,7 +41,7 @@ export default function Start() {
 
 	const handleLogin = async () => {
 		if (!email || !password) {
-			Alert.alert("Error", "Email and password are required");
+			Alert.alert(t("errorTitle"), t("emailRequired"));
 			return;
 		}
 
@@ -65,40 +64,30 @@ export default function Start() {
 					await AsyncStorage.setItem("guest", "false");
 					router.replace("/(tabs)");
 				} else {
-					Alert.alert(
-						"Email Not Verified",
-						"Please verify your email before logging in."
-					);
+					Alert.alert(t("emailNotVerified"), t("verifyEmail"));
 				}
 			} else {
-				Alert.alert("Login Failed", "Invalid email or password");
+				Alert.alert(t("loginFailed"), t("invalidCredentials"));
 			}
 		} catch (error) {
-    console.log("Login error:", error.response?.data || error.message);
+			console.log("Login error:", error.response?.data || error.message);
 
-    // Extract exact backend message
-    const backendMessage =
-        error.response?.data?.message ||
-        error.response?.data?.error ||
-        error.message ||
-        "Unknown error occurred";
+			// Extract exact backend message
+			const backendMessage =
+				error.response?.data?.message ||
+				error.response?.data?.error ||
+				error.message ||
+				"Unknown error occurred";
 
-    Alert.alert(
-        "Login Failed",
-        backendMessage
-    );
-} finally {
-    setLoading(false);
-}
-
+			Alert.alert(t("loginFailed"), backendMessage);
+		} finally {
+			setLoading(false);
+		}
 	};
-
-
 
 	const inputBg = "#FFFFFF";
 	const inputText = "#000000";
 	const placeholderColor = "#666666";
-
 
 	return (
 		<KeyboardAvoidingView
@@ -130,8 +119,6 @@ export default function Start() {
 					/>
 				</View>
 
-
-
 				{/* Bottom 60% content */}
 				<View
 					style={{
@@ -139,38 +126,36 @@ export default function Start() {
 						justifyContent: "center",
 						alignItems: "center",
 						paddingHorizontal: 24,
-						backgroundColor: "#ffffff", 
+						backgroundColor: "#ffffff",
 					}}
 				>
+					<View style={styles.dropdownContainer}>
+						<TouchableOpacity
+							style={styles.dropdownButton}
+							onPress={() => setDropdownOpen(!dropdownOpen)}
+						>
+							<Image source={{ uri: selectedLang.flag }} style={styles.flag} />
+							<Text style={styles.arrow}>{dropdownOpen ? "▲" : "▼"}</Text>
+						</TouchableOpacity>
 
-					
-								<View style={styles.dropdownContainer}>
+						{dropdownOpen && (
+							<View style={styles.dropdownList}>
+								{languages.map((lang) => (
 									<TouchableOpacity
-										style={styles.dropdownButton}
-										onPress={() => setDropdownOpen(!dropdownOpen)}
+										key={lang.code}
+										style={styles.dropdownItem}
+										onPress={() => {
+											switchLanguage(lang.code);
+											setDropdownOpen(false);
+										}}
 									>
-										<Image source={{ uri: selectedLang.flag }} style={styles.flag} />
-										<Text style={styles.arrow}>{dropdownOpen ? "▲" : "▼"}</Text>
+										<Image source={{ uri: lang.flag }} style={styles.flag} />
+										<Text style={styles.dropdownText}>{lang.name}</Text>
 									</TouchableOpacity>
-				
-									{dropdownOpen && (
-										<View style={styles.dropdownList}>
-											{languages.map((lang) => (
-												<TouchableOpacity
-													key={lang.code}
-													style={styles.dropdownItem}
-													onPress={() => {
-														switchLanguage(lang.code);
-														setDropdownOpen(false);
-													}}
-												>
-													<Image source={{ uri: lang.flag }} style={styles.flag} />
-													<Text style={styles.dropdownText}>{lang.name}</Text>
-												</TouchableOpacity>
-											))}
-										</View>
-									)}
-								</View>
+								))}
+							</View>
+						)}
+					</View>
 					{/* Email input */}
 					<View
 						style={{
@@ -267,19 +252,18 @@ export default function Start() {
 						</Text>
 					</TouchableOpacity>
 					<TouchableOpacity
-						onPress={async () => { 
-							router.push("https://frischlyshop-server.onrender.com/forgot-password.html");
+						onPress={async () => {
+							router.push(
+								"https://frischlyshop-server.onrender.com/forgot-password.html"
+							);
 						}}
 					>
 						<Text style={{ fontSize: 16, textAlign: "center" }}>
-							<Text style={{ color: "#000" }}> 
+							<Text style={{ color: "#000" }}>
 								<Text style={{ color: "#ffc300" }}>{t("forget")}</Text>
 							</Text>
 						</Text>
-
-
 					</TouchableOpacity>
-
 
 					<TouchableOpacity
 						onPress={async () => {
@@ -293,8 +277,6 @@ export default function Start() {
 								<Text style={{ color: "#ffc300" }}>{t("asGuest")}</Text>
 							</Text>
 						</Text>
-
-
 					</TouchableOpacity>
 				</View>
 			</ScrollView>
@@ -303,58 +285,56 @@ export default function Start() {
 }
 
 const styles = StyleSheet.create({
- 
- dropdownContainer: {
-	width: "100%",
-	alignItems: "center", 
-	marginBottom: 40,
-	zIndex: 9999, // 🔥 FIX: ensures it appears above everything
-  },
+	dropdownContainer: {
+		width: "100%",
+		alignItems: "center",
+		marginBottom: 40,
+		zIndex: 9999, // 🔥 FIX: ensures it appears above everything
+	},
 
-  dropdownButton: {
-	flexDirection: "row",
-	alignItems: "center",
-	paddingHorizontal: 8, 
-  },
+	dropdownButton: {
+		flexDirection: "row",
+		alignItems: "center",
+		paddingHorizontal: 8,
+	},
 
-  dropdownList: {
-	position: "absolute",
-	top: 40,
-	backgroundColor: "#fff",
-	borderWidth: 1,
-	borderColor: "#ccc",
-	borderRadius: 10,
-	shadowColor: "#000",
-	shadowOpacity: 0.2,
-	shadowRadius: 6,
-	elevation: 10,
-	width: 150,
-	zIndex: 99999,
-  },
+	dropdownList: {
+		position: "absolute",
+		top: 40,
+		backgroundColor: "#fff",
+		borderWidth: 1,
+		borderColor: "#ccc",
+		borderRadius: 10,
+		shadowColor: "#000",
+		shadowOpacity: 0.2,
+		shadowRadius: 6,
+		elevation: 10,
+		width: 150,
+		zIndex: 99999,
+	},
 
-  dropdownItem: {
-	flexDirection: "row",
-	alignItems: "center",
-	paddingVertical: 10,
-	paddingHorizontal: 12,
-  },
+	dropdownItem: {
+		flexDirection: "row",
+		alignItems: "center",
+		paddingVertical: 10,
+		paddingHorizontal: 12,
+	},
 
-  flag: {
-	width: 24,
-	height: 16,
-	marginRight: 8,
-	borderRadius: 3,
-  },
+	flag: {
+		width: 24,
+		height: 16,
+		marginRight: 8,
+		borderRadius: 3,
+	},
 
-  dropdownText: {
-	color: "#000",
-	fontSize: 14,
-  },
+	dropdownText: {
+		color: "#000",
+		fontSize: 14,
+	},
 
-  arrow: {
-	marginLeft: 5,
-	fontSize: 14,
-	color: "#333",
-  },
-
+	arrow: {
+		marginLeft: 5,
+		fontSize: 14,
+		color: "#333",
+	},
 });

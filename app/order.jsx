@@ -1,5 +1,6 @@
 "use client";
 import { useCart } from "@/contexts/CartContext";
+import { useTranslation } from "@/contexts/TranslationContext";
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
@@ -18,6 +19,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function TestOrder() {
+	const { t } = useTranslation();
 	const [user, setUser] = useState(null);
 	const [orders, setOrders] = useState([]);
 	const [loading, setLoading] = useState(true);
@@ -28,6 +30,21 @@ export default function TestOrder() {
 	const [cancelModalVisible, setCancelModalVisible] = useState(false);
 	const [cancelReason, setCancelReason] = useState("");
 	const [selectedOrderId, setSelectedOrderId] = useState(null);
+
+	const getStatusText = (status) => {
+		switch (status) {
+			case "pending":
+				return t("pending");
+			case "delivered":
+				return t("delivered");
+			case "shipped":
+				return t("shipped");
+			case "cancelled":
+				return t("cancelled");
+			default:
+				return status;
+		}
+	};
 
 	const promptCancelOrder = (orderId) => {
 		setSelectedOrderId(orderId);
@@ -40,7 +57,7 @@ export default function TestOrder() {
 		console.log("📝 Cancel Reason:", cancelReason);
 
 		if (!cancelReason.trim()) {
-			alert("Please provide a reason for cancellation");
+			alert(t("provideReason"));
 			return;
 		}
 
@@ -53,7 +70,7 @@ export default function TestOrder() {
 
 			if (!token) {
 				console.log("❌ No token found in AsyncStorage");
-				alert("Not authenticated");
+				alert(t("notAuthenticated"));
 				return;
 			}
 
@@ -84,14 +101,14 @@ export default function TestOrder() {
 					)
 				);
 				setCancelModalVisible(false);
-				alert("Order cancelled successfully");
+				alert(t("orderCancelled"));
 			} else {
 				console.log("❌ Failed to cancel. Status:", res.status);
-				alert("Failed to cancel order");
+				alert(t("cancelFailed"));
 			}
 		} catch (e) {
 			console.error("🔥 Exception during cancellation:", e);
-			alert("An error occurred");
+			alert(t("errorOccurred"));
 		}
 	};
 
@@ -202,9 +219,11 @@ export default function TestOrder() {
 			<View style={styles.itemRow}>
 				<Image source={image ? { uri: image } : ""} style={styles.itemImage} />
 				<Text style={styles.itemText}>{item.product.name}</Text>
-				<Text style={styles.itemText}>Qty: {item.quantity}</Text>
 				<Text style={styles.itemText}>
-					Price: €{item.totalPrice.toFixed(2)}
+					{t("quantity")} {item.quantity}
+				</Text>
+				<Text style={styles.itemText}>
+					{t("price")}: €{item.totalPrice.toFixed(2)}
 				</Text>
 			</View>
 		);
@@ -243,7 +262,7 @@ export default function TestOrder() {
 									fontSize: 12,
 								}}
 							>
-								PAY
+								{t("pay")}
 							</Text>
 						</TouchableOpacity>
 					)}
@@ -268,7 +287,7 @@ export default function TestOrder() {
 								fontSize: 12,
 							}}
 						>
-							Cancel Order
+							{t("cancelOrder")}
 						</Text>
 					</TouchableOpacity>
 				</View>
@@ -288,7 +307,7 @@ export default function TestOrder() {
 	if (!orders.length) {
 		return (
 			<View style={styles.container}>
-				<Text>No orders found.</Text>
+				<Text>{t("noOrdersFound")}</Text>
 			</View>
 		);
 	}
@@ -324,15 +343,19 @@ export default function TestOrder() {
 								: styles.statusPending,
 						]}
 					>
-						{item.status || "Pending"}
+						{getStatusText(item.status) || t("pending")}
 					</Text>
 				</View>
 
 				<View style={{ flex: 2 }}>
-					<Text>Subtotal: €{item.subtotal.toFixed(2)}</Text>
-					<Text>Delivery: €{item.delivery?.toFixed(2) || "0.00"}</Text>
+					<Text>
+						{t("subtotal")}: €{item.subtotal.toFixed(2)}
+					</Text>
+					<Text>
+						{t("delivery")}: €{item.delivery?.toFixed(2) || "0.00"}
+					</Text>
 					<Text style={{ fontWeight: "bold" }}>
-						Total: €{item.total.toFixed(2)}
+						{t("total")}: €{item.total.toFixed(2)}
 					</Text>
 				</View>
 
@@ -387,12 +410,12 @@ export default function TestOrder() {
 							}}
 						>
 							<Text style={{ fontWeight: "bold", marginBottom: 10 }}>
-								Reason for cancellation
+								{t("reasonCancellation")}
 							</Text>
 							<TextInput
 								value={cancelReason}
 								onChangeText={setCancelReason}
-								placeholder="Type your reason..."
+								placeholder={t("typeReason")}
 								style={{
 									borderWidth: 1,
 									borderColor: "#ccc",
@@ -421,7 +444,7 @@ export default function TestOrder() {
 									}}
 								>
 									<Text style={{ textAlign: "center", color: "#000" }}>
-										Cancel
+										{t("cancel")}
 									</Text>
 								</TouchableOpacity>
 								<TouchableOpacity
@@ -435,7 +458,7 @@ export default function TestOrder() {
 									}}
 								>
 									<Text style={{ textAlign: "center", color: "#fff" }}>
-										Submit
+										{t("submit")}
 									</Text>
 								</TouchableOpacity>
 							</View>
