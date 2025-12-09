@@ -91,20 +91,11 @@ const ProductPage = () => {
  
 
   const handleAddToCart = () => {
-    if (product.is18Plus) {
-      setShowModal(true);
-    } else {
+ 
       addToCart(product, quantity);
-    }
   };
 
-  const handleModalResponse = (response) => {
-    setShowModal(false);
-    if (response === "yes") {
-      addToCart(product, quantity);
-    }
-  };
-
+ 
 	const toggleCart = () => setBooleanValue(!isBooleanValue);
 
 	if (!product) return <Text style={styles.center}>Loading...</Text>;
@@ -400,44 +391,7 @@ const ProductPage = () => {
 
 
   
-<Modal visible={showModal} transparent animationType="slide">
-  <View style={styles.modalBackground}>
-    <View style={styles.modalContainer}>
-      <Text style={{ marginBottom: 20 }}>
-        Are your age 18+? (Driver will check the ID)
-      </Text>
-      <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-        <TouchableOpacity
-          onPress={() => handleModalResponse("yes")}
-          style={{
-            backgroundColor: "#ffc300",
-            paddingVertical: 10,
-            paddingHorizontal: 20,
-            borderRadius: 5,
-            marginRight: 10,
-          }}
-        >
-          <Text style={{ color: "black", textAlign: "center", fontWeight: "bold" }}>
-            Yes
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => handleModalResponse("no")}
-          style={{
-            backgroundColor: "#ffc300",
-            paddingVertical: 10,
-            paddingHorizontal: 20,
-            borderRadius: 5,
-          }}
-        >
-          <Text style={{ color: "black", textAlign: "center", fontWeight: "bold" }}>
-            No
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  </View>
-</Modal>
+
 
 
 

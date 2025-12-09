@@ -10,23 +10,25 @@ import { useEffect, useState } from "react";
 import {
 	Alert,
 	Image,
+	Modal,
 	ScrollView,
 	StyleSheet,
 	Text,
 	TextInput,
 	TouchableOpacity,
-	View,
+	View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import OrderComponent from "../components/CreateOrderButton";
 
 const CheckoutScreen = () => {
 	const { t } = useTranslation();
+	  const [showModal, setShowModal] = useState(false);
+const [modalResponse, setModalResponse] = useState(null);
 
 	const { cart, removeFromCart, subtotal, calculatePriceDetails } = useCart();
 	const [deliveryFee, setDeliveryFee] = useState(0);
 	const [total, setTotal] = useState("0.00");
-
 	const [zones, setZones] = useState([]);
 
 	const [country, setCountry] = useState("");
@@ -208,6 +210,13 @@ const CheckoutScreen = () => {
 		}));
 	};
 
+ 
+const handleModalResponse = (response) => {
+  setShowModal(false);
+  setModalResponse(response); // trigger child effect
+};
+
+
 	const handleRemoveFromCart = (id) => removeFromCart(id);
 
 	if (state.loading) {
@@ -221,6 +230,8 @@ const CheckoutScreen = () => {
 	const inputBg = "#FFFFFF";
 	const inputText = "#000000";
 	const placeholderColor = "#666666";
+
+	
 
 	if (!cart || cart.length === 0) {
 		return (
@@ -390,8 +401,46 @@ const CheckoutScreen = () => {
 					<Text style={{ fontWeight: "bold" }}>€{total}</Text>
 				</View>
 
-				<OrderComponent items={cart} customer={state.user} />
+				<OrderComponent items={cart} customer={state.user}  setShowModal={setShowModal} modalResponse={modalResponse}/>
 			</ScrollView>
+			<Modal visible={showModal} transparent animationType="slide">
+  <View style={styles.modalBackground}>
+    <View style={styles.modalContainer}>
+      <Text style={{ marginBottom: 20 }}>
+        Are your age 18+? (Driver will check the ID)
+      </Text>
+      <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+        <TouchableOpacity
+          onPress={() => handleModalResponse("yes")}
+          style={{
+            backgroundColor: "#ffc300",
+            paddingVertical: 10,
+            paddingHorizontal: 20,
+            borderRadius: 5,
+            marginRight: 10,
+          }}
+        >
+          <Text style={{ color: "black", textAlign: "center", fontWeight: "bold" }}>
+            Yes
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => handleModalResponse("no")}
+          style={{
+            backgroundColor: "#ffc300",
+            paddingVertical: 10,
+            paddingHorizontal: 20,
+            borderRadius: 5,
+          }}
+        >
+          <Text style={{ color: "black", textAlign: "center", fontWeight: "bold" }}>
+            No
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </View>
+</Modal>
 		</SafeAreaView>
 	);
 };
@@ -442,6 +491,18 @@ const styles = StyleSheet.create({
 	},
 	emptyText: { fontSize: 18, marginBottom: 20 },
 	safeArea: { flex: 1, backgroundColor: "#FFFFFF" },
+		  modalBackground: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContainer: {
+    backgroundColor: "#fff",
+    padding: 20,
+    borderRadius: 10,
+    width: "80%",
+  },
 });
 
 export default CheckoutScreen;

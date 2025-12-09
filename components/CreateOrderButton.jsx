@@ -5,7 +5,7 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 // -------------------- CheckoutPage Component --------------------
-const CheckoutPage = ({ items, customer }) => {
+const CheckoutPage = ({ items, customer, setShowModal ,modalResponse  }) => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 	const { t } = useTranslation();
@@ -24,8 +24,18 @@ const CheckoutPage = ({ items, customer }) => {
     checkUser();
   }, []);
 
+useEffect(() => {
+  if (modalResponse === "yes") {
+    console.log("✅ Parent confirmed age -> continue order");
+    processOrder();
+  }
+}, [modalResponse]);
+
+
+
   // -------------------- Place Order --------------------
-const handlePlaceOrder = async () => {
+// Main trigger: checks 18+ first
+const handlePlaceOrder = () => {
   console.log("🛒 handlePlaceOrder triggered");
 
   if (!items || !customer) { 
@@ -33,33 +43,37 @@ const handlePlaceOrder = async () => {
     return;
   }
 
+  // -------------------- 18+ Check --------------------
+  const has18PlusItem = items.some(item => item?.is18Plus === true);
+
+  console.log("🔞 18+ check:", has18PlusItem);
+
+  if (has18PlusItem) {
+    console.log("🔞 18+ item found -> showing modal");
+    setShowModal(true); // show modal on parent
+    return;   // STOP here for now
+  }
+
+  // If no 18+ items, continue immediately
+  processOrder();
+};
+
+
+const processOrder = async () => {
   try {
     setLoading(true);
     console.log("⏳ Starting order process...");
 
     const stored = await AsyncStorage.getItem("userData");
-    console.log("📦 Stored userData:", stored);
-
-    if (!stored) {
-      console.log("❌ No stored userData found in AsyncStorage");
-      return;
-    }
+    if (!stored) return;
 
     const { token } = JSON.parse(stored);
-    console.log("🔑 Token found:", token ? "Yes" : "No");
 
     const validItems = items.filter(item => item && item._id);
-    console.log("✅ Valid items:", validItems);
-
     const orderItems = validItems.map(item => ({
       product: item._id,
       quantity: item.quantity,
     }));
-
-    if (orderItems.length === 0) {
-      console.log("⚠️ No valid order items found");
-      return;
-    }
 
     const orderPayload = {
       customer: { id: customer._id },
@@ -67,8 +81,6 @@ const handlePlaceOrder = async () => {
       paymentMethod: "card",
       notes: "Order placed from mobile app",
     };
-
-    console.log("📤 Sending order payload:", JSON.stringify(orderPayload, null, 2));
 
     const orderRes = await fetch("https://frischlyshop-server.onrender.com/api/orders", {
       method: "POST",
@@ -79,32 +91,29 @@ const handlePlaceOrder = async () => {
       body: JSON.stringify(orderPayload),
     });
 
-    console.log("📡 Response status:", orderRes.status);
-
     const data = await orderRes.json();
-    console.log("📥 Response data:", data);
 
     if (!orderRes.ok || !data.success) {
-      console.log("❌ Order creation failed:", data.message || "Unknown error");
       Alert.alert("Error", data.message || "Failed to create order");
       return;
     }
 
-    console.log("✅ Order successfully created:", data);
-router.push({
-  pathname: "/done",
-  params: { yourData: JSON.stringify(data) }
-});
-
+    router.push({
+      pathname: "/done",
+      params: { yourData: JSON.stringify(data) }
+    });
 
   } catch (err) {
-    console.error("❌ Exception occurred:", err);
     Alert.alert("Error", err.message || "An error occurred");
   } finally {
-    console.log("🏁 Order process finished");
     setLoading(false);
   }
 };
+
+
+
+
+
 
 
   // -------------------- Render --------------------
@@ -127,6 +136,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 20, marginBottom: 15, fontWeight: "bold" },
   button: { backgroundColor: "#ffc300", padding: 15, borderRadius: 8, alignItems: "center" },
   buttonText: { color: "#000", fontWeight: "bold", fontSize: 16 },
+  
 });
 
 export default CheckoutPage;
