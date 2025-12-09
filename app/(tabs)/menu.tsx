@@ -12,12 +12,15 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { useTranslation } from "@/contexts/TranslationContext";
+
 const { width } = Dimensions.get("window");
 const NUM_COLUMNS = 2;
 const ITEM_WIDTH = width / NUM_COLUMNS - 20;
 const ITEM_HEIGHT = 130;
 
 export default function CategoriesGrid() {
+	const { t } = useTranslation();
 	const router = useRouter();
 	const [categories, setCategories] = useState([]);
 	const [loading, setLoading] = useState(true);
@@ -43,7 +46,7 @@ export default function CategoriesGrid() {
 		return (
 			<View style={styles.loadingBox}>
 				<ActivityIndicator size="large" color="#ffc300" />
-				<Text>Loading categories...</Text>
+				<Text>{t("loadingCategories")}</Text>
 			</View>
 		);
 	}

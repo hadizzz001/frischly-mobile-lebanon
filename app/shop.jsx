@@ -524,12 +524,12 @@ export default function ShopPage() {
 										setFilters((p) => ({ ...p, priceRange: v }))
 									}
 								>
-									<Picker.Item label="All Prices" value="" />
-									<Picker.Item label="€1 - €20" value="1-20" />
-									<Picker.Item label="€21 - €50" value="21-50" />
-									<Picker.Item label="€51 - €100" value="51-100" />
-									<Picker.Item label="€101 - €200" value="101-200" />
-									<Picker.Item label="€201+" value="201-10000" />
+									<Picker.Item label={t("allPrices")} value="" />
+									<Picker.Item label={t("price1to20")} value="1-20" />
+									<Picker.Item label={t("price21to50")} value="21-50" />
+									<Picker.Item label={t("price51to100")} value="51-100" />
+									<Picker.Item label={t("price101to200")} value="101-200" />
+									<Picker.Item label={t("price201plus")} value="201-10000" />
 								</Picker>
 							</View>
 

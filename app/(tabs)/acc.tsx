@@ -36,16 +36,16 @@ export default function AccScreen() {
       );
 
       if (res.ok) {
-        Alert.alert("Account Deleted", "Your account has been removed.");
+        Alert.alert(t("accountDeleted"), t("accountRemoved"));
         await AsyncStorage.removeItem("userData");
         router.replace("/start");
       } else {
         const errorData = await res.json();
-        Alert.alert("Error", errorData.message || "Failed to delete account.");
+        Alert.alert(t("errorTitle"), errorData.message || t("failedDeleteAccount"));
       }
     } catch (err) {
       console.error(err);
-      Alert.alert("Error", "Something went wrong.");
+      Alert.alert(t("errorTitle"), t("somethingWrong"));
     }
   };
 

@@ -9,11 +9,7 @@ import { Stack, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Image, Modal, StyleSheet, Text, View } from "react-native";
 
-import {
-	Dimensions,
-	ScrollView,
-	TouchableOpacity
-} from "react-native";
+import { Dimensions, ScrollView, TouchableOpacity } from "react-native";
 import Swiper from "react-native-swiper";
 import Feather from "react-native-vector-icons/Feather";
 
@@ -36,7 +32,7 @@ const ProductPage = () => {
 	const [profileOpen, setProfileOpen] = useState(false);
 	const [categories, setCategories] = useState([]);
 	const [user, setUser] = useState(null);
-	  const [showModal, setShowModal] = useState(false);
+	const [showModal, setShowModal] = useState(false);
 
 	const token = process.env.EXPO_PUBLIC_JWT_TOKEN;
 
@@ -88,14 +84,10 @@ const ProductPage = () => {
 		checkLogin();
 	}, []);
 
- 
+	const handleAddToCart = () => {
+		addToCart(product, quantity);
+	};
 
-  const handleAddToCart = () => {
- 
-      addToCart(product, quantity);
-  };
-
- 
 	const toggleCart = () => setBooleanValue(!isBooleanValue);
 
 	if (!product) return <Text style={styles.center}>Loading...</Text>;
@@ -163,11 +155,7 @@ const ProductPage = () => {
 				>
 					{[picture].map((src, i) => (
 						<View key={i} style={styles.slide}>
-							<TouchableOpacity
-								onPress={() =>
-									setZoomedImg(src)
-								}
-							>
+							<TouchableOpacity onPress={() => setZoomedImg(src)}>
 								<Image
 									source={{ uri: src }}
 									style={styles.swiperImage}
@@ -181,8 +169,8 @@ const ProductPage = () => {
 				{/* Product Info */}
 				<View style={styles.info}>
 					<Text style={styles.title}>{name}</Text>
-				 
-					<Text>{description}</Text> 
+
+					<Text>{description}</Text>
 
 					{/* Price Calculation */}
 					{(() => {
@@ -208,7 +196,8 @@ const ProductPage = () => {
 								</Text>
 								{discountPercent > 0 && (
 									<Text style={styles.discount}>
-										{t("discount")} ({discountPercent}%): -€{discountAmount.toFixed(2)}
+										{t("discount")} ({discountPercent}%): -€
+										{discountAmount.toFixed(2)}
 									</Text>
 								)}
 								{taxPercent > 0 && (
@@ -244,7 +233,10 @@ const ProductPage = () => {
 								productId={_id}
 							/>
 							{!isOutOfStock ? (
-								<TouchableOpacity onPress={handleAddToCart} style={styles.button}>
+								<TouchableOpacity
+									onPress={handleAddToCart}
+									style={styles.button}
+								>
 									<Text style={styles.buttonText}>{t("aBag")}</Text>
 								</TouchableOpacity>
 							) : (
@@ -292,7 +284,7 @@ const ProductPage = () => {
 						<Feather name="x" size={28} color="#000" />
 					</TouchableOpacity>
 					<ScrollView contentContainerStyle={styles.overlayContentProfile}>
-						<Text style={styles.title}>My Profile</Text>
+						<Text style={styles.title}>{t("myProfile")}</Text>
 						{user ? (
 							<>
 								<Text style={styles.item}>Name: {user.name}</Text>
@@ -300,7 +292,7 @@ const ProductPage = () => {
 								<Text style={styles.item}>Phone: {user.phoneNumber}</Text>
 							</>
 						) : (
-							<Text style={styles.item}>Loading user...</Text>
+							<Text style={styles.item}>{t("loadingUser")}</Text>
 						)}
 						<TouchableOpacity
 							style={styles.row}
@@ -317,7 +309,7 @@ const ProductPage = () => {
 								color="red"
 								style={{ marginRight: 6 }}
 							/>
-							<Text style={[styles.item, { color: "red" }]}>Logout</Text>
+							<Text style={[styles.item, { color: "red" }]}>{t("logout")}</Text>
 						</TouchableOpacity>
 						<TouchableOpacity
 							style={styles.row}
@@ -335,7 +327,7 @@ const ProductPage = () => {
 								style={{ marginRight: 6 }}
 							/>
 							<Text style={[styles.item, { color: "red" }]}>
-								Request Delete Account
+								{t("requestDeleteAccount")}
 							</Text>
 						</TouchableOpacity>
 					</ScrollView>
@@ -352,7 +344,7 @@ const ProductPage = () => {
 						<Feather name="x" size={28} color="#000" />
 					</TouchableOpacity>
 					<ScrollView contentContainerStyle={styles.overlayContentMenu}>
-						<Text style={styles.title}>Categories</Text>
+						<Text style={styles.title}>{t("categories")}</Text>
 						{categories.slice(0, 8).map((cat) => (
 							<TouchableOpacity
 								key={cat._id}
@@ -370,7 +362,7 @@ const ProductPage = () => {
 								router.push("/shop");
 							}}
 						>
-							<Text style={styles.item}>All Categories</Text>
+							<Text style={styles.item}>{t("allCategories")}</Text>
 						</TouchableOpacity>
 					</ScrollView>
 				</View>
@@ -388,14 +380,6 @@ const ProductPage = () => {
 					<Cart />
 				</View>
 			)}
-
-
-  
-
-
-
-
-
 		</View>
 	);
 };
@@ -515,18 +499,18 @@ const styles = StyleSheet.create({
 		width: width * 1.2,
 		height: width * 1.2,
 	},
-	  modalBackground: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContainer: {
-    backgroundColor: "#fff",
-    padding: 20,
-    borderRadius: 10,
-    width: "80%",
-  },
+	modalBackground: {
+		flex: 1,
+		backgroundColor: "rgba(0,0,0,0.5)",
+		justifyContent: "center",
+		alignItems: "center",
+	},
+	modalContainer: {
+		backgroundColor: "#fff",
+		padding: 20,
+		borderRadius: 10,
+		width: "80%",
+	},
 });
 
 export default ProductPage;

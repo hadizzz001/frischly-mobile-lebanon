@@ -14,7 +14,7 @@ const OutOfStockComponent = ({ itemName }) => {
 		if (supported) {
 			await Linking.openURL(whatsappLink);
 		} else {
-			alert("WhatsApp is not installed or the link cannot be opened.");
+			alert(t("whatsappNotInstalled"));
 		}
 	};
 
@@ -22,7 +22,7 @@ const OutOfStockComponent = ({ itemName }) => {
 		<View style={styles.container}>
 			<Text style={styles.outOfStockText}>{t("out")}</Text>
 			{/* <TouchableOpacity style={styles.button} onPress={handlePress}>
-        <Text style={styles.buttonText}>PREORDER</Text>
+        <Text style={styles.buttonText}>{t("preorder")}</Text>
       </TouchableOpacity> */}
 		</View>
 	);

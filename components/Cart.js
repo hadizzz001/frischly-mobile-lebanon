@@ -46,7 +46,7 @@ const Cart = () => {
 									<Text style={styles.itemTitle}>{obj.name}</Text>
 
 									<View style={styles.quantityRow}>
-										<Text style={styles.label}>Qty: {String(quantity)}</Text>
+										<Text style={styles.label}>{t("quantity")} {String(quantity)}</Text>
 									</View>
 
 									<Text style={styles.price}>
