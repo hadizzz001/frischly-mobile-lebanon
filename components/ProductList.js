@@ -21,7 +21,7 @@ import { useTranslation } from "@/contexts/TranslationContext";
 
 const { width } = Dimensions.get("window");
 const ITEM_WIDTH = width / 3 - 15;
-const LIMIT = 10; // items per fetch
+const LIMIT = 12; // items per fetch
 
 export default function ShopPage({ refreshTrigger, setRefreshing }) {
 	const { t } = useTranslation();
