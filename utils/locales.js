@@ -157,7 +157,8 @@ export const translations = {
 		failedDeleteAccount: "Failed to delete account.",
 		loadingCategories: "Loading categories...",
 		preorder: "PREORDER",
-		whatsappNotInstalled: "WhatsApp is not installed or the link cannot be opened.",
+		whatsappNotInstalled:
+			"WhatsApp is not installed or the link cannot be opened.",
 	},
 
 	de: {
@@ -320,6 +321,7 @@ export const translations = {
 		failedDeleteAccount: "Konto konnte nicht gelöscht werden.",
 		loadingCategories: "Kategorien laden...",
 		preorder: "VORBESTELLEN",
-		whatsappNotInstalled: "WhatsApp ist nicht installiert oder der Link kann nicht geöffnet werden.",
+		whatsappNotInstalled:
+			"WhatsApp ist nicht installiert oder der Link kann nicht geöffnet werden.",
 	},
 };

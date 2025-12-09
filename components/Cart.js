@@ -46,7 +46,9 @@ const Cart = () => {
 									<Text style={styles.itemTitle}>{obj.name}</Text>
 
 									<View style={styles.quantityRow}>
-										<Text style={styles.label}>{t("quantity")} {String(quantity)}</Text>
+										<Text style={styles.label}>
+											{t("quantity")} {String(quantity)}
+										</Text>
 									</View>
 
 									<Text style={styles.price}>
@@ -64,14 +66,14 @@ const Cart = () => {
 						);
 					})
 				) : (
-					<Text style={styles.emptyText}>
-						{t("noItemsInBag")}
-					</Text>
+					<Text style={styles.emptyText}>{t("noItemsInBag")}</Text>
 				)}
 			</ScrollView>
 
 			<View style={styles.footer}>
-				<Text style={styles.total}>{t("total")}: €{subtotal.toFixed(2)} </Text>
+				<Text style={styles.total}>
+					{t("total")}: €{subtotal.toFixed(2)}{" "}
+				</Text>
 
 				<TouchableOpacity style={styles.checkoutBtn} onPress={goToCart}>
 					<Text style={styles.checkoutText}>{t("goToCheckout")}</Text>

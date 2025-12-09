@@ -2,6 +2,7 @@ import CatSlider from "@/components/CatSlider";
 import Footer from "@/components/Footer";
 import ProductList from "@/components/ProductList";
 import ProductSlide from "@/components/ProductSlide";
+import NewsTicker from "@/components/Textslide";
 import { useState } from "react";
 import { RefreshControl, ScrollView } from "react-native";
 
@@ -21,6 +22,7 @@ export default function HomeScreen() {
 					<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
 				}
 			>
+				<NewsTicker />
 				<ProductSlide refreshTrigger={refreshTrigger} />
 				<CatSlider refreshTrigger={refreshTrigger} />
 				<ProductList
