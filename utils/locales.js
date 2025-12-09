@@ -120,6 +120,9 @@ export const translations = {
 		updatePassword: "Update Password",
 		noOrdersFound: "No Orders Found",
 		shippingInformation: "Shipping Information",
+		paymentMethod: "Payment Method",
+		onlinePayment: "Online Payment",
+		cashOnDelivery: "Cash on Delivery",
 		orderSummary: "Order Summary",
 		subtotal: "Subtotal",
 		delivery: "Delivery",
@@ -127,7 +130,10 @@ export const translations = {
 		thankYouPurchase: "Order Confirmed!",
 		orderProcessed:
 			"Thank you for your order. Your order has been confirmed and is being processed. Please click the button to continue to the payment form.",
+		orderProcessedCash:
+			"Thank you for your order. Your order has been confirmed and is being processed. Please prepare the payment amount for delivery.",
 		proceedToPayment: "Proceed to Payment",
+		backToHome: "Back to Home",
 		country: "Country",
 		cancel: "Cancel",
 		bottle: "Bottle Refund",
@@ -280,6 +286,9 @@ export const translations = {
 		updatePassword: "Passwort aktualisieren",
 		noOrdersFound: "Keine Bestellungen gefunden",
 		shippingInformation: "Versandinformationen",
+		paymentMethod: "Zahlungsmethode",
+		onlinePayment: "Online-Zahlung",
+		cashOnDelivery: "Barzahlung bei Lieferung",
 		orderSummary: "Bestellübersicht",
 		subtotal: "Zwischensumme",
 		delivery: "Lieferung",
@@ -287,7 +296,10 @@ export const translations = {
 		thankYouPurchase: "Danke für Ihren Einkauf!",
 		orderProcessed:
 			"Vielen Dank für Ihre Bestellung. Ihre Bestellung wurde bestätigt und wird bearbeitet. Bitte klicken Sie auf den Button, um zum Zahlungsformular zu gelangen.",
+		orderProcessedCash:
+			"Vielen Dank für Ihre Bestellung. Ihre Bestellung wurde bestätigt und wird bearbeitet. Bitte halten Sie den Zahlungsbetrag für die Lieferung bereit.",
 		proceedToPayment: "Zur Zahlung fortfahren",
+		backToHome: "Zurück zur Startseite",
 		address: "Adresse",
 		country: "Land",
 		cancel: "Stornieren",

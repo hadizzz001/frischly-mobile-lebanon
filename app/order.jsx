@@ -345,6 +345,11 @@ export default function TestOrder() {
 					>
 						{getStatusText(item.status) || t("pending")}
 					</Text>
+					<Text style={styles.paymentMethod}>
+						{item.paymentMethod === "cash"
+							? t("cashOnDelivery")
+							: t("onlinePayment")}
+					</Text>
 				</View>
 
 				<View style={{ flex: 2 }}>
@@ -519,6 +524,11 @@ const styles = StyleSheet.create({
 	},
 	itemText: {
 		flex: 1,
+	},
+	paymentMethod: {
+		fontSize: 12,
+		color: "#666",
+		marginTop: 2,
 	},
 	safeArea: {
 		flex: 1,

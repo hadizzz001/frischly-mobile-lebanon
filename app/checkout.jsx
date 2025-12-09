@@ -25,6 +25,7 @@ const CheckoutScreen = () => {
 	const { t } = useTranslation();
 	const [showModal, setShowModal] = useState(false);
 	const [modalResponse, setModalResponse] = useState(null);
+	const [paymentMethod, setPaymentMethod] = useState("card"); // "card" or "cash"
 
 	const { cart, removeFromCart, subtotal, calculatePriceDetails } = useCart();
 	const [deliveryFee, setDeliveryFee] = useState(0);
@@ -347,6 +348,54 @@ const CheckoutScreen = () => {
 					onChangeText={(v) => handleInput("street", v)}
 				/>
 
+				<Text style={styles.heading}>{t("paymentMethod")}</Text>
+
+				<View style={styles.paymentOptions}>
+					<TouchableOpacity
+						style={[
+							styles.paymentOption,
+							paymentMethod === "card" && styles.paymentOptionSelected,
+						]}
+						onPress={() => setPaymentMethod("card")}
+					>
+						<Feather
+							name="credit-card"
+							size={24}
+							color={paymentMethod === "card" ? "#000" : "#666"}
+						/>
+						<Text
+							style={[
+								styles.paymentOptionText,
+								paymentMethod === "card" && styles.paymentOptionTextSelected,
+							]}
+						>
+							{t("onlinePayment")}
+						</Text>
+					</TouchableOpacity>
+
+					<TouchableOpacity
+						style={[
+							styles.paymentOption,
+							paymentMethod === "cash" && styles.paymentOptionSelected,
+						]}
+						onPress={() => setPaymentMethod("cash")}
+					>
+						<Feather
+							name="dollar-sign"
+							size={24}
+							color={paymentMethod === "cash" ? "#000" : "#666"}
+						/>
+						<Text
+							style={[
+								styles.paymentOptionText,
+								paymentMethod === "cash" && styles.paymentOptionTextSelected,
+							]}
+						>
+							{t("cashOnDelivery")}
+						</Text>
+					</TouchableOpacity>
+				</View>
+
 				<Text style={styles.heading}>{t("orderSummary")}</Text>
 
 				<View>
@@ -402,6 +451,7 @@ const CheckoutScreen = () => {
 					customer={state.user}
 					setShowModal={setShowModal}
 					modalResponse={modalResponse}
+					paymentMethod={paymentMethod}
 				/>
 			</ScrollView>
 			<Modal visible={showModal} transparent animationType="slide">
@@ -503,6 +553,35 @@ const styles = StyleSheet.create({
 		marginTop: 60,
 	},
 	emptyText: { fontSize: 18, marginBottom: 20 },
+	paymentOptions: {
+		flexDirection: "row",
+		justifyContent: "space-between",
+		marginBottom: 16,
+	},
+	paymentOption: {
+		flex: 1,
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "center",
+		padding: 16,
+		borderWidth: 1,
+		borderColor: "#ccc",
+		borderRadius: 8,
+		marginHorizontal: 4,
+	},
+	paymentOptionSelected: {
+		borderColor: "#FFC300",
+		backgroundColor: "#FFC30020",
+	},
+	paymentOptionText: {
+		marginLeft: 8,
+		fontSize: 14,
+		color: "#666",
+	},
+	paymentOptionTextSelected: {
+		color: "#000",
+		fontWeight: "bold",
+	},
 	safeArea: { flex: 1, backgroundColor: "#FFFFFF" },
 	modalBackground: {
 		flex: 1,

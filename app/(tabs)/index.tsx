@@ -22,7 +22,7 @@ export default function HomeScreen() {
 					<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
 				}
 			>
-				<NewsTicker />
+				<NewsTicker refreshTrigger={refreshTrigger} />
 				<ProductSlide refreshTrigger={refreshTrigger} />
 				<CatSlider refreshTrigger={refreshTrigger} />
 				<ProductList

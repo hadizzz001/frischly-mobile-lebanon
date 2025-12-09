@@ -13,7 +13,13 @@ import {
 	View,
 } from "react-native";
 // -------------------- CheckoutPage Component --------------------
-const CheckoutPage = ({ items, customer, setShowModal, modalResponse }) => {
+const CheckoutPage = ({
+	items,
+	customer,
+	setShowModal,
+	modalResponse,
+	paymentMethod = "card",
+}) => {
 	const router = useRouter();
 	const [loading, setLoading] = useState(false);
 	const { t } = useTranslation();
@@ -83,7 +89,7 @@ const CheckoutPage = ({ items, customer, setShowModal, modalResponse }) => {
 			const orderPayload = {
 				customer: { id: customer._id },
 				items: orderItems,
-				paymentMethod: "card",
+				paymentMethod: paymentMethod,
 				notes: "Order placed from mobile app",
 			};
 

@@ -24,8 +24,10 @@ export default function CheckoutSuccessPage() {
 	const params = useLocalSearchParams();
 	const parsed = JSON.parse(params.yourData);
 	const paymentUrl = parsed.paymentUrl;
+	const paymentMethod = parsed.data?.paymentMethod || "card";
 
 	console.log("Payment URL:", paymentUrl);
+	console.log("Payment Method:", paymentMethod);
 
 	useEffect(() => {
 		const checkLoginAndFetchOrders = async () => {
@@ -111,15 +113,28 @@ export default function CheckoutSuccessPage() {
 
 				{/* Messages */}
 				<Text style={styles.title}>{t("thankYouPurchase")}</Text>
-				<Text style={styles.subtitle}>{t("orderProcessed")}</Text>
+				<Text style={styles.subtitle}>
+					{paymentMethod === "cash"
+						? t("orderProcessedCash")
+						: t("orderProcessed")}
+				</Text>
 
-				{paymentUrl && (
+				{paymentMethod === "cash" ? (
 					<TouchableOpacity
 						style={styles.button}
-						onPress={() => Linking.openURL(`${paymentUrl}`)}
+						onPress={() => router.push("/")}
 					>
-						<Text style={styles.buttonText}>{t("proceedToPayment")}</Text>
+						<Text style={styles.buttonText}>{t("backToHome")}</Text>
 					</TouchableOpacity>
+				) : (
+					paymentUrl && (
+						<TouchableOpacity
+							style={styles.button}
+							onPress={() => Linking.openURL(`${paymentUrl}`)}
+						>
+							<Text style={styles.buttonText}>{t("proceedToPayment")}</Text>
+						</TouchableOpacity>
+					)
 				)}
 			</View>
 		</ScrollView>
