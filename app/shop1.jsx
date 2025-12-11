@@ -12,6 +12,8 @@ import {
 	Dimensions,
 	FlatList,
 	Image,
+	ScrollView,
+	SectionList,
 	StyleSheet,
 	Text,
 	TouchableOpacity,
@@ -31,7 +33,7 @@ export default function ShopPage() {
 
 	const [user, setUser] = useState(null);
 	const [loading, setLoading] = useState(true);
-	const [products, setProducts] = useState([]);
+	const [sections, setSections] = useState([]);
 	const [quantities, setQuantities] = useState({});
 	const [showQty, setShowQty] = useState({}); // track which products show qty
 
@@ -49,7 +51,27 @@ export default function ShopPage() {
 			);
 			const json = await res.json();
 			if (json?.success && json?.data) {
-				setProducts(json.data);
+				const grouped = {};
+				json.data.forEach((item) => {
+					const sub = item?.subcategory?.name || "Other";
+					if (!grouped[sub]) grouped[sub] = [];
+					grouped[sub].push(item);
+				});
+
+				// Create sections data for SectionList with rows
+				const sectionsData = Object.keys(grouped).map((subName) => {
+					const products = grouped[subName];
+					const rows = [];
+					for (let i = 0; i < products.length; i += 3) {
+						rows.push(products.slice(i, i + 3));
+					}
+					return {
+						title: subName,
+						data: rows,
+						key: subName
+					};
+				});
+				setSections(sectionsData);
 			}
 		} catch (err) {
 			console.error("fetchProducts error:", err);
@@ -219,24 +241,37 @@ export default function ShopPage() {
 
 	return (
 		<SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
-			<FlatList
-				data={products}
-				renderItem={({ item }) => renderProduct(item)}
-				keyExtractor={(item) => item._id}
-				numColumns={3}
-				contentContainerStyle={{ paddingBottom: 120 }}
-				style={styles.container}
-				ListHeaderComponent={
-					<View style={styles.header}>
-						<TouchableOpacity
-							onPress={() => router.back()}
-							style={styles.backButton}
-						>
-							<Feather name="chevron-left" size={24} color="#000" />
-						</TouchableOpacity>
-						<Text style={styles.headerTitle}>{category}</Text>
+			{/* Back Button */}
+			<View style={styles.header}>
+				<TouchableOpacity
+					onPress={() => router.back()}
+					style={styles.backButton}
+				>
+					<Feather name="chevron-left" size={24} color="#000" />
+				</TouchableOpacity>
+				<Text style={styles.headerTitle}>{category}</Text>
+			</View>
+
+			{/* Grouped Products with SectionList */}
+			<SectionList
+				sections={sections}
+				keyExtractor={(item, index) => {
+					// item is a row (array of products), create key from first product ID and index
+					return `row-${item[0]?._id || 'unknown'}-${index}`;
+				}}
+				renderItem={({ item: row }) => (
+					<View style={styles.row}>
+						{row.map((product) => renderProduct(product))}
 					</View>
-				}
+				)}
+				renderSectionHeader={({ section: { title } }) => (
+					<Text style={styles.subcategoryTitle}>{title}</Text>
+				)}
+				contentContainerStyle={{ paddingBottom: 120, paddingHorizontal: 10 }}
+				showsVerticalScrollIndicator={false}
+				initialNumToRender={10}
+				maxToRenderPerBatch={10}
+				windowSize={10}
 			/>
 		</SafeAreaView>
 	);
@@ -267,6 +302,11 @@ const styles = StyleSheet.create({
 		marginTop: 10,
 		marginBottom: 10,
 	},
+	row: {
+		flexDirection: 'row',
+		justifyContent: 'space-between',
+		marginBottom: 10,
+	},
 	grid: {
 		flexDirection: "row",
 		flexWrap: "wrap",
@@ -275,7 +315,6 @@ const styles = StyleSheet.create({
 	},
 	card: {
 		width: ITEM_WIDTH,
-		marginBottom: 10,
 		padding: 4,
 		backgroundColor: "transparent",
 		elevation: 0,

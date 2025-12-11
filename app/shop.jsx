@@ -391,7 +391,7 @@ export default function ShopPage() {
 									]}
 									onPress={() =>
 										router.push(
-											`/shop?category=${encodeURIComponent(cat.name)}`
+											`/shop1?category=${encodeURIComponent(cat.name)}`
 										)
 									}
 								>
