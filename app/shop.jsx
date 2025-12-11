@@ -348,72 +348,76 @@ export default function ShopPage() {
 						<Feather name="chevron-left" size={24} color="#000000" />
 					</TouchableOpacity>
 
-					<ScrollView
-						horizontal
-						showsHorizontalScrollIndicator={false}
-						style={styles.categoryBar}
-						contentContainerStyle={{ alignItems: "center" }}
-					>
-						{/* All button */}
-						<TouchableOpacity
-							style={[
-								styles.categoryBtn,
-								!categoryParam &&
-									discountParam !== "true" && {
-										backgroundColor: "#ffc300",
-									},
-							]}
-							onPress={() => router.push("/shop")}
+					{discountParam !== "true" && (
+						<ScrollView
+							horizontal
+							showsHorizontalScrollIndicator={false}
+							style={styles.categoryBar}
+							contentContainerStyle={{ alignItems: "center" }}
 						>
-							<Text
+							{/* All button */}
+							<TouchableOpacity
 								style={[
-									styles.categoryText,
+									styles.categoryBtn,
 									!categoryParam &&
 										discountParam !== "true" && {
-											color: "#000",
-											fontWeight: "700",
+											backgroundColor: "#ffc300",
 										},
 								]}
+								onPress={() => router.push("/shop")}
 							>
-								{t("all")}
-							</Text>
-						</TouchableOpacity>
-
-						{/* Dynamic categories */}
-						{categories.map((cat) => {
-							const isSelected = categoryParam === cat.name;
-							return (
-								<TouchableOpacity
-									key={cat._id}
+								<Text
 									style={[
-										styles.categoryBtn,
-										isSelected && { backgroundColor: "#ffc300" },
+										styles.categoryText,
+										!categoryParam &&
+											discountParam !== "true" && {
+												color: "#000",
+												fontWeight: "700",
+											},
 									]}
-									onPress={() =>
-										router.push(
-											`/shop1?category=${encodeURIComponent(cat.name)}`
-										)
-									}
 								>
-									<Text
-										style={[
-											styles.categoryText,
-											isSelected && { color: "#000", fontWeight: "700" },
-										]}
-									>
-										{cat.name}
-									</Text>
-								</TouchableOpacity>
-							);
-						})}
-					</ScrollView>
+									{t("all")}
+								</Text>
+							</TouchableOpacity>
 
-					<TouchableOpacity
-						style={[styles.categoryBtn, { backgroundColor: "#ddd" }]}
-						onPress={() => setFilterOpen(true)}
-					>
-						<Feather name="sliders" size={18} color="#000" />
-					</TouchableOpacity>
+							{/* Dynamic categories */}
+							{categories.map((cat) => {
+								const isSelected = categoryParam === cat.name;
+								return (
+									<TouchableOpacity
+										key={cat._id}
+										style={[
+											styles.categoryBtn,
+											isSelected && { backgroundColor: "#ffc300" },
+										]}
+										onPress={() =>
+											router.push(
+												`/shop1?category=${encodeURIComponent(cat.name)}`
+											)
+										}
+									>
+										<Text
+											style={[
+												styles.categoryText,
+												isSelected && { color: "#000", fontWeight: "700" },
+											]}
+										>
+											{cat.name}
+										</Text>
+									</TouchableOpacity>
+								);
+							})}
+						</ScrollView>
+					)}
+
+					{discountParam !== "true" && (
+						<TouchableOpacity
+							style={[styles.categoryBtn, { backgroundColor: "#ddd" }]}
+							onPress={() => setFilterOpen(true)}
+						>
+							<Feather name="sliders" size={18} color="#000" />
+						</TouchableOpacity>
+					)}
 				</View>
 
 				{/* Products Grid */}
