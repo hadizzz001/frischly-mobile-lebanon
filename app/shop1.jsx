@@ -10,9 +10,7 @@ import { useEffect, useState } from "react";
 import {
 	ActivityIndicator,
 	Dimensions,
-	FlatList,
 	Image,
-	ScrollView,
 	SectionList,
 	StyleSheet,
 	Text,
@@ -68,7 +66,7 @@ export default function ShopPage() {
 					return {
 						title: subName,
 						data: rows,
-						key: subName
+						key: subName,
 					};
 				});
 				setSections(sectionsData);
@@ -257,7 +255,7 @@ export default function ShopPage() {
 				sections={sections}
 				keyExtractor={(item, index) => {
 					// item is a row (array of products), create key from first product ID and index
-					return `row-${item[0]?._id || 'unknown'}-${index}`;
+					return `row-${item[0]?._id || "unknown"}-${index}`;
 				}}
 				renderItem={({ item: row }) => (
 					<View style={styles.row}>
@@ -303,8 +301,8 @@ const styles = StyleSheet.create({
 		marginBottom: 10,
 	},
 	row: {
-		flexDirection: 'row',
-		justifyContent: 'space-between',
+		flexDirection: "row",
+		justifyContent: "space-between",
 		marginBottom: 10,
 	},
 	grid: {
