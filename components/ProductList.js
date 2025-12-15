@@ -343,9 +343,10 @@ const styles = StyleSheet.create({
 	},
 	qtyBtn: {
 		backgroundColor: "#ffc300",
-		paddingHorizontal: 8,
-		paddingVertical: 2,
 		borderRadius: 4,
+		paddingHorizontal: 10,
+		paddingVertical: 8,
+		marginHorizontal: 4,
 	},
 	qtyText: { fontSize: 14, fontWeight: "700", color: "#fff" },
 	qtyValue: {

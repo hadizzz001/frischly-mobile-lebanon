@@ -795,8 +795,8 @@ const styles = StyleSheet.create({
 	qtyBtn: {
 		backgroundColor: "#ffc300",
 		borderRadius: 4,
-		paddingHorizontal: 6,
-		paddingVertical: 4,
+		paddingHorizontal: 10,
+		paddingVertical: 8,
 		marginHorizontal: 4,
 	},
 

@@ -292,10 +292,11 @@ const styles = StyleSheet.create({
 		marginTop: 6,
 	},
 	qtyBtn: {
-		backgroundColor: "#FFC300",
-		paddingHorizontal: 8,
-		paddingVertical: 2,
+		backgroundColor: "#ffc300",
 		borderRadius: 4,
+		paddingHorizontal: 10,
+		paddingVertical: 8,
+		marginHorizontal: 4,
 	},
 	qtyText: {
 		fontSize: 14,
