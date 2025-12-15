@@ -219,11 +219,14 @@ export default function Register() {
 			return;
 		}
 
-		const sanitizedPhone = phone.replace(/\D/g, "");
+const sanitizedPhone = phone.replace(/\D/g, "");
+
+// full international number
+const fullPhoneNumber = `${countryCode}${sanitizedPhone}`;
 
 		const userData = {
 			name,
-			phoneNumber: sanitizedPhone,
+			phoneNumber: fullPhoneNumber,
 			email: email.toLowerCase(),
 			password,
 			address: { street, city, state: stateVal, zipCode, country: "DE" },
