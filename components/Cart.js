@@ -2,14 +2,17 @@ import { useBooleanValue } from "@/contexts/CartBoolContext";
 import { useCart } from "@/contexts/CartContext";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useState } from "react";
 import {
 	Image,
+	Modal,
 	ScrollView,
 	StyleSheet,
 	Text,
 	TouchableOpacity,
 	View,
 } from "react-native";
+
 
 import { useTranslation } from "@/contexts/TranslationContext";
 
@@ -20,13 +23,39 @@ const Cart = () => {
 		useCart();
 
 	const { isBooleanValue, setBooleanValue } = useBooleanValue();
+	const [showModal, setShowModal] = useState(false);
+	const [modalResponse, setModalResponse] = useState(null);
+
+	const handleModalResponse = (response) => {
+		setShowModal(false);
+		setModalResponse(response);
+
+		if (response === "yes") {
+			router.push("/checkout");
+		}
+	};
+
 	const router = useRouter();
 
 	const handleRemoveFromCart = (itemId) => {
 		removeFromCart(itemId);
 	};
 
-	const goToCart = () => router.push("/checkout");
+	const goToCart = () => {
+
+		const has18PlusItem = cart.some((item) => item?.is18Plus === true);
+
+		console.log("18 == ", has18PlusItem);
+
+		if (has18PlusItem) {
+			setShowModal(true); // show modal on parent
+			return; // STOP here for now
+		}
+		router.push("/checkout");
+
+
+	};
+
 
 	return (
 		<View style={styles.container}>
@@ -79,6 +108,74 @@ const Cart = () => {
 					<Text style={styles.checkoutText}>{t("goToCheckout")}</Text>
 				</TouchableOpacity>
 			</View>
+
+
+			<Modal visible={showModal} transparent animationType="slide">
+				<View style={styles.modalBackground}>
+					<View style={styles.modalContainer}>
+						<Text
+							style={{
+								marginBottom: 20,
+								textAlign: "center",
+								fontWeight: "bold",
+							}}
+						>
+							{t("ageVerificationTitle")}
+						</Text>
+
+						<Text style={{ marginBottom: 30, textAlign: "center" }}>
+							{t("ageVerification")}
+						</Text>
+
+						<View style={{ width: "100%" }}>
+							{/* YES */}
+							<TouchableOpacity
+								onPress={() => handleModalResponse("yes")}
+								style={{
+									backgroundColor: "#ffc300",
+									paddingVertical: 16,
+									borderRadius: 8,
+									marginBottom: 15,
+									width: "100%",
+								}}
+							>
+								<Text
+									style={{
+										color: "black",
+										textAlign: "center",
+										fontWeight: "bold",
+										fontSize: 18,
+									}}
+								>
+									{t("yes")}
+								</Text>
+							</TouchableOpacity>
+
+							{/* NO */}
+							<TouchableOpacity
+								onPress={() => handleModalResponse("no")}
+								style={{
+									paddingVertical: 16,
+									borderRadius: 8,
+									width: "100%",
+								}}
+							>
+								<Text
+									style={{
+										color: "#ffc300",
+										textAlign: "center",
+										fontWeight: "bold",
+										fontSize: 18,
+									}}
+								>
+									{t("no")}
+								</Text>
+							</TouchableOpacity>
+						</View>
+					</View>
+				</View>
+			</Modal>
+
 		</View>
 	);
 };
@@ -192,4 +289,17 @@ const styles = StyleSheet.create({
 		color: "#000000",
 		fontWeight: "bold",
 	},
+	modalBackground: {
+		flex: 1,
+		backgroundColor: "rgba(0,0,0,0.5)",
+		justifyContent: "center",
+		alignItems: "center",
+	},
+	modalContainer: {
+		backgroundColor: "#fff",
+		padding: 20,
+		borderRadius: 10,
+		width: "80%",
+	},
+
 });

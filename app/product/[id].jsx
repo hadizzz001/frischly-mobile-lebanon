@@ -33,6 +33,9 @@ const ProductPage = () => {
 	const [categories, setCategories] = useState([]);
 	const [user, setUser] = useState(null);
 	const [showModal, setShowModal] = useState(false);
+const [showAgeModal, setShowAgeModal] = useState(false);
+
+
 
 	const token = process.env.EXPO_PUBLIC_JWT_TOKEN;
 
@@ -110,6 +113,30 @@ const ProductPage = () => {
 	} = product;
 
 	const isOutOfStock = stock === 0;
+
+
+	const handleGoToCheckout = () => {
+	const has18PlusItem = cart.some(
+		(item) => item?.is18Plus === true
+	);
+
+	if (has18PlusItem) {
+		setShowAgeModal(true);
+		return;
+	}
+
+	router.push("/checkout");
+};
+
+const handleAgeResponse = (response) => {
+	setShowAgeModal(false);
+
+	if (response === "yes") {
+		router.push("/checkout");
+	}
+};
+
+
 
 	return (
 		<View style={{ flex: 1, backgroundColor: "#fff" }}>
@@ -220,7 +247,8 @@ const ProductPage = () => {
 					{/* Add to Cart / Checkout */}
 					{isInCart ? (
 						<TouchableOpacity
-							onPress={() => navigation.navigate("checkout")}
+							onPress={handleGoToCheckout}
+
 							style={styles.button}
 						>
 							<Text style={styles.buttonText}>{t("goToCheckout")}</Text>
@@ -380,6 +408,73 @@ const ProductPage = () => {
 					<Cart />
 				</View>
 			)}
+
+			<Modal visible={showAgeModal} transparent animationType="slide">
+	<View style={styles.modalBackground}>
+		<View style={styles.modalContainer}>
+			<Text
+				style={{
+					marginBottom: 20,
+					textAlign: "center",
+					fontWeight: "bold",
+				}}
+			>
+				{t("ageVerificationTitle")}
+			</Text>
+
+			<Text style={{ marginBottom: 30, textAlign: "center" }}>
+				{t("ageVerification")}
+			</Text>
+
+			<View style={{ width: "100%" }}>
+				{/* YES */}
+				<TouchableOpacity
+					onPress={() => handleAgeResponse("yes")}
+					style={{
+						backgroundColor: "#ffc300",
+						paddingVertical: 16,
+						borderRadius: 8,
+						marginBottom: 15,
+						width: "100%",
+					}}
+				>
+					<Text
+						style={{
+							color: "black",
+							textAlign: "center",
+							fontWeight: "bold",
+							fontSize: 18,
+						}}
+					>
+						{t("yes")}
+					</Text>
+				</TouchableOpacity>
+
+				{/* NO */}
+				<TouchableOpacity
+					onPress={() => handleAgeResponse("no")}
+					style={{
+						paddingVertical: 16,
+						borderRadius: 8,
+						width: "100%",
+					}}
+				>
+					<Text
+						style={{
+							color: "#ffc300",
+							textAlign: "center",
+							fontWeight: "bold",
+							fontSize: 18,
+						}}
+					>
+						{t("no")}
+					</Text>
+				</TouchableOpacity>
+			</View>
+		</View>
+	</View>
+</Modal>
+
 		</View>
 	);
 };

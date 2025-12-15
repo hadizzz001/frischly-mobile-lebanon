@@ -158,13 +158,16 @@ export default function ShopPage() {
 			// include category & discount param from query
 			if (categoryParam) params.append("category", categoryParam);
 
-			let url;
+let url;
 
-			if (discountParam === "true") {
-				url = `https://frischlyshop-server.onrender.com/api/products/discount?limit=1000`;
-			} else {
-				url = `https://frischlyshop-server.onrender.com/api/products?${params.toString()}`;
-			}
+// ✅ If discount from URL OR filter toggle
+if (discountParam === "true" || filters.discount === true) {
+  params.append("minDiscount", filters.minDiscount || 1);
+
+  url = `https://frischlyshop-server.onrender.com/api/products/discount?${params.toString()}`;
+} else {
+  url = `https://frischlyshop-server.onrender.com/api/products?${params.toString()}`;
+}
 
 			console.log("URL:", url);
 
