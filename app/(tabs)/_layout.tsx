@@ -1,67 +1,119 @@
-import { Feather } from "@expo/vector-icons";
-import { Tabs } from "expo-router";
-import { useEffect, useState } from "react";
-import { ActivityIndicator, Platform, StyleSheet, View } from "react-native";
-
 import { HapticTab } from "@/components/HapticTab";
 import TabBarBackground from "@/components/ui/TabBarBackground";
 import { useCart } from "@/contexts/CartContext";
+import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useRouter } from "expo-router";
+import { Tabs, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, Platform, StyleSheet, View } from "react-native";
+import { usePushNotifications } from "../../usePushNotifications";
 
-export default function TabLayout() { 
+export default function TabLayout() {
 	const { cart } = useCart();
 	const [loading, setLoading] = useState(true);
 	const router = useRouter();
-	const [user, setUser] = useState(null);
-
+	const [user, setUser] = useState(null); 
 	// Tabs to show
 	const visibleTabs = ["index", "menu", "cart", "acc"];
-
+	  const { expoPushToken } = usePushNotifications(); 
+console.log("expoPushToken:", expoPushToken?.data);
 	// Check login
-	useEffect(() => {
-		const checkLogin = async () => {
-			const userData = await AsyncStorage.getItem("userData");
-			const guest = await AsyncStorage.getItem("guest");
+useEffect(() => {
+	const checkLogin = async () => {
+		console.log("🔍 checkLogin started");
 
-			if (!userData && !guest) {
-				router.replace("/start");
-			} else {
-				try {
-					// ✅ Parse userData and get token
-					const parsedUser = userData ? JSON.parse(userData) : null;
-					const token = parsedUser?.token;
+		const userData = await AsyncStorage.getItem("userData");
+		const guest = await AsyncStorage.getItem("guest");
 
-					if (!token) {
-						console.error("⚠️ No token found in userData");
-						setLoading(false);
-						return;
-					}
+		console.log("📦 userData:", userData);
+		console.log("👤 guest:", guest);
 
-					const res = await fetch(
-						"https://frischlyshop-server.onrender.com/api/auth/me",
-						{
-							headers: {
-								Authorization: `Bearer ${token}`,
-								"Content-Type": "application/json",
-							},
-						}
-					);
+		if (!userData && !guest) {
+			console.warn("🚪 No user or guest found → redirecting");
+			router.replace("/start");
+			return;
+		}
 
-					if (res.ok) {
-						const data = await res.json();
-						setUser(data.data.user);
-					} else {
-						console.error("❌ Failed to fetch user:", res.status);
-					}
-				} catch (err) {
-					console.error("🔥 Network/Fetch error:", err);
-				}
+		try {
+			const parsedUser = userData ? JSON.parse(userData) : null;
+			const token = parsedUser?.token;
+
+			console.log("🔑 Auth token:", token);
+
+			if (!token) {
+				console.error("⚠️ No token found in userData");
 				setLoading(false);
+				return;
 			}
-		};
-		checkLogin();
-	}, [router]);
+
+			// 🔹 Fetch logged-in user
+			console.log("📡 Fetching /api/auth/me");
+
+			const res = await fetch(
+				"https://frischlyshop-server.onrender.com/api/auth/me",
+				{
+					headers: {
+						Authorization: `Bearer ${token}`,
+						"Content-Type": "application/json",
+					},
+				}
+			);
+
+			console.log("📨 /me response status:", res.status);
+
+			if (!res.ok) {
+				console.error("❌ Failed to fetch user");
+				setLoading(false);
+				return;
+			}
+
+			const data = await res.json();
+			const user = data.data.user;
+
+			console.log("✅ User fetched:", user);
+			setUser(user);
+
+			// 🔹 Send FCM token to server after login
+			const fcmToken = expoPushToken?.data; // or however you get it
+			if (fcmToken) {
+				console.log("📲 Sending FCM token to server:", fcmToken);
+
+				const fcmRes = await fetch(
+					"https://frischlyshop-server.onrender.com/api/notifications/token",
+					{
+						method: "POST",
+						headers: {
+							Authorization: `Bearer ${token}`,
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({
+							userId: user._id, // assuming user._id is the ID
+							fcmToken: fcmToken,
+						}),
+					}
+				);
+
+				if (fcmRes.ok) {
+					console.log("✅ FCM token sent successfully");
+				} else {
+					console.error("❌ Failed to send FCM token:", fcmRes.status);
+				}
+			} else {
+				console.warn("⚠️ No FCM token found to send");
+			}
+
+		} catch (err) {
+			console.error("🔥 Network/Fetch error:", err);
+		}
+
+		setLoading(false);
+		console.log("🏁 checkLogin finished");
+	};
+
+	checkLogin();
+}, [router, expoPushToken?.data]);
+
+ 
 
 	if (loading) {
 		return (
@@ -73,6 +125,9 @@ export default function TabLayout() {
 
 	return (
 		<View style={{ flex: 1 }}>
+
+		     
+     
 			{/* Bottom Tabs */}
 			<Tabs
 				screenOptions={{
