@@ -2,24 +2,29 @@ import { useCart } from "@/contexts/CartContext";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { Picker } from "@react-native-picker/picker";
 import axios from "axios";
 import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
+
+
 import {
-	Alert,
-	Image,
-	Modal,
-	ScrollView,
-	StyleSheet,
-	Text,
-	TextInput,
-	TouchableOpacity,
-	View,
+    Alert,
+    Image,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import OrderComponent from "../components/CreateOrderButton";
+
 
 const CheckoutScreen = () => {
     const { t } = useTranslation();
@@ -31,6 +36,13 @@ const CheckoutScreen = () => {
     const [deliveryFee, setDeliveryFee] = useState(0);
     const [total, setTotal] = useState("0.00");
     const [zones, setZones] = useState([]);
+
+
+    const [deliveryTime, setDeliveryTime] = useState(new Date());
+const [showDatePicker, setShowDatePicker] = useState(false);
+const [pickerMode, setPickerMode] = useState("date"); // "date" | "time"
+
+
 
     const [country, setCountry] = useState("");
     const [cities, setCities] = useState([]);
@@ -60,6 +72,9 @@ const CheckoutScreen = () => {
         },
         country: "",
     });
+
+
+ 
 
     useEffect(() => {
         const fetchZones = async () => {
@@ -218,6 +233,16 @@ const CheckoutScreen = () => {
 
     const handleRemoveFromCart = (id) => removeFromCart(id);
 
+
+
+    useEffect(() => {
+    console.log("🚚 Delivery Time:", deliveryTime);
+    console.log("📅 ISO:", deliveryTime.toISOString());
+    console.log("⏰ Local:", deliveryTime.toString());
+}, [deliveryTime]);
+
+ 
+
     if (state.loading) {
         return (
             <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
@@ -331,6 +356,47 @@ const CheckoutScreen = () => {
                     </Picker>
                 </View>
 
+
+
+
+{showDatePicker && (
+    <DateTimePicker
+        value={deliveryTime}
+        mode={Platform.OS === "android" ? pickerMode : "datetime"}
+        display={Platform.OS === "android" ? "spinner" : "default"}
+        minimumDate={new Date()}
+        onChange={(event, selectedDate) => {
+            if (event.type !== "set") {
+                setShowDatePicker(false);
+                setPickerMode("date");
+                return;
+            }
+
+            if (Platform.OS === "android") {
+                if (pickerMode === "date") {
+                    // user picked date → now pick time
+                    const newDate = selectedDate || deliveryTime;
+                    setDeliveryTime(newDate);
+                    setPickerMode("time");
+                } else {
+                    // user picked time → done
+                    const newDate = selectedDate || deliveryTime;
+                    setDeliveryTime(newDate);
+                    setShowDatePicker(false);
+                    setPickerMode("date");
+                }
+            } else {
+                // iOS
+                setDeliveryTime(selectedDate);
+                setShowDatePicker(false);
+            }
+        }}
+    />
+)}
+
+
+
+
                 <View style={styles.row}>
                     <TextInput
                         style={[styles.input, { flex: 1 }]}
@@ -348,6 +414,27 @@ const CheckoutScreen = () => {
                     onChangeText={(v) => handleInput("street", v)}
                 />
 
+
+
+
+                <Text style={styles.heading}>Delivery Time</Text>
+
+<TouchableOpacity
+    onPress={() => setShowDatePicker(true)}
+    style={styles.input}
+>
+    <Text>
+        {deliveryTime.toLocaleString("en-US", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "numeric",
+            minute: "2-digit",
+            second: "2-digit",
+            hour12: true,
+        })}
+    </Text>
+</TouchableOpacity>
                 <Text style={styles.heading}>{t("paymentMethod")}</Text>
 
                 <View style={styles.paymentOptions}>
@@ -452,6 +539,7 @@ const CheckoutScreen = () => {
                     setShowModal={setShowModal}
                     modalResponse={modalResponse}
                     paymentMethod={paymentMethod}
+                    deliveryTime={deliveryTime.toISOString()}
                 />
             </ScrollView>
 <Modal visible={showModal} transparent animationType="slide">

@@ -3,10 +3,12 @@
 import { useTranslation } from "@/contexts/TranslationContext";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { Picker } from "@react-native-picker/picker";
 import axios from "axios";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
+
 import {
 	Alert,
 	Dimensions,
@@ -174,6 +176,10 @@ export default function Register() {
 	const [stateVal, setStateVal] = useState("");
 	const [country, setCountry] = useState("");
 	const [countryData, setCountryData] = useState(null);
+const [dateOfBirth, setDateOfBirth] = useState(null); // Date object
+const [showDatePicker, setShowDatePicker] = useState(false);
+
+
 	const languages = [
 		{ code: "en", name: "English", flag: "https://flagcdn.com/w40/gb.png" },
 		{ code: "de", name: "Deutsch", flag: "https://flagcdn.com/w40/de.png" },
@@ -208,16 +214,38 @@ export default function Register() {
 		if (userData) router.replace("/tabs");
 	};
 
+
+	const isAdult = (dob) => {
+  const today = new Date();
+  const age = today.getFullYear() - dob.getFullYear();
+  const m = today.getMonth() - dob.getMonth();
+
+  if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+    return age - 1;
+  }
+  return age;
+};
+
+
 	// -------------------------
 	// Register handler
 	// -------------------------
 	const handleRegister = async () => {
 		console.log("Register function called");
 
-		if (!name || !phone || !password || !zipCode) {
-			Alert.alert(t("errorTitle"), t("registerMissingFields"));
-			return;
-		}
+if (!name || !phone || !password || !zipCode || !dateOfBirth) {
+  Alert.alert(t("errorTitle"), t("registerMissingFields"));
+  return;
+}
+
+if (isAdult(dateOfBirth) < 18) {
+  Alert.alert(
+    t("errorTitle"),
+    t("mustBe18") || "You must be at least 18 years old"
+  );
+  return;
+}
+
 
 const sanitizedPhone = phone.replace(/\D/g, "");
 
@@ -226,6 +254,7 @@ const fullPhoneNumber = `${countryCode}${sanitizedPhone}`;
 
 		const userData = {
 			name,
+			 dateOfBirth: dateOfBirth.toISOString(), // ✅ Date object
 			phoneNumber: fullPhoneNumber,
 			email: email.toLowerCase(),
 			password,
@@ -385,6 +414,39 @@ const fullPhoneNumber = `${countryCode}${sanitizedPhone}`;
 							placeholderTextColor={placeholderColor}
 						/>
 					</View>
+
+{/* Date of Birth */}
+<TouchableOpacity onPress={() => setShowDatePicker(true)}>
+  <View pointerEvents="none">
+    <InputBox
+      placeholder={t("dateOfBirth")}
+      value={
+        dateOfBirth
+          ? dateOfBirth.toISOString().split("T")[0] // YYYY-MM-DD
+          : ""
+      }
+      inputBg={inputBg}
+      inputText={inputText}
+      placeholderColor={placeholderColor}
+      editable={false}
+    />
+  </View>
+</TouchableOpacity>
+
+{showDatePicker && (
+  <DateTimePicker
+    value={dateOfBirth || new Date(2000, 0, 1)}
+    mode="date"
+    display={Platform.OS === "ios" ? "spinner" : "default"}
+    maximumDate={new Date()} // 🔒 no future dates
+    onChange={(event, selectedDate) => {
+      setShowDatePicker(false);
+      if (selectedDate) setDateOfBirth(selectedDate);
+    }}
+  />
+)}
+
+
 
 					<InputBox
 						placeholder={t("email")}

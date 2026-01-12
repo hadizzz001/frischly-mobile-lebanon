@@ -214,6 +214,8 @@ export const translations = {
 		privacyContactTitle: "Contact Us",
 		privacyContact:
 			"If you have any questions about this privacy policy, please contact us at info@frischlyshop.com.",
+			        dateOfBirth: "Date of Birth",
+        mustBe18: "Must be 18 years old and above.",
 	},
 
 	de: {
@@ -433,5 +435,7 @@ export const translations = {
 		privacyContactTitle: "Kontaktieren Sie uns",
 		privacyContact:
 			"Wenn Sie Fragen zu dieser Datenschutzrichtlinie haben, kontaktieren Sie uns bitte unter info@frischlyshop.com.",
-	},
+	            dateOfBirth: "Geburtsdatum",
+            mustBe18: "Muss mindestens 18 Jahre alt sein.",
+		},
 };

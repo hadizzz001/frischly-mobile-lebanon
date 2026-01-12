@@ -3,6 +3,7 @@ import { useTranslation } from "@/contexts/TranslationContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
+
 import {
 	ActivityIndicator,
 	Alert,
@@ -19,6 +20,7 @@ const CheckoutPage = ({
 	setShowModal,
 	modalResponse,
 	paymentMethod = "card",
+	deliveryTime
 }) => {
 	const router = useRouter();
 	const [loading, setLoading] = useState(false);
@@ -91,6 +93,7 @@ const CheckoutPage = ({
 				items: orderItems,
 				paymentMethod: paymentMethod,
 				notes: "Order placed from mobile app",
+				deliveryTime
 			};
 
 			const orderRes = await fetch(
