@@ -1,13 +1,32 @@
 {
   "project_info": {
-    "project_number": "854092693447",
-    "project_id": "frischly-2a318",
-    "storage_bucket": "frischly-2a318.firebasestorage.app"
+    "project_number": "463444827922",
+    "project_id": "frischlyshop",
+    "storage_bucket": "frischlyshop.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:854092693447:android:f78f10f3925f67a554e3e2",
+        "mobilesdk_app_id": "1:463444827922:android:02e0a329e45836cb299dcb",
+        "android_client_info": {
+          "package_name": "com.alihadimedlej001.frischlyshop1"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBaJpl1O-yuknqR-weGyOORPqrkR2szd5M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:463444827922:android:098ae7e551b45be1299dcb",
         "android_client_info": {
           "package_name": "com.alihadimedlej001.myMob"
         }
@@ -15,7 +34,26 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyDIjeWOKkymmM9RdiUytCbmuI44DHqVXrc"
+          "current_key": "AIzaSyBaJpl1O-yuknqR-weGyOORPqrkR2szd5M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:463444827922:android:7537d38595628ada299dcb",
+        "android_client_info": {
+          "package_name": "com.example.warehouse_stuff_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBaJpl1O-yuknqR-weGyOORPqrkR2szd5M"
         }
       ],
       "services": {
