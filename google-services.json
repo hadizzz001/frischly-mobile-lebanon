@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "854092693447",
+    "project_id": "frischly-2a318",
+    "storage_bucket": "frischly-2a318.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:854092693447:android:f78f10f3925f67a554e3e2",
+        "android_client_info": {
+          "package_name": "com.alihadimedlej001.myMob"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDIjeWOKkymmM9RdiUytCbmuI44DHqVXrc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

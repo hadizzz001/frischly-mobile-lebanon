@@ -39,8 +39,8 @@ const CheckoutScreen = () => {
 
 
     const [deliveryTime, setDeliveryTime] = useState(new Date());
-const [showDatePicker, setShowDatePicker] = useState(false);
-const [pickerMode, setPickerMode] = useState("date"); // "date" | "time"
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    const [pickerMode, setPickerMode] = useState("date"); // "date" | "time"
 
 
 
@@ -74,7 +74,7 @@ const [pickerMode, setPickerMode] = useState("date"); // "date" | "time"
     });
 
 
- 
+
 
     useEffect(() => {
         const fetchZones = async () => {
@@ -236,12 +236,12 @@ const [pickerMode, setPickerMode] = useState("date"); // "date" | "time"
 
 
     useEffect(() => {
-    console.log("🚚 Delivery Time:", deliveryTime);
-    console.log("📅 ISO:", deliveryTime.toISOString());
-    console.log("⏰ Local:", deliveryTime.toString());
-}, [deliveryTime]);
+        console.log("🚚 Delivery Time:", deliveryTime);
+        console.log("📅 ISO:", deliveryTime.toISOString());
+        console.log("⏰ Local:", deliveryTime.toString());
+    }, [deliveryTime]);
 
- 
+
 
     if (state.loading) {
         return (
@@ -359,40 +359,6 @@ const [pickerMode, setPickerMode] = useState("date"); // "date" | "time"
 
 
 
-{showDatePicker && (
-    <DateTimePicker
-        value={deliveryTime}
-        mode={Platform.OS === "android" ? pickerMode : "datetime"}
-        display={Platform.OS === "android" ? "spinner" : "default"}
-        minimumDate={new Date()}
-        onChange={(event, selectedDate) => {
-            if (event.type !== "set") {
-                setShowDatePicker(false);
-                setPickerMode("date");
-                return;
-            }
-
-            if (Platform.OS === "android") {
-                if (pickerMode === "date") {
-                    // user picked date → now pick time
-                    const newDate = selectedDate || deliveryTime;
-                    setDeliveryTime(newDate);
-                    setPickerMode("time");
-                } else {
-                    // user picked time → done
-                    const newDate = selectedDate || deliveryTime;
-                    setDeliveryTime(newDate);
-                    setShowDatePicker(false);
-                    setPickerMode("date");
-                }
-            } else {
-                // iOS
-                setDeliveryTime(selectedDate);
-                setShowDatePicker(false);
-            }
-        }}
-    />
-)}
 
 
 
@@ -417,24 +383,60 @@ const [pickerMode, setPickerMode] = useState("date"); // "date" | "time"
 
 
 
-                <Text style={styles.heading}>Delivery Time</Text>
+                <Text style={styles.heading}>{t("dtime")}</Text>
 
-<TouchableOpacity
-    onPress={() => setShowDatePicker(true)}
-    style={styles.input}
->
-    <Text>
-        {deliveryTime.toLocaleString("en-US", {
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-            hour: "numeric",
-            minute: "2-digit",
-            second: "2-digit",
-            hour12: true,
-        })}
-    </Text>
-</TouchableOpacity>
+                <TouchableOpacity
+                    onPress={() => setShowDatePicker(true)}
+                    style={styles.input}
+                >
+                    <Text>
+                        {deliveryTime.toLocaleString("en-US", {
+                            year: "numeric",
+                            month: "2-digit",
+                            day: "2-digit",
+                            hour: "numeric",
+                            minute: "2-digit",
+                            second: "2-digit",
+                            hour12: true,
+                        })}
+                    </Text>
+
+
+                {showDatePicker && (
+                    <DateTimePicker
+                        value={deliveryTime}
+                        mode={Platform.OS === "android" ? pickerMode : "datetime"}
+                        display={Platform.OS === "android" ? "spinner" : "default"}
+                        minimumDate={new Date()}
+                        onChange={(event, selectedDate) => {
+                            if (event.type !== "set") {
+                                setShowDatePicker(false);
+                                setPickerMode("date");
+                                return;
+                            }
+
+                            if (Platform.OS === "android") {
+                                if (pickerMode === "date") {
+                                    // user picked date → now pick time
+                                    const newDate = selectedDate || deliveryTime;
+                                    setDeliveryTime(newDate);
+                                    setPickerMode("time");
+                                } else {
+                                    // user picked time → done
+                                    const newDate = selectedDate || deliveryTime;
+                                    setDeliveryTime(newDate);
+                                    setShowDatePicker(false);
+                                    setPickerMode("date");
+                                }
+                            } else {
+                                // iOS
+                                setDeliveryTime(selectedDate);
+                                setShowDatePicker(false);
+                            }
+                        }}
+                    />
+                )}
+                </TouchableOpacity>
                 <Text style={styles.heading}>{t("paymentMethod")}</Text>
 
                 <View style={styles.paymentOptions}>
@@ -542,66 +544,66 @@ const [pickerMode, setPickerMode] = useState("date"); // "date" | "time"
                     deliveryTime={deliveryTime.toISOString()}
                 />
             </ScrollView>
-<Modal visible={showModal} transparent animationType="slide">
-  <View style={styles.modalBackground}>
-    <View style={styles.modalContainer}>
-      <Text style={{ marginBottom: 20, textAlign: "center" , fontWeight:"bold"}}>
-        {t("ageVerificationTitle")}
-      </Text>
+            <Modal visible={showModal} transparent animationType="slide">
+                <View style={styles.modalBackground}>
+                    <View style={styles.modalContainer}>
+                        <Text style={{ marginBottom: 20, textAlign: "center", fontWeight: "bold" }}>
+                            {t("ageVerificationTitle")}
+                        </Text>
 
-      <Text style={{ marginBottom: 30, textAlign: "center" }}>
-        {t("ageVerification")}
-      </Text>
+                        <Text style={{ marginBottom: 30, textAlign: "center" }}>
+                            {t("ageVerification")}
+                        </Text>
 
-      {/* Buttons container */}
-      <View style={{ width: "100%" }}>
-        {/* YES BUTTON */}
-        <TouchableOpacity
-          onPress={() => handleModalResponse("yes")}
-          style={{
-            backgroundColor: "#ffc300",
-            paddingVertical: 16,
-            borderRadius: 8,
-            marginBottom: 15,
-            width: "100%",
-          }}
-        >
-          <Text
-            style={{
-              color: "black",
-              textAlign: "center",
-              fontWeight: "bold",
-              fontSize: 18,
-            }}
-          >
-            {t("yes")}
-          </Text>
-        </TouchableOpacity>
+                        {/* Buttons container */}
+                        <View style={{ width: "100%" }}>
+                            {/* YES BUTTON */}
+                            <TouchableOpacity
+                                onPress={() => handleModalResponse("yes")}
+                                style={{
+                                    backgroundColor: "#ffc300",
+                                    paddingVertical: 16,
+                                    borderRadius: 8,
+                                    marginBottom: 15,
+                                    width: "100%",
+                                }}
+                            >
+                                <Text
+                                    style={{
+                                        color: "black",
+                                        textAlign: "center",
+                                        fontWeight: "bold",
+                                        fontSize: 18,
+                                    }}
+                                >
+                                    {t("yes")}
+                                </Text>
+                            </TouchableOpacity>
 
-        {/* NO BUTTON */}
-        <TouchableOpacity
-          onPress={() => handleModalResponse("no")}
-          style={{
-            paddingVertical: 16,
-            borderRadius: 8,
-            width: "100%", 
-          }}
-        >
-          <Text
-            style={{
-              color: "#ffc300",
-              textAlign: "center",
-              fontWeight: "bold",
-              fontSize: 18,
-            }}
-          >
-            {t("no")}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  </View>
-</Modal>
+                            {/* NO BUTTON */}
+                            <TouchableOpacity
+                                onPress={() => handleModalResponse("no")}
+                                style={{
+                                    paddingVertical: 16,
+                                    borderRadius: 8,
+                                    width: "100%",
+                                }}
+                            >
+                                <Text
+                                    style={{
+                                        color: "#ffc300",
+                                        textAlign: "center",
+                                        fontWeight: "bold",
+                                        fontSize: 18,
+                                    }}
+                                >
+                                    {t("no")}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
 
         </SafeAreaView>
     );
