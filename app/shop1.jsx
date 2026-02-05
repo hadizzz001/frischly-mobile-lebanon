@@ -34,6 +34,7 @@ export default function ShopPage() {
 	const [sections, setSections] = useState([]);
 	const [quantities, setQuantities] = useState({});
 	const [showQty, setShowQty] = useState({}); // track which products show qty
+	const [currentSectionTitle, setCurrentSectionTitle] = useState("");
 
 	const token =
 		Constants.expoConfig?.extra?.jwtToken || process.env.EXPO_PUBLIC_JWT_TOKEN;
@@ -44,9 +45,12 @@ export default function ShopPage() {
 			setLoading(true);
 			const res = await fetch(
 				`https://frischlyshop-server.onrender.com/api/products?limit=200&sortBy=categorySortOrder&sortOrder=asc&category=${encodeURIComponent(
-					category
-				)}`
+					category,
+				)}`,
 			);
+			if (!res.ok) {
+				throw new Error(`HTTP error! status: ${res.status}`);
+			}
 			const json = await res.json();
 			if (json?.success && json?.data) {
 				const grouped = {};
@@ -99,7 +103,7 @@ export default function ShopPage() {
 								Authorization: `Bearer ${token}`,
 								"Content-Type": "application/json",
 							},
-						}
+						},
 					);
 					if (res.ok) {
 						const data = await res.json();
@@ -136,6 +140,25 @@ export default function ShopPage() {
 			const newQty = currentQty - 1;
 			setQuantities({ ...quantities, [product._id]: newQty });
 			addToCart(product, newQty);
+		}
+	};
+
+	const onViewableItemsChanged = ({ viewableItems }) => {
+		if (viewableItems.length > 0) {
+			const firstVisibleItem = viewableItems[0];
+			// Find the section that contains this item
+			const section = sections.find((sec) =>
+				sec.data.some((row) =>
+					row.some(
+						(product) =>
+							`row-${product._id || "unknown"}-${sec.data.indexOf(row)}` ===
+							firstVisibleItem.key,
+					),
+				),
+			);
+			if (section) {
+				setCurrentSectionTitle(section.title);
+			}
 		}
 	};
 
@@ -250,6 +273,13 @@ export default function ShopPage() {
 				<Text style={styles.headerTitle}>{category}</Text>
 			</View>
 
+			{/* Floating Sticky Header Alternative */}
+			{currentSectionTitle ? (
+				<View style={styles.floatingHeader}>
+					<Text style={styles.floatingHeaderText}>{currentSectionTitle}</Text>
+				</View>
+			) : null}
+
 			{/* Grouped Products with SectionList */}
 			<SectionList
 				sections={sections}
@@ -265,11 +295,19 @@ export default function ShopPage() {
 				renderSectionHeader={({ section: { title } }) => (
 					<Text style={styles.subcategoryTitle}>{title}</Text>
 				)}
-				contentContainerStyle={{ paddingBottom: 120, paddingHorizontal: 10 }}
+				contentContainerStyle={{
+					paddingBottom: 120,
+					paddingHorizontal: 10,
+				}}
 				showsVerticalScrollIndicator={false}
 				initialNumToRender={10}
 				maxToRenderPerBatch={10}
 				windowSize={10}
+				stickySectionHeadersEnabled={false}
+				onViewableItemsChanged={onViewableItemsChanged}
+				viewabilityConfig={{
+					itemVisiblePercentThreshold: 50,
+				}}
 			/>
 		</SafeAreaView>
 	);
@@ -382,5 +420,17 @@ const styles = StyleSheet.create({
 	safeArea: {
 		flex: 1,
 		backgroundColor: "#fff",
+	},
+	floatingHeader: {
+		backgroundColor: "#fff",
+		paddingVertical: 8,
+		paddingHorizontal: 10,
+		borderBottomWidth: 1,
+		borderBottomColor: "#eee",
+	},
+	floatingHeaderText: {
+		fontSize: 18,
+		fontWeight: "700",
+		color: "#000",
 	},
 });

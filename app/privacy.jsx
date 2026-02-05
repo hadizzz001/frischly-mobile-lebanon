@@ -26,7 +26,17 @@ const PrivacyPolicy = () => {
 			<Text style={styles.paragraph}>{t("privacyChanges")}</Text>
 
 			<Text style={styles.subtitle}>6. {t("privacyContactTitle")}</Text>
-			<Text style={styles.paragraph}>{t("privacyContact")}</Text>
+			<Text style={styles.paragraph}>
+				{t("privacyContactEmail")}
+				{"\n"}
+				{t("privacyContactPhone")}
+				{"\n\n"}
+				{t("privacyContactCompany")}
+				{"\n"}
+				{t("privacyContactManager")}
+				{"\n"}
+				{t("privacyContactAddress")}
+			</Text>
 		</ScrollView>
 	);
 };

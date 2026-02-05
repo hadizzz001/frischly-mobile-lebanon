@@ -20,7 +20,9 @@ const CheckoutPage = ({
 	setShowModal,
 	modalResponse,
 	paymentMethod = "card",
-	deliveryTime
+	deliveryTime,
+	appliedPromo,
+	discountAmount,
 }) => {
 	const router = useRouter();
 	const [loading, setLoading] = useState(false);
@@ -93,7 +95,11 @@ const CheckoutPage = ({
 				items: orderItems,
 				paymentMethod: paymentMethod,
 				notes: "Order placed from mobile app",
-				deliveryTime
+				deliveryTime,
+				...(appliedPromo && {
+					promoCode: appliedPromo.promoCode.id,
+					discountAmount: discountAmount,
+				}),
 			};
 
 			const orderRes = await fetch(
@@ -105,7 +111,7 @@ const CheckoutPage = ({
 						"Content-Type": "application/json",
 					},
 					body: JSON.stringify(orderPayload),
-				}
+				},
 			);
 
 			const data = await orderRes.json();

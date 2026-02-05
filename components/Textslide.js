@@ -1,37 +1,38 @@
 import { Feather } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useState } from "react";
-import { Dimensions, StyleSheet, View } from "react-native";
+import {
+	Dimensions,
+	Modal,
+	ScrollView,
+	StyleSheet,
+	Text,
+	TouchableOpacity,
+	View,
+} from "react-native";
 import TextTicker from "react-native-text-ticker";
 
 const { width } = Dimensions.get("window");
 
 const NewsTicker = ({ refreshTrigger }) => {
 	const [textItems, setTextItems] = useState([]);
+	const [promoData, setPromoData] = useState([]);
+	const [modalVisible, setModalVisible] = useState(false);
 
 	useEffect(() => {
 		const fetchData = async () => {
 			try {
-				const userData = await AsyncStorage.getItem("userData");
-				const parsedUser = userData ? JSON.parse(userData) : null;
-				const token = parsedUser?.token;
-
-				const headers = token ? { Authorization: `Bearer ${token}` } : {};
-
 				const res = await fetch(
-					"https://frischlyshop-server.onrender.com/api/promocodes/public",
-					{
-						headers,
-					}
+					"https://frischlyshop-server.onrender.com/api/announcements/public/active",
 				);
 				const data = await res.json();
 				if (data.success && Array.isArray(data.data)) {
+					setPromoData(data.data);
 					setTextItems(
-						data.data.map((item) => `${item.companyName}: ${item.description}`)
+						data.data.map((item) => `${item.title}: ${item.description}`),
 					);
 				}
 			} catch (error) {
-				console.error("Error fetching promo data:", error);
+				console.error("Error fetching announcement data:", error);
 			}
 		};
 
@@ -42,24 +43,55 @@ const NewsTicker = ({ refreshTrigger }) => {
 
 	return textItems.length > 0 ? (
 		<View style={styles.outerContainer}>
-			<View style={styles.container}>
+			<TouchableOpacity
+				style={styles.container}
+				onPress={() => setModalVisible(true)}
+				activeOpacity={0.8}
+			>
 				<View style={styles.iconContainer}>
 					<Feather name="gift" size={18} color="#FFC300" />
 				</View>
 				<View style={styles.tickerContainer}>
 					<TextTicker
 						style={styles.tickerText}
-						duration={20000}
+						duration={30000}
 						loop
 						bounce={false}
 						repeatSpacer={80}
 						marqueeDelay={1500}
-						scrollSpeed={40}
+						scrollSpeed={10}
 					>
 						{combinedText}
 					</TextTicker>
 				</View>
-			</View>
+			</TouchableOpacity>
+
+			<Modal
+				visible={modalVisible}
+				transparent
+				animationType="slide"
+				onRequestClose={() => setModalVisible(false)}
+			>
+				<View style={styles.modalBackground}>
+					<View style={styles.modalContainer}>
+						<Text style={styles.modalTitle}>Announcements</Text>
+						<ScrollView style={styles.scrollView}>
+							{promoData.map((promo, index) => (
+								<View key={index} style={styles.promoCard}>
+									<Text style={styles.companyName}>{promo.title}</Text>
+									<Text style={styles.description}>{promo.description}</Text>
+								</View>
+							))}
+						</ScrollView>
+						<TouchableOpacity
+							style={styles.closeButton}
+							onPress={() => setModalVisible(false)}
+						>
+							<Text style={styles.closeButtonText}>Close</Text>
+						</TouchableOpacity>
+					</View>
+				</View>
+			</Modal>
 		</View>
 	) : null;
 };
@@ -102,6 +134,65 @@ const styles = StyleSheet.create({
 		color: "#FFFFFF",
 		fontWeight: "600",
 		letterSpacing: 0.3,
+	},
+	modalBackground: {
+		flex: 1,
+		backgroundColor: "rgba(0,0,0,0.5)",
+		justifyContent: "center",
+		alignItems: "center",
+	},
+	modalContainer: {
+		backgroundColor: "#fff",
+		padding: 20,
+		borderRadius: 10,
+		width: "90%",
+		maxHeight: "80%",
+	},
+	modalTitle: {
+		fontSize: 24,
+		fontWeight: "bold",
+		textAlign: "center",
+		marginBottom: 20,
+		color: "#333",
+	},
+	scrollView: {
+		maxHeight: 400,
+	},
+	promoCard: {
+		backgroundColor: "#f9f9f9",
+		padding: 15,
+		borderRadius: 8,
+		marginBottom: 10,
+		borderLeftWidth: 4,
+		borderLeftColor: "#FFC300",
+	},
+	companyName: {
+		fontSize: 18,
+		fontWeight: "bold",
+		color: "#333",
+		marginBottom: 5,
+	},
+	description: {
+		fontSize: 14,
+		color: "#666",
+		marginBottom: 5,
+	},
+	code: {
+		fontSize: 16,
+		fontWeight: "600",
+		color: "#FFC300",
+	},
+	closeButton: {
+		backgroundColor: "#FFC300",
+		paddingVertical: 12,
+		borderRadius: 8,
+		marginTop: 20,
+		alignItems: "center",
+	},
+	closeButtonText: {
+		color: "#000",
+		fontSize: 16,
+		fontWeight: "bold",
 	},
 });
 
