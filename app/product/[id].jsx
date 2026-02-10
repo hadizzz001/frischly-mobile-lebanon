@@ -237,9 +237,14 @@ const handleAgeResponse = (response) => {
 										{t("bottle")}: +€{bottleRefundValue.toFixed(2)}
 									</Text>
 								)}
-								<Text style={styles.finalPrice}>
-									{t("fPrice")}: €{finalPrice.toFixed(2)}
-								</Text>
+								   <Text
+									   style={[
+										   styles.finalPrice,
+										   discountPercent > 0 && { color: 'red' }
+									   ]}
+								   >
+									   {t("fPrice")}: €{finalPrice.toFixed(2)}
+								   </Text>
 							</View>
 						);
 					})()}

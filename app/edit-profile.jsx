@@ -319,8 +319,38 @@ export default function EditProfile() {
 			const data = await res.json().catch(() => ({}));
 
 			if (res.ok && data.success) {
-				Alert.alert(t("success"), t("profileUpdated"));
-				router.back();
+				// Re-fetch user data from API to get updated info
+				try {
+					const userRes = await fetch(
+						"https://frischlyshop-server.onrender.com/api/auth/me",
+						{
+							headers: {
+								Authorization: `Bearer ${token}`,
+								"Content-Type": "application/json",
+							},
+						}
+					);
+
+					if (userRes.ok) {
+						const userData = await userRes.json();
+						// Update AsyncStorage with fresh user data (keep the token)
+						if (userData?.data?.user) {
+							const updatedUserData = {
+								token,
+								user: userData.data.user,
+							};
+							await AsyncStorage.setItem("userData", JSON.stringify(updatedUserData));
+							setUser(userData.data.user);
+						}
+					}
+				} catch (fetchErr) {
+					console.error("⚠️ Failed to re-fetch user data:", fetchErr);
+				}
+
+				Alert.alert(t("success"), t("profileUpdated"), [
+					{ text: "OK", onPress: () => router.back() }
+				]);
+				return;
 			} else {
 				Alert.alert(
 					t("error"),

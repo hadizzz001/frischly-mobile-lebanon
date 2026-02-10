@@ -1,17 +1,17 @@
 import { useTranslation } from "@/contexts/TranslationContext";
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
 import {
-	Alert,
-	Modal,
-	ScrollView,
-	StyleSheet,
-	Text,
-	TextInput,
-	TouchableOpacity,
-	View,
+    Alert,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 export default function AccScreen() {
@@ -56,46 +56,49 @@ export default function AccScreen() {
 		}
 	};
 
-	useEffect(() => {
-		const checkLogin = async () => {
-			const userData = await AsyncStorage.getItem("userData");
-			const guest = await AsyncStorage.getItem("guest");
+	// Re-fetch user data every time the screen comes into focus
+	useFocusEffect(
+		useCallback(() => {
+			const checkLogin = async () => {
+				const userData = await AsyncStorage.getItem("userData");
+				const guest = await AsyncStorage.getItem("guest");
 
-			if (!userData && !guest) {
-				router.replace("/start");
-			} else {
-				try {
-					const parsedUser = userData ? JSON.parse(userData) : null;
-					const token = parsedUser?.token;
+				if (!userData && !guest) {
+					router.replace("/start");
+				} else {
+					try {
+						const parsedUser = userData ? JSON.parse(userData) : null;
+						const token = parsedUser?.token;
 
-					if (!token) {
-						console.error("⚠️ No token found in userData");
-						return;
-					}
-
-					const res = await fetch(
-						"https://frischlyshop-server.onrender.com/api/auth/me",
-						{
-							headers: {
-								Authorization: `Bearer ${token}`,
-								"Content-Type": "application/json",
-							},
+						if (!token) {
+							console.error("⚠️ No token found in userData");
+							return;
 						}
-					);
 
-					if (res.ok) {
-						const data = await res.json();
-						setUser(data.data.user);
-					} else {
-						console.error("❌ Failed to fetch user:", res.status);
+						const res = await fetch(
+							"https://frischlyshop-server.onrender.com/api/auth/me",
+							{
+								headers: {
+									Authorization: `Bearer ${token}`,
+									"Content-Type": "application/json",
+								},
+							}
+						);
+
+						if (res.ok) {
+							const data = await res.json();
+							setUser(data.data.user);
+						} else {
+							console.error("❌ Failed to fetch user:", res.status);
+						}
+					} catch (err) {
+						console.error("🔥 Network/Fetch error:", err);
 					}
-				} catch (err) {
-					console.error("🔥 Network/Fetch error:", err);
 				}
-			}
-		};
-		checkLogin();
-	}, [router]);
+			};
+			checkLogin();
+		}, [router])
+	);
 
 	return (
 		<ScrollView

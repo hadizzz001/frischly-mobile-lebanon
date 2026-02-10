@@ -366,7 +366,7 @@ export const translations = {
 		country: "Land",
 		cancel: "Stornieren",
 		baseP: "Grundpreis",
-		discount: "Diskont",
+		discount: "Rabatt",
 		bottle: "Flaschenrückgabe",
 		fPrice: "Endpreis",
 		aBag: "In den Warenkorb",

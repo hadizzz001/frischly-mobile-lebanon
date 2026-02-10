@@ -633,7 +633,7 @@ const styles = StyleSheet.create({
 		marginRight: 6,
 		fontSize: 13,
 	},
-	finalPrice: { fontSize: 15, fontWeight: "700", color: "#000000" },
+	finalPrice: { fontSize: 15, fontWeight: "700", color: "red" },
 	pagination: {
 		flexDirection: "row",
 		justifyContent: "center",

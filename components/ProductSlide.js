@@ -322,7 +322,7 @@ basePrice: {
 },
 
 finalPrice: {
-  color: "#000",
+  color: "red",
   fontWeight: "bold",
   fontSize: 13,
 },
