@@ -5,12 +5,12 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-	Linking,
-	ScrollView,
-	StyleSheet,
-	Text,
-	TouchableOpacity,
-	View,
+    Linking,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import Svg, { G, Path } from "react-native-svg";
 
@@ -43,7 +43,7 @@ export default function CheckoutSuccessPage() {
 
 				// Fetch orders
 				const ordersRes = await fetch(
-					"https://frischlyshop-server.onrender.com/api/orders",
+					"https://frischly-dash-leb.onrender.com/api/orders",
 					{
 						headers: {
 							Authorization: `Bearer ${token}`,
@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
 		textAlign: "center",
 	},
 	button: {
-		backgroundColor: "#ffc300",
+		backgroundColor: "#f4bb26",
 		borderRadius: 5,
 		height: 50,
 		alignItems: "center",

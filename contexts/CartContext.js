@@ -9,6 +9,22 @@ const cartReducer = (state, action) => {
       return action.payload;
     case "UPDATE_CART":
       return action.payload;
+    case "ADD_ITEMS_TO_CART":
+      return action.payload.reduce((updatedCart, item) => {
+        const existingCartItemIndex = updatedCart.findIndex(
+          (cartItem) => String(cartItem._id) === String(item._id)
+        );
+
+        if (existingCartItemIndex !== -1) {
+          return updatedCart.map((cartItem) =>
+            String(cartItem._id) === String(item._id)
+              ? { ...item, quantity: item.quantity }
+              : cartItem
+          );
+        }
+
+        return [...updatedCart, item];
+      }, state);
     case "REMOVE_FROM_CART":
       return state.filter((item) => item._id !== action.payload);
     case "CLEAR_CART":
@@ -112,6 +128,13 @@ const CartProvider = ({ children }) => {
     }
   };
 
+  const addItemsToCart = (items) => {
+    dispatch({
+      type: "ADD_ITEMS_TO_CART",
+      payload: items,
+    });
+  };
+
   // Remove from cart
   const removeFromCart = (itemId) => {
     dispatch({ type: "REMOVE_FROM_CART", payload: itemId });
@@ -132,6 +155,7 @@ const CartProvider = ({ children }) => {
       value={{
         cart,
         addToCart,
+        addItemsToCart,
         removeFromCart,
         clearCart,
         subtotal,

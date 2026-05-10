@@ -2,9 +2,10 @@ import CatSlider from "@/components/CatSlider";
 import Footer from "@/components/Footer";
 import ProductList from "@/components/ProductList";
 import ProductSlide from "@/components/ProductSlide";
+import RepeatOrderButton from "@/components/RepeatOrderButton";
 import NewsTicker from "@/components/Textslide";
 import { useState } from "react";
-import { RefreshControl, ScrollView } from "react-native";
+import { RefreshControl, ScrollView, View } from "react-native";
 
 export default function HomeScreen() {
 	const [refreshing, setRefreshing] = useState(false);
@@ -15,9 +16,10 @@ export default function HomeScreen() {
 	};
 
 	return (
-		<>
+		<View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
 			<ScrollView
-				style={{ flex: 1, backgroundColor: "#FFFFFF" }}
+				style={{ flex: 1 }}
+				contentContainerStyle={{ paddingBottom: 150 }}
 				refreshControl={
 					<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
 				}
@@ -31,6 +33,7 @@ export default function HomeScreen() {
 				/>
 				<Footer />
 			</ScrollView>
-		</>
+			<RepeatOrderButton />
+		</View>
 	);
 }

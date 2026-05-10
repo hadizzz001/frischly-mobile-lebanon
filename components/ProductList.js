@@ -4,14 +4,14 @@ import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-	ActivityIndicator,
-	Dimensions,
-	FlatList,
-	Image,
-	StyleSheet,
-	Text,
-	TouchableOpacity,
-	View,
+    ActivityIndicator,
+    Dimensions,
+    FlatList,
+    Image,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import Feather from "react-native-vector-icons/Feather";
 
@@ -84,7 +84,7 @@ export default function ShopPage({ refreshTrigger, setRefreshing }) {
 			}
 
 			const res = await fetch(
-				`https://frischlyshop-server.onrender.com/api/products?page=${pageNum}&limit=${LIMIT}&isActive=true&inAds=all&stockLevel=Available&sortBy=categorySortOrder&sortOrder=asc`
+				`https://frischly-dash-leb.onrender.com/api/products?page=${pageNum}&limit=${LIMIT}&isActive=true&inAds=all&stockLevel=Available&sortBy=categorySortOrder&sortOrder=asc`
 			);
 			const json = await res.json();
 			const newProducts = json.data || [];
@@ -123,7 +123,7 @@ export default function ShopPage({ refreshTrigger, setRefreshing }) {
 			} else {
 				try {
 					const res = await fetch(
-						"https://frischlyshop-server.onrender.com/api/auth/me",
+						"https://frischly-dash-leb.onrender.com/api/auth/me",
 						{
 							headers: {
 								Authorization: `Bearer ${token}`,
@@ -243,7 +243,7 @@ export default function ShopPage({ refreshTrigger, setRefreshing }) {
 	if (loading && page === 1) {
 		return (
 			<View style={styles.loader}>
-				<ActivityIndicator size="large" color="#ffc300" />
+				<ActivityIndicator size="large" color="#f4bb26" />
 			</View>
 		);
 	}
@@ -327,7 +327,7 @@ const styles = StyleSheet.create({
 	loadMoreBtn: {
 		margin: 20,
 		padding: 12,
-		backgroundColor: "#ffc300",
+		backgroundColor: "#f4bb26",
 		borderRadius: 8,
 		alignItems: "center",
 	},
@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
 		marginTop: 6,
 	},
 	qtyBtn: {
-		backgroundColor: "#ffc300",
+		backgroundColor: "#f4bb26",
 		borderRadius: 4,
 		paddingHorizontal: 10,
 		paddingVertical: 8,

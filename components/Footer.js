@@ -3,12 +3,12 @@ import { AntDesign, FontAwesome, FontAwesome5 } from "@expo/vector-icons";
 import { useRouter } from "expo-router"; // or next/navigation / @react-navigation/native
 import { useEffect, useState } from "react";
 import {
-	Image,
-	Linking,
-	StyleSheet,
-	Text,
-	TouchableOpacity,
-	View,
+    Image,
+    Linking,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -24,7 +24,7 @@ export default function Footer() {
 		const fetchCategories = async () => {
 			try {
 				const res = await fetch(
-					"https://frischlyshop-server.onrender.com/api/categories"
+					"https://frischly-dash-leb.onrender.com/api/categories"
 				);
 				const data = await res.json();
 				setCategories(data.data || []);
@@ -52,7 +52,7 @@ export default function Footer() {
 			items: [
 				{
 					text: t("contactUs"),
-					action: () => router.push("tel:+4915256429941"),
+					action: () => router.push("tel:+961"),
 				},
 			],
 		},

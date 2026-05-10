@@ -5,12 +5,12 @@ import { Picker } from "@react-native-picker/picker";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-	Alert,
-	StyleSheet,
-	Text,
-	TextInput,
-	TouchableOpacity,
-	View,
+    Alert,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 // -------------------- PaymentForm Component --------------------
@@ -51,7 +51,7 @@ const PaymentForm = () => {
 				if (userData) {
 					const { token } = JSON.parse(userData);
 					const res = await fetch(
-						"https://frischlyshop-server.onrender.com/api/auth/me",
+						"https://frischly-dash-leb.onrender.com/api/auth/me",
 						{
 							headers: {
 								Authorization: `Bearer ${token}`,
@@ -147,7 +147,7 @@ const PaymentForm = () => {
 			console.log("🧾 Final values:", values);
 
 			const res = await fetch(
-				"https://frischlyshop-server.onrender.com/api/auth/profile",
+				"https://frischly-dash-leb.onrender.com/api/auth/profile",
 				{
 					method: "PUT",
 					headers: {
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
 		marginBottom: 12,
 	},
 	button: {
-		backgroundColor: "#ffc300",
+		backgroundColor: "#f4bb26",
 		padding: 15,
 		borderRadius: 8,
 		alignItems: "center",

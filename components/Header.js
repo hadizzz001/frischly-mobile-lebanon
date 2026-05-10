@@ -24,12 +24,12 @@ export default function Header() {
   };
  
   const languages = [
-    { code: "de", name: "Deutsch", flag: "https://flagcdn.com/w40/de.png" },
     { code: "en", name: "English", flag: "https://flagcdn.com/w40/gb.png" },
+    { code: "ar", name: "العربية", flag: "https://flagcdn.com/w40/lb.png" },
 
   ];
 
-  const selectedLang = languages.find((l) => l.code === language);
+  const selectedLang = languages.find((l) => l.code === language) || languages[0];
 
   console.log("Current language:", language);
 
@@ -41,7 +41,7 @@ export default function Header() {
       <TouchableOpacity onPress={() => router.push("/")}>
         <Image
           source={{
-            uri: "https://res.cloudinary.com/dtzuor7no/image/upload/v1762515215/LOGO_frischly2_page-0003-removebg-preview_ek6ugj.png",
+            uri: "https://res.cloudinary.com/dxefurewd/image/upload/v1778403318/freshly_1-removebg-preview_mwrt49.png",
           }}
           style={styles.logo}
           resizeMode="contain"

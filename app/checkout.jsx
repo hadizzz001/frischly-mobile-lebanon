@@ -3,24 +3,22 @@ import { useTranslation } from "@/contexts/TranslationContext";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { Picker } from "@react-native-picker/picker";
-import axios from "axios";
 import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 
 import {
-	ActivityIndicator,
-	Alert,
-	Image,
-	Modal,
-	Platform,
-	ScrollView,
-	StyleSheet,
-	Text,
-	TextInput,
-	TouchableOpacity,
-	View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import OrderComponent from "../components/CreateOrderButton";
@@ -36,21 +34,12 @@ const CheckoutScreen = () => {
 	const [promoLoading, setPromoLoading] = useState(false);
 
 	const { cart, removeFromCart, subtotal, calculatePriceDetails } = useCart();
-	const [deliveryFee, setDeliveryFee] = useState(0);
+	const [deliveryFee] = useState(0);
 	const [total, setTotal] = useState("0.00");
-	const [zones, setZones] = useState([]);
 
 	const [deliveryTime, setDeliveryTime] = useState(new Date());
 	const [showDatePicker, setShowDatePicker] = useState(false);
 	const [pickerMode, setPickerMode] = useState("date"); // "date" | "time"
-
-	const [country, setCountry] = useState("");
-	const [cities, setCities] = useState([]);
-	const [countryData, setCountryData] = useState({
-		code: "",
-		flag: "",
-		dial: "",
-	});
 
 	const router = useRouter();
 	const token =
@@ -65,30 +54,13 @@ const CheckoutScreen = () => {
 			name: "",
 			email: "",
 			phone: "",
-			country: "",
+			country: "LB",
 			state: "",
 			city: "",
-			zipCode: "",
 			street: "",
 		},
-		country: "",
+		country: "LB",
 	});
-
-	useEffect(() => {
-		const fetchZones = async () => {
-			try {
-				const res = await axios.get(
-					"https://frischlyshop-server.onrender.com/api/zones?isActive=true",
-				);
-				if (res.data.success) {
-					setZones(res.data.data); // store array of zones
-				}
-			} catch (error) {
-				console.log("Error fetching zones:", error.message);
-			}
-		};
-		fetchZones();
-	}, []);
 
 	// Check login and fetch user
 	useEffect(() => {
@@ -123,7 +95,7 @@ const CheckoutScreen = () => {
 				}
 
 				const res = await fetch(
-					"https://frischlyshop-server.onrender.com/api/auth/me",
+					"https://frischly-dash-leb.onrender.com/api/auth/me",
 					{
 						headers: {
 							Authorization: `Bearer ${token}`,
@@ -149,13 +121,12 @@ const CheckoutScreen = () => {
 						name: user.name || "",
 						email: user.email || "",
 						phone: user.phoneNumber || "",
-						country: user.address?.country || "",
+						country: "LB",
 						state: user.address?.state || "",
 						city: user.address?.city || "",
-						zipCode: user.address?.zipCode || "",
 						street: user.address?.street || "",
 					},
-					country: user.address?.country || "",
+					country: "LB",
 					loading: false,
 				}));
 			} catch (err) {
@@ -166,36 +137,6 @@ const CheckoutScreen = () => {
 
 		checkLogin();
 	}, [router]);
-
-	// Delivery fee fetch
-	useEffect(() => {
-		const fetchPrice = async () => {
-			if (!state.inputs.zipCode || state.inputs.zipCode.length < 4) {
-				setDeliveryFee(0);
-				return;
-			}
-			try {
-				const response = await fetch(
-					"https://frischlyshop-server.onrender.com/api/zones/calculate-delivery",
-					{
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({ zipCode: state.inputs.zipCode }),
-					},
-				);
-				const data = await response.json();
-				if (data.success) {
-					setDeliveryFee(data.data.deliveryFee);
-				} else {
-					setDeliveryFee(0);
-				}
-			} catch (error) {
-				console.error("Delivery fetch error:", error);
-				setDeliveryFee(0);
-			}
-		};
-		fetchPrice();
-	}, [state.inputs.zipCode]);
 
 	const calculateTotal = () => {
 		const s = Number(subtotal);
@@ -229,7 +170,7 @@ const CheckoutScreen = () => {
 		try {
 			const orderTotal = Number(subtotal) + Number(deliveryFee);
 			const response = await fetch(
-				"https://frischlyshop-server.onrender.com/api/promocodes/validate",
+				"https://frischly-dash-leb.onrender.com/api/promocodes/validate",
 				{
 					method: "POST",
 					headers: {
@@ -349,7 +290,7 @@ const CheckoutScreen = () => {
 						<View pointerEvents="none">
 							<TextInput
 								style={styles.input}
-								value={t("germany")}
+								value={t("lebanon")}
 								editable={false}
 							/>
 						</View>
@@ -369,34 +310,6 @@ const CheckoutScreen = () => {
 					value={state.inputs.state}
 					onChangeText={(v) => handleInput("state", v)}
 				/>
-
-				<View
-					style={{
-						marginBottom: 12,
-						width: "100%",
-						minHeight: 55,
-						borderWidth: 1,
-						borderColor: "#000000",
-						borderRadius: 12,
-						backgroundColor: "#FFFFFF",
-						justifyContent: "center",
-					}}
-				>
-					<Picker
-						selectedValue={state.inputs.zipCode}
-						onValueChange={(itemValue) => handleInput("zipCode", itemValue)}
-						style={{ color: "#000" }}
-					>
-						<Picker.Item label={t("selectZipCode")} value="" />
-						{zones.map((zone) => (
-							<Picker.Item
-								key={zone._id}
-								label={`${zone.zipCode} `} // display both
-								value={zone.zipCode} // only store zipCode
-							/>
-						))}
-					</Picker>
-				</View>
 
 				<View style={styles.row}>
 					<TextInput
@@ -638,7 +551,7 @@ const CheckoutScreen = () => {
 							<TouchableOpacity
 								onPress={() => handleModalResponse("yes")}
 								style={{
-									backgroundColor: "#ffc300",
+									backgroundColor: "#f4bb26",
 									paddingVertical: 16,
 									borderRadius: 8,
 									marginBottom: 15,
@@ -668,7 +581,7 @@ const CheckoutScreen = () => {
 							>
 								<Text
 									style={{
-										color: "#ffc300",
+										color: "#f4bb26",
 										textAlign: "center",
 										fontWeight: "bold",
 										fontSize: 18,
@@ -716,7 +629,7 @@ const styles = StyleSheet.create({
 		marginVertical: 4,
 	},
 	button: {
-		backgroundColor: "#FFC300",
+		backgroundColor: "#f4bb26",
 		padding: 12,
 		borderRadius: 6,
 		alignItems: "center",
@@ -747,8 +660,8 @@ const styles = StyleSheet.create({
 		marginHorizontal: 4,
 	},
 	paymentOptionSelected: {
-		borderColor: "#FFC300",
-		backgroundColor: "#FFC30020",
+		borderColor: "#f4bb26",
+		backgroundColor: "#f4bb2620",
 	},
 	paymentOptionText: {
 		marginLeft: 8,
@@ -765,7 +678,7 @@ const styles = StyleSheet.create({
 		marginBottom: 12,
 	},
 	applyButton: {
-		backgroundColor: "#FFC300",
+		backgroundColor: "#f4bb26",
 		paddingHorizontal: 20,
 		paddingVertical: 12,
 		borderRadius: 6,

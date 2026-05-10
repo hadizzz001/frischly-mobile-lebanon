@@ -1,13 +1,13 @@
 import { Feather } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import {
-	Dimensions,
-	Modal,
-	ScrollView,
-	StyleSheet,
-	Text,
-	TouchableOpacity,
-	View,
+    Dimensions,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import TextTicker from "react-native-text-ticker";
 
@@ -22,7 +22,7 @@ const NewsTicker = ({ refreshTrigger }) => {
 		const fetchData = async () => {
 			try {
 				const res = await fetch(
-					"https://frischlyshop-server.onrender.com/api/announcements/public/active",
+					"https://frischly-dash-leb.onrender.com/api/announcements/public/active",
 				);
 				const data = await res.json();
 				if (data.success && Array.isArray(data.data)) {
@@ -49,7 +49,7 @@ const NewsTicker = ({ refreshTrigger }) => {
 				activeOpacity={0.8}
 			>
 				<View style={styles.iconContainer}>
-					<Feather name="gift" size={18} color="#FFC300" />
+					<Feather name="gift" size={18} color="#f4bb26" />
 				</View>
 				<View style={styles.tickerContainer}>
 					<TextTicker
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
 		borderRadius: 8,
 		marginBottom: 10,
 		borderLeftWidth: 4,
-		borderLeftColor: "#FFC300",
+		borderLeftColor: "#f4bb26",
 	},
 	companyName: {
 		fontSize: 18,
@@ -180,10 +180,10 @@ const styles = StyleSheet.create({
 	code: {
 		fontSize: 16,
 		fontWeight: "600",
-		color: "#FFC300",
+		color: "#f4bb26",
 	},
 	closeButton: {
-		backgroundColor: "#FFC300",
+		backgroundColor: "#f4bb26",
 		paddingVertical: 12,
 		borderRadius: 8,
 		marginTop: 20,

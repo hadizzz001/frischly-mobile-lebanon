@@ -4,14 +4,14 @@ import { useEffect, useRef, useState } from "react";
 
 import { useTranslation } from "@/contexts/TranslationContext";
 import {
-	ActivityIndicator,
-	Dimensions,
-	FlatList,
-	Image,
-	StyleSheet,
-	Text,
-	TouchableOpacity,
-	View,
+    ActivityIndicator,
+    Dimensions,
+    FlatList,
+    Image,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import Feather from "react-native-vector-icons/Feather";
 
@@ -34,7 +34,7 @@ export default function DiscountCarousel({ refreshTrigger }) {
 		try {
 			setLoading(true);
 			const res = await fetch(
-				"https://frischlyshop-server.onrender.com/api/products/discount"
+				"https://frischly-dash-leb.onrender.com/api/products/discount"
 			);
 			const json = await res.json();
 			const withDiscount = json.data;
@@ -97,7 +97,7 @@ const increaseQty = (product) => {
 					alignItems: "center",
 				}}
 			>
-				<ActivityIndicator size="large" color="#ffc300" />
+				<ActivityIndicator size="large" color="#f4bb26" />
 				<Text>Loading  ...</Text>
 			</View>
 		);
@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
 		position: "absolute",
 		top: 8,
 		right: 8,
-		backgroundColor: "#FFC300",
+		backgroundColor: "#f4bb26",
 		paddingHorizontal: 6,
 		paddingVertical: 2,
 		borderRadius: 4,
@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
 		marginTop: 6,
 	},
 	qtyBtn: {
-		backgroundColor: "#ffc300",
+		backgroundColor: "#f4bb26",
 		borderRadius: 4,
 		paddingHorizontal: 10,
 		paddingVertical: 8,

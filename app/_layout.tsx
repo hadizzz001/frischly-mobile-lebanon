@@ -8,14 +8,19 @@ import { useFonts } from "expo-font";
 import { Stack, usePathname } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import {
+    StyleSheet,
+    View,
+} from "react-native";
 import "react-native-reanimated";
 
-export default function RootLayout() { 
+export default function RootLayout() {
 	const pathname = usePathname(); // current route
 	const [loaded] = useFonts({
 		SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
 	});
+
+
 
 	// For Lower.js overlays
 	const [menuOpen, setMenuOpen] = useState(false);
@@ -25,7 +30,7 @@ export default function RootLayout() {
 		const fetchCategories = async () => {
 			try {
 				const res = await fetch(
-					"https://frischlyshop-server.onrender.com/api/categories"
+					"https://frischly-dash-leb.onrender.com/api/categories"
 				);
 				const data = await res.json();
 				setCategories(data);

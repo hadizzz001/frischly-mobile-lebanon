@@ -40,7 +40,7 @@ const CarCard = ({ temp, index }) => {
 	const { t } = useTranslation();
 
 	// Rotate 3 background colors
-	const bgColors = ["#FFC300", "#000000", "#FFFFFF"]; // yellow, black, white
+	const bgColors = ["#f4bb26", "#000000", "#FFFFFF"]; // yellow, black, white
 	const selectedBg = bgColors[index % bgColors.length];
 
 	// Determine if product is out of stock
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
 		position: "absolute",
 		bottom: 8,
 		right: 8,
-		backgroundColor: "#FFC300",
+		backgroundColor: "#f4bb26",
 		paddingVertical: 4,
 		paddingHorizontal: 6,
 		borderRadius: 4,
@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
 	sizesText: {
 		paddingHorizontal: 12,
 		paddingVertical: 4,
-		backgroundColor: "#FFC300",
+		backgroundColor: "#f4bb26",
 		fontWeight: "bold",
 		fontSize: 16,
 		color: "#000000",
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
 	priceContainer: {
 		paddingHorizontal: 12,
 		paddingVertical: 10,
-		backgroundColor: "#FFC300",
+		backgroundColor: "#f4bb26",
 	},
 	priceText: {
 		fontWeight: "bold",

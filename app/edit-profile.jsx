@@ -1,213 +1,30 @@
 import { useTranslation } from "@/contexts/TranslationContext";
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Picker } from "@react-native-picker/picker";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-	Alert,
-	ScrollView,
-	StyleSheet,
-	Text,
-	TextInput,
-	TouchableOpacity,
-	View,
+    Alert,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
-
-const countryMap = {
-	Afghanistan: "AF",
-	Albania: "AL",
-	Algeria: "DZ",
-	Andorra: "AD",
-	Angola: "AO",
-	Argentina: "AR",
-	Armenia: "AM",
-	Australia: "AU",
-	Austria: "AT",
-	Azerbaijan: "AZ",
-	Bahamas: "BS",
-	Bahrain: "BH",
-	Bangladesh: "BD",
-	Barbados: "BB",
-	Belarus: "BY",
-	Belgium: "BE",
-	Belize: "BZ",
-	Benin: "BJ",
-	Bhutan: "BT",
-	Bolivia: "BO",
-	BosniaAndHerzegovina: "BA",
-	Botswana: "BW",
-	Brazil: "BR",
-	Brunei: "BN",
-	Bulgaria: "BG",
-	BurkinaFaso: "BF",
-	Burundi: "BI",
-	Cambodia: "KH",
-	Cameroon: "CM",
-	Canada: "CA",
-	CapeVerde: "CV",
-	CentralAfricanRepublic: "CF",
-	Chad: "TD",
-	Chile: "CL",
-	China: "CN",
-	Colombia: "CO",
-	Comoros: "KM",
-	Congo: "CG",
-	CongoDR: "CD",
-	CostaRica: "CR",
-	Croatia: "HR",
-	Cuba: "CU",
-	Cyprus: "CY",
-	CzechRepublic: "CZ",
-	Denmark: "DK",
-	Djibouti: "DJ",
-	Dominica: "DM",
-	DominicanRepublic: "DO",
-	Ecuador: "EC",
-	Egypt: "EG",
-	ElSalvador: "SV",
-	Estonia: "EE",
-	Eswatini: "SZ",
-	Ethiopia: "ET",
-	Fiji: "FJ",
-	Finland: "FI",
-	France: "FR",
-	Gabon: "GA",
-	Gambia: "GM",
-	Georgia: "GE",
-	Germany: "DE",
-	Ghana: "GH",
-	Greece: "GR",
-	Grenada: "GD",
-	Guatemala: "GT",
-	Guinea: "GN",
-	GuineaBissau: "GW",
-	Guyana: "GY",
-	Haiti: "HT",
-	Honduras: "HN",
-	Hungary: "HU",
-	Iceland: "IS",
-	India: "IN",
-	Indonesia: "ID",
-	Iran: "IR",
-	Iraq: "IQ",
-	Ireland: "IE",
-	Israel: "IL",
-	Italy: "IT",
-	IvoryCoast: "CI",
-	Jamaica: "JM",
-	Japan: "JP",
-	Jordan: "JO",
-	Kazakhstan: "KZ",
-	Kenya: "KE",
-	Kuwait: "KW",
-	Kyrgyzstan: "KG",
-	Laos: "LA",
-	Latvia: "LV",
-	Lebanon: "LB",
-	Lesotho: "LS",
-	Liberia: "LR",
-	Libya: "LY",
-	Liechtenstein: "LI",
-	Lithuania: "LT",
-	Luxembourg: "LU",
-	Madagascar: "MG",
-	Malawi: "MW",
-	Malaysia: "MY",
-	Maldives: "MV",
-	Mali: "ML",
-	Malta: "MT",
-	Mauritania: "MR",
-	Mauritius: "MU",
-	Mexico: "MX",
-	Moldova: "MD",
-	Monaco: "MC",
-	Mongolia: "MN",
-	Montenegro: "ME",
-	Morocco: "MA",
-	Mozambique: "MZ",
-	Myanmar: "MM",
-	Namibia: "NA",
-	Nepal: "NP",
-	Netherlands: "NL",
-	NewZealand: "NZ",
-	Nicaragua: "NI",
-	Niger: "NE",
-	Nigeria: "NG",
-	NorthKorea: "KP",
-	NorthMacedonia: "MK",
-	Norway: "NO",
-	Oman: "OM",
-	Pakistan: "PK",
-	Palestine: "PS",
-	Panama: "PA",
-	PapuaNewGuinea: "PG",
-	Paraguay: "PY",
-	Peru: "PE",
-	Philippines: "PH",
-	Poland: "PL",
-	Portugal: "PT",
-	Qatar: "QA",
-	Romania: "RO",
-	Russia: "RU",
-	Rwanda: "RW",
-	SaudiArabia: "SA",
-	Senegal: "SN",
-	Serbia: "RS",
-	Seychelles: "SC",
-	SierraLeone: "SL",
-	Singapore: "SG",
-	Slovakia: "SK",
-	Slovenia: "SI",
-	Somalia: "SO",
-	SouthAfrica: "ZA",
-	SouthKorea: "KR",
-	SouthSudan: "SS",
-	Spain: "ES",
-	SriLanka: "LK",
-	Sudan: "SD",
-	Suriname: "SR",
-	Sweden: "SE",
-	Switzerland: "CH",
-	Syria: "SY",
-	Taiwan: "TW",
-	Tajikistan: "TJ",
-	Tanzania: "TZ",
-	Thailand: "TH",
-	Togo: "TG",
-	TrinidadAndTobago: "TT",
-	Tunisia: "TN",
-	Turkey: "TR",
-	Turkmenistan: "TM",
-	Uganda: "UG",
-	Ukraine: "UA",
-	UnitedArabEmirates: "AE",
-	UnitedKingdom: "GB",
-	UnitedStates: "US",
-	Uruguay: "UY",
-	Uzbekistan: "UZ",
-	Venezuela: "VE",
-	Vietnam: "VN",
-	Yemen: "YE",
-	Zambia: "ZM",
-	Zimbabwe: "ZW",
-};
 
 export default function EditProfile() {
 	const [user, setUser] = useState(null);
 	const router = useRouter();
 	const { t } = useTranslation();
 
-	const [zones, setZones] = useState([]); // <-- ZIP zones
-
 	const [form, setForm] = useState({
 		name: "",
-		phoneNumber: "",
+		phoneNumber: "+961",
 		street: "",
 		city: "",
 		state: "",
-		zipCode: "",
-		country: "",
+		country: "LB",
 	});
 
 	console.log("user data in EditProfile:", user);
@@ -230,7 +47,7 @@ export default function EditProfile() {
 					}
 
 					const res = await fetch(
-						"https://frischlyshop-server.onrender.com/api/auth/me",
+						"https://frischly-dash-leb.onrender.com/api/auth/me",
 						{
 							headers: {
 								Authorization: `Bearer ${token}`,
@@ -243,19 +60,13 @@ export default function EditProfile() {
 						const data = await res.json();
 						setUser(data.data.user);
 
-						const countryName = data.data.user.address?.country || "";
-						const shortCode =
-							countryMap[countryName.replace(/\s/g, "")] ||
-							countryName.slice(0, 2).toUpperCase();
-
 						setForm({
 							name: data.data.user.name || "",
-							phoneNumber: data.data.user.phoneNumber || "",
+							phoneNumber: data.data.user.phoneNumber || "+961",
 							street: data.data.user.address?.street || "",
 							city: data.data.user.address?.city || "",
 							state: data.data.user.address?.state || "",
-							zipCode: data.data.user.address?.zipCode || "",
-							country: "DE",
+							country: "LB",
 						});
 					} else {
 						console.error("❌ Failed to fetch user:", res.status);
@@ -266,20 +77,7 @@ export default function EditProfile() {
 			}
 		};
 
-		const fetchZones = async () => {
-			try {
-				const res = await fetch(
-					"https://frischlyshop-server.onrender.com/api/zones"
-				);
-				const data = await res.json();
-				if (res.ok) setZones(data.data || []);
-			} catch (err) {
-				console.error("⚠️ Failed to fetch zones:", err);
-			}
-		};
-
 		checkLogin();
-		fetchZones();
 	}, [router]);
 
 	const handleUpdate = async () => {
@@ -299,13 +97,12 @@ export default function EditProfile() {
 					street: form.street,
 					city: form.city,
 					state: form.state,
-					zipCode: form.zipCode,
-					country: form.country, // ✅ still included but read-only
+					country: form.country,
 				},
 			};
 
 			const res = await fetch(
-				"https://frischlyshop-server.onrender.com/api/auth/profile",
+				"https://frischly-dash-leb.onrender.com/api/auth/profile",
 				{
 					method: "PUT",
 					headers: {
@@ -322,7 +119,7 @@ export default function EditProfile() {
 				// Re-fetch user data from API to get updated info
 				try {
 					const userRes = await fetch(
-						"https://frischlyshop-server.onrender.com/api/auth/me",
+						"https://frischly-dash-leb.onrender.com/api/auth/me",
 						{
 							headers: {
 								Authorization: `Bearer ${token}`,
@@ -393,39 +190,9 @@ export default function EditProfile() {
 				</View>
 			))}
 
-			{/* ZIP Code Dropdown */}
-			<View
-				style={{
-					marginBottom: 12,
-					width: "100%",
-					minHeight: 55,
-					justifyContent: "center",
-				}}
-			>
-				<Text style={[styles.label, { marginLeft: 10 }]}>
-					{t("selectZipCode")}
-				</Text>
-				<Picker
-					selectedValue={form.zipCode}
-					onValueChange={(itemValue) =>
-						setForm({ ...form, zipCode: itemValue })
-					}
-					style={{ color: "#000" }}
-				>
-					<Picker.Item label="Select Zip Code" value="" />
-					{zones.map((zone) => (
-						<Picker.Item
-							key={zone._id}
-							label={`${zone.zipCode} `}
-							value={zone.zipCode}
-						/>
-					))}
-				</Picker>
-			</View>
-
 			<View style={{ marginBottom: 12 }}>
 				<Text style={styles.label}>{t("country")}</Text>
-				<TextInput style={styles.input} value={t("germany")} editable={false} />
+				<TextInput style={styles.input} value={t("lebanon")} editable={false} />
 			</View>
 
 			<TouchableOpacity style={styles.saveBtn} onPress={handleUpdate}>
@@ -442,7 +209,7 @@ const styles = StyleSheet.create({
 	label: { marginBottom: 4, color: "#555" },
 	input: { borderWidth: 1, padding: 12, borderRadius: 15, borderColor: "#ccc" },
 	saveBtn: {
-		backgroundColor: "#FFC300",
+		backgroundColor: "#f4bb26",
 		padding: 16,
 		borderRadius: 12,
 		marginTop: 16,

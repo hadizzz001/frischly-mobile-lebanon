@@ -1,4 +1,4 @@
-package com.alihadimedlej001.frischlyshop1
+package com.frischly.lebanon
 
 import android.app.Application
 import android.content.res.Configuration

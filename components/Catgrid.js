@@ -1,13 +1,13 @@
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-	Dimensions,
-	Image,
-	ScrollView,
-	StyleSheet,
-	Text,
-	TouchableOpacity,
-	View,
+    Dimensions,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import Feather from "react-native-vector-icons/Feather"; // already imported for left arrow
 
@@ -20,7 +20,7 @@ export default function CategoryGrid() {
 	const router = useRouter();
 
 	useEffect(() => {
-		fetch("https://frischlyshop-server.onrender.com/api/categories")
+		fetch("https://frischly-dash-leb.onrender.com/api/categories")
 			.then((res) => res.json())
 			.then((data) => {
 				if (data.success && Array.isArray(data.data)) {

@@ -32,12 +32,12 @@ export default function Start() {
 	const [loading, setLoading] = useState(false);
 	const languages = [
 		{ code: "en", name: "English", flag: "https://flagcdn.com/w40/gb.png" },
-		{ code: "de", name: "Deutsch", flag: "https://flagcdn.com/w40/de.png" },
+		{ code: "ar", name: "العربية", flag: "https://flagcdn.com/w40/lb.png" },
 	];
 
 	const screenHeight = Dimensions.get("window").height;
 
-	const selectedLang = languages.find((l) => l.code === language);
+	const selectedLang = languages.find((l) => l.code === language) || languages[0];
 
 	const handleLogin = async () => {
 		if (!email || !password) {
@@ -48,7 +48,7 @@ export default function Start() {
 		setLoading(true);
 		try {
 			const res = await axios.post(
-				"https://frischlyshop-server.onrender.com/api/auth/login-profile",
+				"https://frischly-dash-leb.onrender.com/api/auth/login-profile",
 				{ email, password }
 			);
 
@@ -104,7 +104,7 @@ export default function Start() {
 						height: screenHeight * 0.4,
 						justifyContent: "center",
 						alignItems: "center",
-						backgroundColor: "#ffc300",
+						backgroundColor: "#f4bb26",
 						borderBottomLeftRadius: 60,
 						borderBottomRightRadius: 60,
 						overflow: "hidden",
@@ -112,7 +112,7 @@ export default function Start() {
 				>
 					<Image
 						source={{
-							uri: "https://res.cloudinary.com/dtzuor7no/image/upload/v1762515371/LOGO_frischly2_page-0002-removebg-preview_achbk6.png",
+							uri: "https://res.cloudinary.com/dxefurewd/image/upload/v1778403318/freshly_1__1_-removebg-preview_mkv83g.png",
 						}}
 						style={{ width: 200, height: 200 }}
 						resizeMode="contain"
@@ -226,7 +226,7 @@ export default function Start() {
 						onPress={handleLogin}
 						disabled={loading}
 						style={{
-							backgroundColor: loading ? "#cccccc" : "#ffc300",
+							backgroundColor: loading ? "#cccccc" : "#f4bb26",
 							borderRadius: 15,
 							paddingVertical: 15,
 							width: "100%",
@@ -248,19 +248,19 @@ export default function Start() {
 					<TouchableOpacity onPress={() => router.push("/register")}>
 						<Text style={{ color: "#000", fontSize: 16 }}>
 							{t("noAccount")}{" "}
-							<Text style={{ color: "#ffc300" }}>{t("register")}</Text>
+							<Text style={{ color: "#f4bb26" }}>{t("register")}</Text>
 						</Text>
 					</TouchableOpacity>
 					<TouchableOpacity
 						onPress={async () => {
 							router.push(
-								"https://frischlyshop-server.onrender.com/forgot-password.html"
+								"https://frischly-dash-leb.onrender.com/forgot-password.html"
 							);
 						}}
 					>
 						<Text style={{ fontSize: 16, textAlign: "center" }}>
 							<Text style={{ color: "#000" }}>
-								<Text style={{ color: "#ffc300" }}>{t("forget")}</Text>
+								<Text style={{ color: "#f4bb26" }}>{t("forget")}</Text>
 							</Text>
 						</Text>
 					</TouchableOpacity>
@@ -274,7 +274,7 @@ export default function Start() {
 						<Text style={{ fontSize: 16, textAlign: "center" }}>
 							<Text style={{ color: "#000" }}>
 								{t("continue")}{" "}
-								<Text style={{ color: "#ffc300" }}>{t("asGuest")}</Text>
+								<Text style={{ color: "#f4bb26" }}>{t("asGuest")}</Text>
 							</Text>
 						</Text>
 					</TouchableOpacity>

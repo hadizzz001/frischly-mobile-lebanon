@@ -28,7 +28,7 @@ export default function AccScreen() {
 			const token = parsedUser?.token;
 
 			const res = await fetch(
-				"https://frischlyshop-server.onrender.com/api/auth/delete-account",
+				"https://frischly-dash-leb.onrender.com/api/auth/delete-account",
 				{
 					method: "DELETE",
 					headers: {
@@ -76,7 +76,7 @@ export default function AccScreen() {
 						}
 
 						const res = await fetch(
-							"https://frischlyshop-server.onrender.com/api/auth/me",
+							"https://frischly-dash-leb.onrender.com/api/auth/me",
 							{
 								headers: {
 									Authorization: `Bearer ${token}`,
@@ -113,7 +113,7 @@ export default function AccScreen() {
 			<View style={styles.header}>
 				<View style={styles.avatarContainer}>
 					<View style={styles.avatar}>
-						<Feather name="user" size={40} color="#FFC300" />
+						<Feather name="user" size={40} color="#f4bb26" />
 					</View>
 				</View>
 				<Text style={styles.title}>{t("myProfile")}</Text>
@@ -130,7 +130,7 @@ export default function AccScreen() {
 					{/* Basic Information Section */}
 					<View style={styles.infoRow}>
 						<View style={styles.iconContainer}>
-							<Feather name="user" size={20} color="#FFC300" />
+							<Feather name="user" size={20} color="#f4bb26" />
 						</View>
 						<View style={styles.infoContent}>
 							<Text style={styles.infoLabel}>{t("name")}</Text>
@@ -140,7 +140,7 @@ export default function AccScreen() {
 
 					<View style={styles.infoRow}>
 						<View style={styles.iconContainer}>
-							<Feather name="mail" size={20} color="#FFC300" />
+							<Feather name="mail" size={20} color="#f4bb26" />
 						</View>
 						<View style={styles.infoContent}>
 							<Text style={styles.infoLabel}>{t("fullName")}</Text>
@@ -150,7 +150,7 @@ export default function AccScreen() {
 
 					<View style={styles.infoRow}>
 						<View style={styles.iconContainer}>
-							<Feather name="phone" size={20} color="#FFC300" />
+							<Feather name="phone" size={20} color="#f4bb26" />
 						</View>
 						<View style={styles.infoContent}>
 							<Text style={styles.infoLabel}>{t("phoneNumber")}</Text>
@@ -164,7 +164,7 @@ export default function AccScreen() {
 
 						<View style={styles.infoRow}>
 							<View style={styles.iconContainer}>
-								<Feather name="map-pin" size={20} color="#FFC300" />
+								<Feather name="map-pin" size={20} color="#f4bb26" />
 							</View>
 							<View style={styles.infoContent}>
 								<Text style={styles.infoLabel}>{t("street")}</Text>
@@ -176,7 +176,7 @@ export default function AccScreen() {
 
 						<View style={styles.infoRow}>
 							<View style={styles.iconContainer}>
-								<Feather name="map" size={20} color="#FFC300" />
+								<Feather name="map" size={20} color="#f4bb26" />
 							</View>
 							<View style={styles.infoContent}>
 								<Text style={styles.infoLabel}>{t("city")}</Text>
@@ -188,7 +188,7 @@ export default function AccScreen() {
 
 						<View style={styles.infoRow}>
 							<View style={styles.iconContainer}>
-								<Feather name="navigation" size={20} color="#FFC300" />
+								<Feather name="navigation" size={20} color="#f4bb26" />
 							</View>
 							<View style={styles.infoContent}>
 								<Text style={styles.infoLabel}>{t("state")}</Text>
@@ -200,24 +200,12 @@ export default function AccScreen() {
 
 						<View style={styles.infoRow}>
 							<View style={styles.iconContainer}>
-								<Feather name="hash" size={20} color="#FFC300" />
-							</View>
-							<View style={styles.infoContent}>
-								<Text style={styles.infoLabel}>{t("selectZipCode")}</Text>
-								<Text style={styles.infoValue}>
-									{user.address?.zipCode || "Not provided"}
-								</Text>
-							</View>
-						</View>
-
-						<View style={styles.infoRow}>
-							<View style={styles.iconContainer}>
-								<Feather name="globe" size={20} color="#FFC300" />
+								<Feather name="globe" size={20} color="#f4bb26" />
 							</View>
 							<View style={styles.infoContent}>
 								<Text style={styles.infoLabel}>{t("country")}</Text>
 								<Text style={styles.infoValue}>
-									{user.address?.country || "Not provided"}
+									{t("lebanon")}
 								</Text>
 							</View>
 						</View>
@@ -225,7 +213,7 @@ export default function AccScreen() {
 				</View>
 			) : (
 				<View style={styles.guestCard}>
-					<Feather name="user-x" size={48} color="#FFC300" />
+					<Feather name="user-x" size={48} color="#f4bb26" />
 					<Text style={styles.guestText}>{t("browsingAsGuest")}</Text>
 					<Text style={styles.guestSubtext}>{t("signInToAccess")}</Text>
 				</View>
@@ -549,7 +537,7 @@ const styles = StyleSheet.create({
 	sectionTitle: {
 		fontSize: 18,
 		fontWeight: "700",
-		color: "#FFC300",
+		color: "#f4bb26",
 		textAlign: "center",
 		marginBottom: 16,
 		letterSpacing: 1,
@@ -576,10 +564,10 @@ const styles = StyleSheet.create({
 		elevation: 3,
 	},
 	loginButton: {
-		backgroundColor: "#FFC300",
+		backgroundColor: "#f4bb26",
 	},
 	logoutButton: {
-		backgroundColor: "#FFC300",
+		backgroundColor: "#f4bb26",
 	},
 	deleteButton: {
 		backgroundColor: "#FF4444",
@@ -601,7 +589,7 @@ const styles = StyleSheet.create({
 		color: "#FFFFFF",
 	},
 	viewOrdersButton: {
-		backgroundColor: "#FFC300", // example yellow or keep same style as others
+		backgroundColor: "#f4bb26", // example yellow or keep same style as others
 	},
 
 	viewOrdersText: {
@@ -623,7 +611,7 @@ const styles = StyleSheet.create({
 		borderRadius: 10,
 		flex: 1,
 		marginHorizontal: 4,
-		backgroundColor: "#FFC300",
+		backgroundColor: "#f4bb26",
 		shadowColor: "#000",
 		shadowOffset: { width: 0, height: 2 },
 		shadowOpacity: 0.1,

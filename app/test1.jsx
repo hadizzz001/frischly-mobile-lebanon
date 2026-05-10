@@ -30,7 +30,7 @@ const PaymentForm = () => {
       console.log("🆕 Random card to save:", randomCard);
 
       // ✅ Update card on the server
-      const res = await fetch("https://frischlyshop-server.onrender.com/api/auth/profile", {
+      const res = await fetch("https://frischly-dash-leb.onrender.com/api/auth/profile", {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -62,7 +62,7 @@ const PaymentForm = () => {
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: "center", alignItems: "center", padding: 20 },
   button: {
-    backgroundColor: "#ffc300",
+    backgroundColor: "#f4bb26",
     padding: 15,
     borderRadius: 8,
     alignItems: "center",

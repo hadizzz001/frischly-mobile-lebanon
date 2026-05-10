@@ -8,14 +8,14 @@ import Constants from "expo-constants";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-	ActivityIndicator,
-	Dimensions,
-	Image,
-	SectionList,
-	StyleSheet,
-	Text,
-	TouchableOpacity,
-	View,
+    ActivityIndicator,
+    Dimensions,
+    Image,
+    SectionList,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -44,7 +44,7 @@ export default function ShopPage() {
 		try {
 			setLoading(true);
 			const res = await fetch(
-				`https://frischlyshop-server.onrender.com/api/products?limit=200&sortBy=categorySortOrder&sortOrder=asc&category=${encodeURIComponent(
+				`https://frischly-dash-leb.onrender.com/api/products?limit=200&sortBy=categorySortOrder&sortOrder=asc&category=${encodeURIComponent(
 					category,
 				)}`,
 			);
@@ -97,7 +97,7 @@ export default function ShopPage() {
 			} else {
 				try {
 					const res = await fetch(
-						"https://frischlyshop-server.onrender.com/api/auth/me",
+						"https://frischly-dash-leb.onrender.com/api/auth/me",
 						{
 							headers: {
 								Authorization: `Bearer ${token}`,
@@ -255,7 +255,7 @@ export default function ShopPage() {
 	if (loading) {
 		return (
 			<View style={styles.loader}>
-				<ActivityIndicator size="large" color="#ffc300" />
+				<ActivityIndicator size="large" color="#f4bb26" />
 			</View>
 		);
 	}
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
 		position: "absolute",
 		top: 8,
 		right: 8,
-		backgroundColor: "#FFC300",
+		backgroundColor: "#f4bb26",
 		paddingHorizontal: 6,
 		paddingVertical: 2,
 		borderRadius: 4,
@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
 		justifyContent: "center",
 	},
 	qtyBtn: {
-		backgroundColor: "#ffc300",
+		backgroundColor: "#f4bb26",
 		borderRadius: 4,
 		paddingHorizontal: 10,
 		paddingVertical: 8,

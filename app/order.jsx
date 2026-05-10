@@ -6,15 +6,15 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-	ActivityIndicator,
-	FlatList,
-	Image,
-	Modal,
-	StyleSheet,
-	Text,
-	TextInput,
-	TouchableOpacity,
-	View,
+    ActivityIndicator,
+    FlatList,
+    Image,
+    Modal,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -74,7 +74,7 @@ export default function TestOrder() {
 				return;
 			}
 
-			const url = `https://frischlyshop-server.onrender.com/api/orders/${selectedOrderId}/cancel`;
+			const url = `https://frischly-dash-leb.onrender.com/api/orders/${selectedOrderId}/cancel`;
 			console.log("🌍 API URL:", url);
 
 			const bodyData = JSON.stringify({ reason: cancelReason });
@@ -126,7 +126,7 @@ export default function TestOrder() {
 
 				// Fetch user info
 				const meRes = await fetch(
-					"https://frischlyshop-server.onrender.com/api/auth/me",
+					"https://frischly-dash-leb.onrender.com/api/auth/me",
 					{
 						headers: {
 							Authorization: `Bearer ${token}`,
@@ -142,7 +142,7 @@ export default function TestOrder() {
 
 				// Fetch orders
 				const ordersRes = await fetch(
-					"https://frischlyshop-server.onrender.com/api/orders",
+					"https://frischly-dash-leb.onrender.com/api/orders",
 					{
 						headers: {
 							Authorization: `Bearer ${token}`,
@@ -193,7 +193,7 @@ export default function TestOrder() {
 
 		try {
 			const res = await fetch(
-				`https://frischlyshop-server.onrender.com/api/products/${productId}`
+				`https://frischly-dash-leb.onrender.com/api/products/${productId}`
 			);
 			const data = await res.json();
 			const img = data?.data?.picture || null;

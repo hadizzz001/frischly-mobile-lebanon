@@ -4,13 +4,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
-	Image,
-	Modal,
-	ScrollView,
-	StyleSheet,
-	Text,
-	TouchableOpacity,
-	View,
+    Image,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 
@@ -132,7 +132,7 @@ const Cart = () => {
 							<TouchableOpacity
 								onPress={() => handleModalResponse("yes")}
 								style={{
-									backgroundColor: "#ffc300",
+									backgroundColor: "#f4bb26",
 									paddingVertical: 16,
 									borderRadius: 8,
 									marginBottom: 15,
@@ -162,7 +162,7 @@ const Cart = () => {
 							>
 								<Text
 									style={{
-										color: "#ffc300",
+										color: "#f4bb26",
 										textAlign: "center",
 										fontWeight: "bold",
 										fontSize: 18,
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
 		marginBottom: 12,
 	},
 	checkoutBtn: {
-		backgroundColor: "#FFC300",
+		backgroundColor: "#f4bb26",
 		padding: 12,
 		borderRadius: 8,
 		alignItems: "center",

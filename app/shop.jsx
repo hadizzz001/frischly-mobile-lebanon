@@ -9,16 +9,16 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useEffect, useState } from "react";
 import {
-	ActivityIndicator,
-	Dimensions,
-	FlatList,
-	Image,
-	ScrollView,
-	StyleSheet,
-	Text,
-	TextInput,
-	TouchableOpacity,
-	View,
+    ActivityIndicator,
+    Dimensions,
+    FlatList,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 import { useBooleanValue } from "@/contexts/CartBoolContext";
@@ -109,7 +109,7 @@ export default function ShopPage() {
 
 	// ✅ Fetch categories
 	useEffect(() => {
-		fetch("https://frischlyshop-server.onrender.com/api/categories")
+		fetch("https://frischly-dash-leb.onrender.com/api/categories")
 			.then((res) => res.json())
 			.then((json) => setCategories(json.data || []))
 			.catch((err) => console.error(err));
@@ -119,7 +119,7 @@ export default function ShopPage() {
 		const getSubcategories = async () => {
 			try {
 				const res = await fetch(
-					"https://frischlyshop-server.onrender.com/api/subcategories"
+					"https://frischly-dash-leb.onrender.com/api/subcategories"
 				);
 				const json = await res.json();
 				if (json.success) {
@@ -164,9 +164,9 @@ let url;
 if (discountParam === "true" || filters.discount === true) {
   params.append("minDiscount", filters.minDiscount || 1);
 
-  url = `https://frischlyshop-server.onrender.com/api/products/discount?${params.toString()}`;
+  url = `https://frischly-dash-leb.onrender.com/api/products/discount?${params.toString()}`;
 } else {
-  url = `https://frischlyshop-server.onrender.com/api/products?${params.toString()}`;
+  url = `https://frischly-dash-leb.onrender.com/api/products?${params.toString()}`;
 }
 
 			console.log("URL:", url);
@@ -207,7 +207,7 @@ if (discountParam === "true" || filters.discount === true) {
 			} else {
 				try {
 					const res = await fetch(
-						"https://frischlyshop-server.onrender.com/api/auth/me",
+						"https://frischly-dash-leb.onrender.com/api/auth/me",
 						{
 							headers: {
 								Authorization: `Bearer ${token}`,
@@ -334,7 +334,7 @@ if (discountParam === "true" || filters.discount === true) {
 	if (loading) {
 		return (
 			<View style={styles.loader}>
-				<ActivityIndicator size="large" color="#ffc300" />
+				<ActivityIndicator size="large" color="#f4bb26" />
 			</View>
 		);
 	}
@@ -364,7 +364,7 @@ if (discountParam === "true" || filters.discount === true) {
 									styles.categoryBtn,
 									!categoryParam &&
 										discountParam !== "true" && {
-											backgroundColor: "#ffc300",
+											backgroundColor: "#f4bb26",
 										},
 								]}
 								onPress={() => router.push("/shop")}
@@ -391,7 +391,7 @@ if (discountParam === "true" || filters.discount === true) {
 										key={cat._id}
 										style={[
 											styles.categoryBtn,
-											isSelected && { backgroundColor: "#ffc300" },
+											isSelected && { backgroundColor: "#f4bb26" },
 										]}
 										onPress={() =>
 											router.push(
@@ -434,7 +434,7 @@ if (discountParam === "true" || filters.discount === true) {
 					onEndReachedThreshold={0.3}
 					ListFooterComponent={
 						isFetchingMore ? (
-							<ActivityIndicator size="small" color="#ffc300" />
+							<ActivityIndicator size="small" color="#f4bb26" />
 						) : null
 					}
 				/>
@@ -612,7 +612,7 @@ const styles = StyleSheet.create({
 		position: "absolute",
 		top: 8,
 		right: 8,
-		backgroundColor: "#FFC300",
+		backgroundColor: "#f4bb26",
 		paddingHorizontal: 6,
 		paddingVertical: 2,
 		borderRadius: 4,
@@ -748,7 +748,7 @@ const styles = StyleSheet.create({
 	row: { flexDirection: "row", alignItems: "center", marginVertical: 8 },
 	title: { fontSize: 20, fontWeight: "bold", marginBottom: 8 },
 	button: {
-		backgroundColor: "#ffc300",
+		backgroundColor: "#f4bb26",
 		paddingVertical: 12,
 		paddingHorizontal: 16,
 		borderRadius: 8,
@@ -779,8 +779,8 @@ const styles = StyleSheet.create({
 		borderColor: "#000",
 	},
 	checkboxActive: {
-		backgroundColor: "#ffc300",
-		borderColor: "#ffc300",
+		backgroundColor: "#f4bb26",
+		borderColor: "#f4bb26",
 	},
 	qtyRow: {
 		flexDirection: "row",
@@ -796,7 +796,7 @@ const styles = StyleSheet.create({
 	},
 
 	qtyBtn: {
-		backgroundColor: "#ffc300",
+		backgroundColor: "#f4bb26",
 		borderRadius: 4,
 		paddingHorizontal: 10,
 		paddingVertical: 8,

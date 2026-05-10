@@ -44,10 +44,12 @@ const [showAgeModal, setShowAgeModal] = useState(false);
 		const fetchData = async () => {
 			try {
 				const res = await fetch(
-					`https://frischlyshop-server.onrender.com/api/products/${search}`
+					`https://frischly-dash-leb.onrender.com/api/products/${search}`
 				);
 				const json = await res.json();
-				if (json?.success && json?.data) setProduct(json.data);
+				if (json?.success && json?.data) {
+					setProduct(json.data);
+				}
 			} catch (err) {
 				console.error("Fetch error:", err);
 			}
@@ -57,7 +59,7 @@ const [showAgeModal, setShowAgeModal] = useState(false);
 
 	// Fetch categories
 	useEffect(() => {
-		fetch("https://frischlyshop-server.onrender.com/api/categories")
+		fetch("https://frischly-dash-leb.onrender.com/api/categories")
 			.then((res) => res.json())
 			.then((json) => setCategories(json.data || []))
 			.catch((err) => console.error(err));
@@ -68,7 +70,7 @@ const [showAgeModal, setShowAgeModal] = useState(false);
 		const checkLogin = async () => {
 			try {
 				const res = await fetch(
-					"https://frischlyshop-server.onrender.com/api/auth/me",
+					"https://frischly-dash-leb.onrender.com/api/auth/me",
 					{
 						headers: {
 							Authorization: `Bearer ${token}`,
@@ -286,24 +288,24 @@ const handleAgeResponse = (response) => {
 					style={styles.tabButton}
 					onPress={() => router.push("/")}
 				>
-					<Feather name="home" size={24} color="#FFC300" />
+					<Feather name="home" size={24} color="#f4bb26" />
 				</TouchableOpacity>
 
 				<TouchableOpacity
 					style={styles.tabButton}
 					onPress={() => setMenuOpen(true)}
 				>
-					<Feather name="menu" size={24} color="#FFC300" />
+					<Feather name="menu" size={24} color="#f4bb26" />
 				</TouchableOpacity>
 				<TouchableOpacity style={styles.tabButton} onPress={toggleCart}>
-					<Feather name="shopping-cart" size={24} color="#FFC300" />
+					<Feather name="shopping-cart" size={24} color="#f4bb26" />
 					{cart?.length > 0 && <View style={styles.cartBadge} />}
 				</TouchableOpacity>
 								<TouchableOpacity
 					style={styles.tabButton}
 					onPress={() => setProfileOpen(true)}
 				>
-					<Feather name="user" size={24} color="#FFC300" />
+					<Feather name="user" size={24} color="#f4bb26" />
 				</TouchableOpacity>
 			</View> */}
 
@@ -436,7 +438,7 @@ const handleAgeResponse = (response) => {
 				<TouchableOpacity
 					onPress={() => handleAgeResponse("yes")}
 					style={{
-						backgroundColor: "#ffc300",
+						backgroundColor: "#f4bb26",
 						paddingVertical: 16,
 						borderRadius: 8,
 						marginBottom: 15,
@@ -466,7 +468,7 @@ const handleAgeResponse = (response) => {
 				>
 					<Text
 						style={{
-							color: "#ffc300",
+							color: "#f4bb26",
 							textAlign: "center",
 							fontWeight: "bold",
 							fontSize: 18,

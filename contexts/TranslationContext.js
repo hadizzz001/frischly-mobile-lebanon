@@ -5,15 +5,26 @@ import { createContext, useContext, useEffect, useState } from "react";
 
 const TranslationContext = createContext();
 
+const DEFAULT_LANGUAGE = "en";
+
+const normalizeLanguage = (lang) => {
+  if (lang === "de") return "ar";
+  return translations[lang] ? lang : DEFAULT_LANGUAGE;
+};
+
 export const TranslationProvider = ({ children }) => {
  
 
-  const [language, setLanguage] = useState("de");
+  const [language, setLanguage] = useState(DEFAULT_LANGUAGE);
 
 useEffect(() => {
   const loadLang = async () => {
     const savedLang = await AsyncStorage.getItem("appLanguage");
-    setLanguage(savedLang || "de");
+    const normalizedLang = normalizeLanguage(savedLang);
+    setLanguage(normalizedLang);
+    if (savedLang && savedLang !== normalizedLang) {
+      await AsyncStorage.setItem("appLanguage", normalizedLang);
+    }
   };
   loadLang();
 }, []);
@@ -21,11 +32,12 @@ useEffect(() => {
 
   // Save language when changed
   const switchLanguage = async (lang) => {
-    setLanguage(lang);
-    await AsyncStorage.setItem("appLanguage", lang);
+    const normalizedLang = normalizeLanguage(lang);
+    setLanguage(normalizedLang);
+    await AsyncStorage.setItem("appLanguage", normalizedLang);
   };
 
-  const t = (key) => translations[language][key] || key;
+  const t = (key) => translations[language]?.[key] || translations.en[key] || key;
 
   return (
     <TranslationContext.Provider value={{ t, language, switchLanguage }}>

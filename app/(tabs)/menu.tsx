@@ -1,14 +1,14 @@
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-	ActivityIndicator,
-	Dimensions,
-	FlatList,
-	Image,
-	StyleSheet,
-	Text,
-	TouchableOpacity,
-	View,
+    ActivityIndicator,
+    Dimensions,
+    FlatList,
+    Image,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -29,7 +29,7 @@ export default function CategoriesGrid() {
 		const fetchCategories = async () => {
 			try {
 				const res = await fetch(
-					"https://frischlyshop-server.onrender.com/api/categories?limit=1000"
+					"https://frischly-dash-leb.onrender.com/api/categories?limit=1000"
 				);
 				const json = await res.json();
 				setCategories(json.data || []);
@@ -45,7 +45,7 @@ export default function CategoriesGrid() {
 	if (loading) {
 		return (
 			<View style={styles.loadingBox}>
-				<ActivityIndicator size="large" color="#ffc300" />
+				<ActivityIndicator size="large" color="#f4bb26" />
 				<Text>{t("loadingCategories")}</Text>
 			</View>
 		);

@@ -5,13 +5,13 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 
 import {
-	ActivityIndicator,
-	Alert,
-	ScrollView,
-	StyleSheet,
-	Text,
-	TouchableOpacity,
-	View,
+    ActivityIndicator,
+    Alert,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 // -------------------- CheckoutPage Component --------------------
 const CheckoutPage = ({
@@ -103,7 +103,7 @@ const CheckoutPage = ({
 			};
 
 			const orderRes = await fetch(
-				"https://frischlyshop-server.onrender.com/api/orders",
+				"https://frischly-dash-leb.onrender.com/api/orders",
 				{
 					method: "POST",
 					headers: {
@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
 	container: { padding: 20, backgroundColor: "#fff" },
 	title: { fontSize: 20, marginBottom: 15, fontWeight: "bold" },
 	button: {
-		backgroundColor: "#ffc300",
+		backgroundColor: "#f4bb26",
 		padding: 15,
 		borderRadius: 8,
 		alignItems: "center",

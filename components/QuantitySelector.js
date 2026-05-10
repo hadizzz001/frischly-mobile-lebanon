@@ -17,7 +17,7 @@ const QuantitySelector = ({ initialQty = 1, productId, onChange }) => {
 		const fetchStock1 = async () => {
 			try {
 				const response = await fetch(
-					`https://frischlyshop-server.onrender.com/api/products/${productId}`
+					`https://frischly-dash-leb.onrender.com/api/products/${productId}`
 				);
 				const result = await response.json();
 

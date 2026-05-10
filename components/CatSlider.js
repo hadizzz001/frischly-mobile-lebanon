@@ -2,14 +2,14 @@ import { useTranslation } from "@/contexts/TranslationContext";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-	ActivityIndicator,
-	Dimensions,
-	FlatList,
-	Image,
-	StyleSheet,
-	Text,
-	TouchableOpacity,
-	View,
+    ActivityIndicator,
+    Dimensions,
+    FlatList,
+    Image,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import Feather from "react-native-vector-icons/Feather";
 
@@ -28,7 +28,7 @@ export default function CategoriesGrid({ refreshTrigger }) {
 		try {
 			setLoading(true);
 			const res = await fetch(
-				"https://frischlyshop-server.onrender.com/api/categories?limit=1000"
+				"https://frischly-dash-leb.onrender.com/api/categories?limit=1000"
 			);
 			const json = await res.json();
 			setCategories(json.data || []);
@@ -58,7 +58,7 @@ export default function CategoriesGrid({ refreshTrigger }) {
 					alignItems: "center",
 				}}
 			>
-				<ActivityIndicator size="large" color="#ffc300" />
+				<ActivityIndicator size="large" color="#f4bb26" />
 				<Text>Loading categories...</Text>
 			</View>
 		);

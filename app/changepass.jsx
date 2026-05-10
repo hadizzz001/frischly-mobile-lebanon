@@ -6,16 +6,16 @@ import axios from "axios";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-	ActivityIndicator,
-	Alert,
-	Dimensions,
-	KeyboardAvoidingView,
-	ScrollView,
-	StyleSheet,
-	Text,
-	TextInput,
-	TouchableOpacity,
-	View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    KeyboardAvoidingView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 // Simple visible password input
@@ -69,7 +69,7 @@ export default function ChangePassword() {
 				return Alert.alert(t("errorTitle"), t("userNotAuthenticated"));
 
 			const res = await axios.put(
-				"https://frischlyshop-server.onrender.com/api/auth/change-password",
+				"https://frischly-dash-leb.onrender.com/api/auth/change-password",
 				{ currentPassword, newPassword },
 				{
 					headers: {
@@ -115,7 +115,7 @@ export default function ChangePassword() {
 						height: screenHeight * 0.4,
 						justifyContent: "center",
 						alignItems: "center",
-						backgroundColor: "#ffc300",
+						backgroundColor: "#f4bb26",
 						borderBottomLeftRadius: 60,
 						borderBottomRightRadius: 60,
 						overflow: "hidden",
@@ -156,7 +156,7 @@ export default function ChangePassword() {
 						onPress={handleChangePassword}
 						disabled={loading}
 						style={{
-							backgroundColor: loading ? "#cccccc" : "#ffc300",
+							backgroundColor: loading ? "#cccccc" : "#f4bb26",
 							borderRadius: 15,
 							paddingVertical: 15,
 							width: "100%",

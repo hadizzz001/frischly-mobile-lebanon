@@ -6,17 +6,13 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Tabs, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Platform, StyleSheet, View } from "react-native";
-import { usePushNotifications } from "../../usePushNotifications";
 
 export default function TabLayout() {
 	const { cart } = useCart();
 	const [loading, setLoading] = useState(true);
 	const router = useRouter();
-	const [user, setUser] = useState(null); 
 	// Tabs to show
 	const visibleTabs = ["index", "menu", "cart", "acc"];
-	  const { expoPushToken } = usePushNotifications(); 
-console.log("expoPushToken:", expoPushToken?.data);
 	// Check login
 useEffect(() => {
 	const checkLogin = async () => {
@@ -50,7 +46,7 @@ useEffect(() => {
 			console.log("📡 Fetching /api/auth/me");
 
 			const res = await fetch(
-				"https://frischlyshop-server.onrender.com/api/auth/me",
+				"https://frischly-dash-leb.onrender.com/api/auth/me",
 				{
 					headers: {
 						Authorization: `Bearer ${token}`,
@@ -71,36 +67,6 @@ useEffect(() => {
 			const user = data.data.user;
 
 			console.log("✅ User fetched:", user);
-			setUser(user);
-
-			// 🔹 Send FCM token to server after login
-			const fcmToken = expoPushToken?.data; // or however you get it
-			if (fcmToken) {
-				console.log("📲 Sending FCM token to server:", fcmToken);
-
-				const fcmRes = await fetch(
-					"https://frischlyshop-server.onrender.com/api/notifications/token",
-					{
-						method: "POST",
-						headers: {
-							Authorization: `Bearer ${token}`,
-							"Content-Type": "application/json",
-						},
-						body: JSON.stringify({
-							userId: user._id, // assuming user._id is the ID
-							fcmToken: fcmToken,
-						}),
-					}
-				);
-
-				if (fcmRes.ok) {
-					console.log("✅ FCM token sent successfully");
-				} else {
-					console.error("❌ Failed to send FCM token:", fcmRes.status);
-				}
-			} else {
-				console.warn("⚠️ No FCM token found to send");
-			}
 
 		} catch (err) {
 			console.error("🔥 Network/Fetch error:", err);
@@ -111,14 +77,14 @@ useEffect(() => {
 	};
 
 	checkLogin();
-}, [router, expoPushToken?.data]);
+}, [router]);
 
  
 
 	if (loading) {
 		return (
 			<View style={styles.loader}>
-				<ActivityIndicator size="large" color="#FFC300" />
+				<ActivityIndicator size="large" color="#f4bb26" />
 			</View>
 		);
 	}
@@ -133,7 +99,7 @@ useEffect(() => {
 				screenOptions={{
 					tabBarShowLabel: false,
 					tabBarActiveTintColor: "#000000",
-					tabBarInactiveTintColor: "#FFC300",
+					tabBarInactiveTintColor: "#f4bb26",
 					headerShown: false,
 					tabBarButton: HapticTab,
 					tabBarBackground: TabBarBackground,
@@ -205,7 +171,7 @@ const styles = StyleSheet.create({
 		position: "absolute",
 		right: -6,
 		top: -3,
-		backgroundColor: "#FFC300",
+		backgroundColor: "#f4bb26",
 		borderRadius: 8,
 		width: 12,
 		height: 12,
