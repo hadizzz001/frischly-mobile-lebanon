@@ -1,4 +1,5 @@
-import { useCart } from "@/contexts/CartContext";
+import CityPicker from "@/components/CityPicker";
+import { MAIN_SOURCE, useCart } from "@/contexts/CartContext";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -8,20 +9,38 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+	ActivityIndicator,
+	Alert,
+	Image,
+	Modal,
+	Platform,
+	ScrollView,
+	StyleSheet,
+	Text,
+	TextInput,
+	TouchableOpacity,
+	View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import OrderComponent from "../components/CreateOrderButton";
+
+// Collect every identifier a market might be referenced by (id / username /
+// name), lower-cased, so a promo's market can be matched against the cart's
+// market no matter how the API returns it (populated object, id string, ...).
+const collectMarketTokens = (market) => {
+	const tokens = new Set();
+	if (!market) return tokens;
+	if (typeof market === "string") {
+		tokens.add(market.toLowerCase());
+		return tokens;
+	}
+	if (typeof market === "object") {
+		["_id", "id", "username", "name"].forEach((key) => {
+			if (market[key]) tokens.add(String(market[key]).toLowerCase());
+		});
+	}
+	return tokens;
+};
 
 const CheckoutScreen = () => {
 	const { t } = useTranslation();
@@ -33,7 +52,8 @@ const CheckoutScreen = () => {
 	const [discountAmount, setDiscountAmount] = useState(0);
 	const [promoLoading, setPromoLoading] = useState(false);
 
-	const { cart, removeFromCart, subtotal, calculatePriceDetails } = useCart();
+	const { cart, removeFromCart, subtotal, calculatePriceDetails, cartSource, cartMarket } =
+		useCart();
 	const [deliveryFee] = useState(0);
 	const [total, setTotal] = useState("0.00");
 
@@ -162,13 +182,51 @@ const CheckoutScreen = () => {
 
 	const validatePromoCode = async () => {
 		if (!promoCode.trim()) {
-			Alert.alert("Error", "Please enter a promo code");
+			Alert.alert(t("errorTitle"), t("enterPromoCodeFirst"));
 			return;
 		}
 
 		setPromoLoading(true);
+
+		// ----------------------- DEBUG: entered code + cart market -----------------
+		const enteredCode = promoCode.toUpperCase();
+		console.log("\n========== 🎟️  PROMO DEBUG START ==========");
+		console.log("📝 Entered promo code:", enteredCode);
+		console.log("🛒 cartSource (market _id or 'MAIN'):", cartSource);
+		console.log(
+			"🛒 cartMarket (object on cart items):",
+			JSON.stringify(cartMarket, null, 2),
+		);
+		console.log(
+			"🛒 Cart market match tokens:",
+			[...collectMarketTokens(cartMarket || cartSource)],
+		);
+		console.log(
+			"🛒 Cart items (id | name | market):",
+			cart.map((it) => ({
+				_id: it._id,
+				name: it.name,
+				market: it.market,
+			})),
+		);
+
 		try {
 			const orderTotal = Number(subtotal) + Number(deliveryFee);
+			// The cart can only contain items from a single source (one market or
+			// the main admin store). Tell the backend which market so it can find
+			// that market's promo codes (they live in a separate collection).
+			const marketId =
+				cartSource && cartSource !== MAIN_SOURCE ? cartSource : null;
+
+			console.log(
+				"\n🚀 Validating code:",
+				enteredCode,
+				"orderTotal:",
+				orderTotal,
+				"market:",
+				marketId,
+			);
+
 			const response = await fetch(
 				"https://frischly-dash-leb.onrender.com/api/promocodes/validate",
 				{
@@ -180,27 +238,109 @@ const CheckoutScreen = () => {
 					body: JSON.stringify({
 						code: promoCode.toUpperCase(),
 						orderTotal: orderTotal,
+						market: marketId,
 					}),
 				},
 			);
 
 			const data = await response.json();
 
+			// ------------------- DEBUG: raw validate response ----------------------
+			console.log("\n📬 VALIDATE response status:", response.status);
+			console.log(
+				"📬 VALIDATE raw response body:\n",
+				JSON.stringify(data, null, 2),
+			);
+
 			if (data.success) {
+				// The cart can only hold items from one source: a single market, or
+				// the main admin store. A promo code must belong to that same source.
+				const promo = data.data?.promoCode ?? data.data ?? {};
+				const promoMarketRaw =
+					promo.market ??
+					promo.marketId ??
+					promo.market_id ??
+					data.data?.market ??
+					data.data?.marketId ??
+					null;
+
+				// Whether the response actually carries market info for the promo.
+				const promoHasMarketInfo =
+					"market" in promo ||
+					"marketId" in promo ||
+					"market_id" in promo ||
+					(!!data.data &&
+						("market" in data.data || "marketId" in data.data));
+
+				const cartIsMarket = !!cartSource && cartSource !== MAIN_SOURCE;
+				const cartTokens = collectMarketTokens(cartMarket || cartSource);
+				const promoTokens = collectMarketTokens(promoMarketRaw);
+
+				// ------------------- DEBUG: market comparison ----------------------
+				console.log("\n🔎 MARKET MATCH CHECK:");
+				console.log("   • Entered code:", enteredCode);
+				console.log("   • promo object keys:", Object.keys(promo));
+				console.log("   • promo market (raw):", JSON.stringify(promoMarketRaw));
+				console.log("   • promoHasMarketInfo:", promoHasMarketInfo);
+				console.log("   • cartIsMarket:", cartIsMarket);
+				console.log("   • cart tokens:", [...cartTokens]);
+				console.log("   • promo tokens:", [...promoTokens]);
+				console.log(
+					"   • overlap (matching tokens):",
+					[...promoTokens].filter((tk) => cartTokens.has(tk)),
+				);
+
+				let wrongMarket = false;
+				if (cartIsMarket) {
+					if (promoTokens.size > 0) {
+						// Promo targets a market -> it must be the cart's market.
+						wrongMarket = ![...promoTokens].some((tk) => cartTokens.has(tk));
+					} else if (promoHasMarketInfo) {
+						// Market field present but empty -> admin/global promo, which is
+						// not allowed while the cart is from a specific market.
+						wrongMarket = true;
+					}
+					// else: response carries no market info -> trust the backend result.
+				} else {
+					// Cart is from the main admin store -> reject market-scoped promos.
+					wrongMarket = promoTokens.size > 0;
+				}
+
+				console.log(
+					wrongMarket
+						? "   ❌ RESULT: wrongMarket = true → promo REJECTED (different market)"
+						: "   ✅ RESULT: wrongMarket = false → promo ACCEPTED (same market)",
+				);
+				console.log("========== 🎟️  PROMO DEBUG END ==========\n");
+
+				if (wrongMarket) {
+					setPromoCode("");
+					setAppliedPromo(null);
+					setDiscountAmount(0);
+					Alert.alert(t("errorTitle"), t("promoWrongMarket"));
+					return;
+				}
+
 				setAppliedPromo(data.data);
 				setDiscountAmount(data.data.discountAmount);
 				Alert.alert(
-					"Success",
-					`Promo code applied! Discount: €${data.data.discountAmount.toFixed(2)}`,
+					t("success"),
+					`${t("promoApplied")} $${data.data.discountAmount.toFixed(2)}`,
 				);
 			} else {
+				console.log(
+					"❌ Backend rejected the code. message:",
+					data.message || "(none)",
+				);
+				console.log("========== 🎟️  PROMO DEBUG END ==========\n");
 				setPromoCode("");
-				Alert.alert("Error", data.message || "Invalid promo code");
+				Alert.alert(t("errorTitle"), data.message || t("invalidPromoCode"));
 			}
 		} catch (error) {
-			console.error("Error validating promo code:", error);
+			console.error("🔥 Error validating promo code:", error);
+			console.log("========== 🎟️  PROMO DEBUG END ==========\n");
 			setPromoCode("");
-			Alert.alert("Error", "Failed to validate promo code. Please try again.");
+			Alert.alert(t("errorTitle"), t("validatePromoFailed"));
 		} finally {
 			setPromoLoading(false);
 		}
@@ -297,11 +437,15 @@ const CheckoutScreen = () => {
 					</TouchableOpacity>
 				</View>
 
-				<TextInput
-					style={styles.input}
-					placeholder={t("cityRequired")}
+				<CityPicker
 					value={state.inputs.city}
-					onChangeText={(v) => handleInput("city", v)}
+					onValueChange={(v) => handleInput("city", v)}
+					placeholder={t("cityRequired")}
+					style={{
+						borderColor: "#000000",
+						borderRadius: 6,
+						marginVertical: 6,
+					}}
 				/>
 
 				<TextInput
@@ -481,7 +625,7 @@ const CheckoutScreen = () => {
 										{t("quantity")} {quantity}
 									</Text>
 									<Text style={styles.price}>
-										€{priceDetails.finalPrice.toFixed(2)}
+										${priceDetails.finalPrice.toFixed(2)}
 									</Text>
 								</View>
 								<TouchableOpacity
@@ -496,11 +640,11 @@ const CheckoutScreen = () => {
 
 				<View style={styles.summaryRow}>
 					<Text>{t("subtotal")}</Text>
-					<Text>€{subtotal.toFixed(2)}</Text>
+					<Text>${subtotal.toFixed(2)}</Text>
 				</View>
 				<View style={styles.summaryRow}>
 					<Text>{t("delivery")}</Text>
-					<Text>€{deliveryFee.toFixed(2)}</Text>
+					<Text>${deliveryFee.toFixed(2)}</Text>
 				</View>
 				<View style={styles.summaryRow}>
 					<Text>{t("processFees")}</Text>
@@ -509,12 +653,12 @@ const CheckoutScreen = () => {
 				{discountAmount > 0 && (
 					<View style={styles.summaryRow}>
 						<Text>{t("discount")}</Text>
-						<Text>-€{discountAmount.toFixed(2)}</Text>
+						<Text>-${discountAmount.toFixed(2)}</Text>
 					</View>
 				)}
 				<View style={styles.summaryRow}>
 					<Text style={{ fontWeight: "bold" }}>{t("total")}</Text>
-					<Text style={{ fontWeight: "bold" }}>€{total}</Text>
+					<Text style={{ fontWeight: "bold" }}>${total}</Text>
 				</View>
 
 				<OrderComponent

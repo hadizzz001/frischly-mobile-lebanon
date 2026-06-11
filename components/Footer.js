@@ -1,9 +1,8 @@
 import { useTranslation } from "@/contexts/TranslationContext";
-import { AntDesign, FontAwesome, FontAwesome5 } from "@expo/vector-icons";
+import { AntDesign, FontAwesome } from "@expo/vector-icons";
 import { useRouter } from "expo-router"; // or next/navigation / @react-navigation/native
 import { useEffect, useState } from "react";
 import {
-    Image,
     Linking,
     StyleSheet,
     Text,
@@ -18,7 +17,7 @@ export default function Footer() {
 	const [showCustomerCare, setShowCustomerCare] = useState(false);
 	const [showCategories, setShowCategories] = useState(false);
 	const router = useRouter();
-	const { t } = useTranslation();
+	const { t, td } = useTranslation();
 
 	useEffect(() => {
 		const fetchCategories = async () => {
@@ -61,7 +60,7 @@ export default function Footer() {
 			isOpen: showCategories,
 			toggle: () => setShowCategories(!showCategories),
 			items: categories.map((cat) => ({
-				text: cat.name,
+				text: td(cat.name),
 				action: () =>
 					router.push(`shop1?category=${encodeURIComponent(cat.name)}`),
 			})),
@@ -99,7 +98,7 @@ export default function Footer() {
 					<TouchableOpacity
 						onPress={() =>
 							Linking.openURL(
-								"https://www.instagram.com/frischly_?igsh=MWs1dWM0dWUwMTJzbA%3D%3D&utm_source=qr"
+								"https://www.instagram.com/freshlylb?igsh=YjJ6Z3FpdGY5aHdt&utm_source=qr"
 							)
 						}
 					>
@@ -107,75 +106,11 @@ export default function Footer() {
 							<FontAwesome name="instagram" size={24} color="white" />
 						</View>
 					</TouchableOpacity>
-					<TouchableOpacity
-						onPress={() =>
-							Linking.openURL(
-								"https://www.facebook.com/profile.php?id=61579362112804"
-							)
-						}
-					>
-						<View style={[styles.circle, { backgroundColor: "#1877F2" }]}>
-							<FontAwesome name="facebook" size={24} color="white" />
-						</View>
-					</TouchableOpacity>
-					<TouchableOpacity
-						onPress={() => Linking.openURL("https://wa.me/4915256429941")}
-					>
-						<View style={[styles.circle, { backgroundColor: "#25D366" }]}>
-							<FontAwesome name="whatsapp" size={24} color="white" />
-						</View>
-					</TouchableOpacity>
-					<TouchableOpacity
-						onPress={() =>
-							Linking.openURL(
-								"https://www.tiktok.com/@frischly.gmbh?_t=ZN-90KSmS2b6Mo&_r=1"
-							)
-						}
-					>
-						<View style={[styles.circle, { backgroundColor: "black" }]}>
-							<FontAwesome5 name="tiktok" size={20} color="white" />
-						</View>
-					</TouchableOpacity>
-					<TouchableOpacity
-						onPress={() =>
-							Linking.openURL(
-								"https://youtube.com/@frischlygmbh?si=gVa5iy0EFWTkHBNn"
-							)
-						}
-					>
-						<View style={[styles.circle, { backgroundColor: "red" }]}>
-							<FontAwesome5 name="youtube" size={20} color="white" />
-						</View>
-					</TouchableOpacity>
-					<TouchableOpacity
-						onPress={() =>
-							Linking.openURL("https://www.threads.com/@frischlygmbh?invite=0")
-						}
-					>
-						<View
-							style={[
-								styles.circle,
-								{
-									backgroundColor: "black",
-									justifyContent: "center",
-									alignItems: "center",
-								},
-							]}
-						>
-							<Image
-								source={{
-									uri: "https://res.cloudinary.com/dziggyzpb/image/upload/v1763481116/threads-social-media-white-logo-icon-hd-png-735811696672474wx9bzdjwmv-removebg-preview_mznwm0.png",
-								}}
-								style={{ width: 20, height: 20 }}
-								resizeMode="contain"
-							/>
-						</View>
-					</TouchableOpacity>
 				</View>
 
 				{/* Bottom text */}
 				<Text style={styles.bottomText}>
-					© Frischly Shop {new Date().getFullYear()} ALL RIGHTS RESERVED
+					© Freshly LB {new Date().getFullYear()} {t("allRightReserved")}
 				</Text>
 			</View>
 		</SafeAreaView>

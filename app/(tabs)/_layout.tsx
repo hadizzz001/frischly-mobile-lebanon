@@ -5,7 +5,7 @@ import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Tabs, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Platform, StyleSheet, View } from "react-native";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
 
 export default function TabLayout() {
 	const { cart } = useCart();
@@ -103,10 +103,9 @@ useEffect(() => {
 					headerShown: false,
 					tabBarButton: HapticTab,
 					tabBarBackground: TabBarBackground,
-					tabBarStyle: Platform.select({
-						ios: { position: "absolute" },
-						default: { backgroundColor: "#FFFFFF" },
-					}),
+					// The global bottom navigation (rendered in app/_layout.tsx) replaces
+					// this built-in bar so it can appear on every page of the app.
+					tabBarStyle: { display: "none" },
 				}}
 			>
 				{visibleTabs.includes("index") && (

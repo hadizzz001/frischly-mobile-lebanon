@@ -7,18 +7,18 @@ import Constants from "expo-constants";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-    ActivityIndicator,
-    Dimensions,
-    FlatList,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+	ActivityIndicator,
+	Dimensions,
+	FlatList,
+	Image,
+	ScrollView,
+	StyleSheet,
+	Text,
+	TextInput,
+	TouchableOpacity,
+	View,
 } from "react-native";
 
 import { useBooleanValue } from "@/contexts/CartBoolContext";
@@ -28,7 +28,7 @@ const { width } = Dimensions.get("window");
 const ITEM_WIDTH = width / 3 - 12; // 3 items per row, adjust margin
 
 export default function ShopPage() {
-	const { t } = useTranslation();
+	const { t, td } = useTranslation();
 
 	const router = useRouter();
 	const searchParams = useLocalSearchParams();
@@ -38,6 +38,8 @@ export default function ShopPage() {
 	// ✅ discount & category from query params
 	const discountParam = searchParams.discount ?? "";
 	const categoryParam = searchParams.category ?? "";
+	const marketParam = searchParams.market ?? "";
+	const marketNameParam = searchParams.marketName ?? "";
 
 	const [menuOpen, setMenuOpen] = useState(false);
 	const [profileOpen, setProfileOpen] = useState(false);
@@ -48,6 +50,11 @@ export default function ShopPage() {
 	const [user, setUser] = useState(null);
 	const [filterOpen, setFilterOpen] = useState(false);
 	const [subcategories, setSubcategories] = useState([]);
+	// Each market has its own categories/subcategories (the MarketCategory
+	// collection), fetched from /api/markets/:id/categories.
+	const [marketCats, setMarketCats] = useState([]);
+	const [marketCatId, setMarketCatId] = useState("");
+	const [marketSubId, setMarketSubId] = useState("");
 	const searchParam = searchParams.search ?? "";
 	const [page, setPage] = useState(1);
 	const [hasNextPage, setHasNextPage] = useState(true);
@@ -70,6 +77,19 @@ export default function ShopPage() {
 	const [quantities, setQuantities] = useState({});
 	const [showQty, setShowQty] = useState({}); // Track which products show qty
 
+	// Keep the +/- quantity UI in sync with the actual cart (also reflects a
+	// cart "restore" when switching markets).
+	useEffect(() => {
+		const nextQuantities = {};
+		const nextShowQty = {};
+		cart.forEach((cartItem) => {
+			nextQuantities[cartItem._id] = cartItem.quantity || 1;
+			nextShowQty[cartItem._id] = true;
+		});
+		setQuantities(nextQuantities);
+		setShowQty(nextShowQty);
+	}, [cart]);
+
 	const increaseQty = (product) => {
 		const currentQty = quantities[product._id] || 0;
 
@@ -79,10 +99,13 @@ export default function ShopPage() {
 		}
 
 		const newQty = currentQty + 1;
-		setQuantities({ ...quantities, [product._id]: newQty });
-
-		addToCart(product, newQty);
-		setShowQty({ ...showQty, [product._id]: true });
+		// Adding from a different market shows a confirm dialog and is applied
+		// asynchronously, so only reflect the change locally when it was added.
+		const result = addToCart(product, newQty);
+		if (result?.added) {
+			setQuantities({ ...quantities, [product._id]: newQty });
+			setShowQty({ ...showQty, [product._id]: true });
+		}
 	};
 
 	const decreaseQty = (product) => {
@@ -133,6 +156,60 @@ export default function ShopPage() {
 		getSubcategories();
 	}, []);
 
+	// Load this market's OWN categories + subcategories. Each market defines its
+	// taxonomy in the MarketCategory/MarketSubcategory collections. We must NOT
+	// derive these from product tags: some markets tag products with main-store
+	// categories, which would surface categories the market never created.
+	useEffect(() => {
+		setMarketCatId("");
+		setMarketSubId("");
+		if (!marketParam) {
+			setMarketCats([]);
+			return;
+		}
+		let cancelled = false;
+		fetch(
+			`https://frischly-dash-leb.onrender.com/api/markets/${marketParam}/categories`
+		)
+			.then((res) => res.json())
+			.then((json) => {
+				if (!cancelled) {
+					setMarketCats(Array.isArray(json?.data) ? json.data : []);
+				}
+			})
+			.catch(() => {
+				if (!cancelled) setMarketCats([]);
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [marketParam]);
+
+	// The currently selected market category (with its subcategories).
+	const selectedMarketCat = useMemo(
+		() => marketCats.find((c) => String(c._id) === marketCatId),
+		[marketCats, marketCatId]
+	);
+
+	// Products shown in the market grid, filtered by the selected category /
+	// subcategory. Matching is done on the product's subcategory id against this
+	// market's own subcategory ids, so only the market's taxonomy is used.
+	const displayedProducts = useMemo(() => {
+		if (!marketParam) return products;
+		if (marketSubId) {
+			return products.filter(
+				(p) => String(p?.subcategory?._id) === marketSubId
+			);
+		}
+		if (marketCatId) {
+			const subIds = new Set(
+				(selectedMarketCat?.subcategories || []).map((s) => String(s._id))
+			);
+			return products.filter((p) => subIds.has(String(p?.subcategory?._id)));
+		}
+		return products;
+	}, [products, marketParam, marketCatId, marketSubId, selectedMarketCat]);
+
 	const fetchProducts = async (nextPage = 1, replace = false) => {
 		try {
 			if (nextPage === 1) setLoading(true);
@@ -140,7 +217,9 @@ export default function ShopPage() {
 
 			const params = new URLSearchParams();
 			params.append("page", nextPage);
-			params.append("limit", 12);
+			// Markets are small: load all their products in one call so the
+			// category chips and client-side filtering have the full list.
+			params.append("limit", marketParam ? 200 : 12);
 
 			// include filters (NO MANUAL ENCODING)
 			if (filters.search) params.append("search", filters.search);
@@ -155,8 +234,19 @@ export default function ShopPage() {
 			if (filters.priceRange) params.append("priceRange", filters.priceRange);
 			if (filters.stockLevel) params.append("stockLevel", filters.stockLevel);
 
-			// include category & discount param from query
-			if (categoryParam) params.append("category", categoryParam);
+			// Main-store browsing filters by the URL category server-side. The
+			// market view filters by category client-side (see displayedProducts),
+			// so here we just fetch the market's full product list.
+			if (!marketParam && categoryParam) params.append("category", categoryParam);
+
+			// include market filter (mobile: filter products by a specific market)
+			if (marketParam) {
+				params.append("market", marketParam);
+			} else {
+				// No specific market selected: show main-store items only. Market
+				// products are browsed by tapping a market on the home page.
+				params.append("market", "none");
+			}
 
 let url;
 
@@ -182,7 +272,10 @@ if (discountParam === "true" || filters.discount === true) {
 				const uniqueNewData = newData.filter((p) => !existingIds.has(p._id));
 				return [...prev, ...uniqueNewData];
 			});
-			setHasNextPage(json.pagination?.hasNextPage ?? false);
+			// Markets load everything at once, so disable infinite scroll there.
+			setHasNextPage(
+				marketParam ? false : json.pagination?.hasNextPage ?? false
+			);
 		} catch (err) {
 			console.error("fetchProducts error:", err);
 		} finally {
@@ -194,7 +287,7 @@ if (discountParam === "true" || filters.discount === true) {
 	useEffect(() => {
 		setPage(1);
 		fetchProducts(1, true); // replace = true so it starts fresh
-	}, [categoryParam, discountParam]);
+	}, [categoryParam, discountParam, marketParam]);
 
 	// ✅ Check login & fetch user
 	useEffect(() => {
@@ -278,17 +371,17 @@ if (discountParam === "true" || filters.discount === true) {
 					</View>
 
 					<Text style={styles.name} numberOfLines={2}>
-						{item.name}
+						{td(item.name)}
 					</Text>
 
 					{basePrice !== finalPrice ? (
 						<View style={styles.priceRow}>
-							<Text style={styles.basePrice}>€{basePrice.toFixed(2)}</Text>
-							<Text style={styles.finalPrice}>€{finalPrice.toFixed(2)}</Text>
+							<Text style={styles.basePrice}>${basePrice.toFixed(2)}</Text>
+							<Text style={styles.finalPrice}>${finalPrice.toFixed(2)}</Text>
 						</View>
 					) : (
 						<View style={styles.priceRow}>
-							<Text style={styles.newPrice}>€{finalPrice.toFixed(2)}</Text>
+							<Text style={styles.newPrice}>${finalPrice.toFixed(2)}</Text>
 						</View>
 					)}
 				</TouchableOpacity>
@@ -351,7 +444,73 @@ if (discountParam === "true" || filters.discount === true) {
 						<Feather name="chevron-left" size={24} color="#000000" />
 					</TouchableOpacity>
 
-					{discountParam !== "true" && (
+					{marketParam ? (
+						marketCats.length > 0 ? (
+							<ScrollView
+								horizontal
+								showsHorizontalScrollIndicator={false}
+								style={styles.categoryBar}
+								contentContainerStyle={{ alignItems: "center" }}
+							>
+								{/* All button */}
+								<TouchableOpacity
+									style={[
+										styles.categoryBtn,
+										!marketCatId && { backgroundColor: "#f4bb26" },
+									]}
+									onPress={() => {
+										setMarketCatId("");
+										setMarketSubId("");
+									}}
+								>
+									<Text
+										style={[
+											styles.categoryText,
+											!marketCatId && { color: "#000", fontWeight: "700" },
+										]}
+									>
+										{t("all")}
+									</Text>
+								</TouchableOpacity>
+
+								{/* This market's own categories */}
+								{marketCats.map((cat) => {
+									const isSelected = marketCatId === String(cat._id);
+									return (
+										<TouchableOpacity
+											key={cat._id}
+											style={[
+												styles.categoryBtn,
+												isSelected && { backgroundColor: "#f4bb26" },
+											]}
+											onPress={() => {
+												setMarketCatId(String(cat._id));
+												setMarketSubId("");
+											}}
+										>
+											<Text
+												style={[
+													styles.categoryText,
+													isSelected && { color: "#000", fontWeight: "700" },
+												]}
+											>
+												{td(cat.name)}
+											</Text>
+										</TouchableOpacity>
+									);
+								})}
+							</ScrollView>
+						) : (
+							<View style={{ flex: 1, paddingHorizontal: 10 }}>
+								<Text
+									numberOfLines={1}
+									style={{ fontSize: 18, fontWeight: "700", color: "#000" }}
+								>
+									{marketNameParam || t("market")}
+								</Text>
+							</View>
+						)
+					) : discountParam !== "true" && (
 						<ScrollView
 							horizontal
 							showsHorizontalScrollIndicator={false}
@@ -405,7 +564,7 @@ if (discountParam === "true" || filters.discount === true) {
 												isSelected && { color: "#000", fontWeight: "700" },
 											]}
 										>
-											{cat.name}
+											{td(cat.name)}
 										</Text>
 									</TouchableOpacity>
 								);
@@ -423,15 +582,80 @@ if (discountParam === "true" || filters.discount === true) {
 					)}
 				</View>
 
+				{/* Market subcategory row: the selected category's subcategories */}
+				{marketParam &&
+					selectedMarketCat &&
+					(selectedMarketCat.subcategories || []).length > 0 && (
+						<ScrollView
+							horizontal
+							showsHorizontalScrollIndicator={false}
+							style={styles.subcategoryBar}
+							contentContainerStyle={{
+								alignItems: "center",
+								paddingHorizontal: 8,
+								paddingVertical: 8,
+							}}
+						>
+							<TouchableOpacity
+								style={[
+									styles.subcategoryBtn,
+									!marketSubId && styles.subcategoryBtnActive,
+								]}
+								onPress={() => setMarketSubId("")}
+							>
+								<Text
+									style={[
+										styles.subcategoryText,
+										!marketSubId && { color: "#000", fontWeight: "700" },
+									]}
+								>
+									{t("all")}
+								</Text>
+							</TouchableOpacity>
+
+							{(selectedMarketCat.subcategories || []).map((sub) => {
+								const isSel = marketSubId === String(sub._id);
+								return (
+									<TouchableOpacity
+										key={sub._id}
+										style={[
+											styles.subcategoryBtn,
+											isSel && styles.subcategoryBtnActive,
+										]}
+										onPress={() => setMarketSubId(String(sub._id))}
+									>
+										<Text
+											style={[
+												styles.subcategoryText,
+												isSel && { color: "#000", fontWeight: "700" },
+											]}
+									>
+										{td(sub.name)}
+									</Text>
+								</TouchableOpacity>
+							);
+						})}
+						</ScrollView>
+					)}
+
 				{/* Products Grid */}
 				<FlatList
 					contentContainerStyle={{ paddingBottom: 120 }}
-					data={products}
+					data={displayedProducts}
 					keyExtractor={(item) => item._id}
 					renderItem={renderProduct}
 					numColumns={3} // <-- 3 items per row
-					onEndReached={loadMore}
+					onEndReached={marketParam ? undefined : loadMore}
 					onEndReachedThreshold={0.3}
+					ListEmptyComponent={
+						!loading ? (
+							<View style={{ paddingVertical: 40, alignItems: "center" }}>
+								<Text style={{ color: "#777", fontSize: 14 }}>
+									{t("noProductsInCategory")}
+								</Text>
+							</View>
+						) : null
+					}
 					ListFooterComponent={
 						isFetchingMore ? (
 							<ActivityIndicator size="small" color="#f4bb26" />
@@ -461,27 +685,32 @@ if (discountParam === "true" || filters.discount === true) {
 								style={styles.input}
 							/>
 
-							{/* Subcategory Picker */}
-							<Text style={{ marginTop: 20, marginBottom: 5 }}>
-								Subcategory
-							</Text>
-							<View style={styles.input}>
-								<Picker
-									selectedValue={filters.subcategory}
-									onValueChange={(v) =>
-										setFilters((p) => ({ ...p, subcategory: v }))
-									}
-								>
-									<Picker.Item label={t("subcategory")} value="" />
-									{subcategories.map((sub) => (
-										<Picker.Item
-											key={sub._id}
-											label={sub.name}
-											value={sub.name}
-										/>
-									))}
-								</Picker>
-							</View>
+							{/* Subcategory Picker (main store only; markets use their own
+							   category/subcategory chips above) */}
+							{!marketParam && (
+								<>
+									<Text style={{ marginTop: 20, marginBottom: 5 }}>
+										{t("subcategory")}
+									</Text>
+									<View style={styles.input}>
+										<Picker
+											selectedValue={filters.subcategory}
+											onValueChange={(v) =>
+												setFilters((p) => ({ ...p, subcategory: v }))
+											}
+										>
+											<Picker.Item label={t("subcategory")} value="" />
+											{subcategories.map((sub) => (
+												<Picker.Item
+													key={sub._id}
+													label={td(sub.name)}
+													value={sub.name}
+												/>
+											))}
+										</Picker>
+									</View>
+								</>
+							)}
 
 							{/* Sort Dropdown */}
 							<Text style={{ marginTop: 20, marginBottom: 5 }}>
@@ -495,12 +724,12 @@ if (discountParam === "true" || filters.discount === true) {
 										setFilters((p) => ({ ...p, sortBy, sortOrder }));
 									}}
 								>
-									<Picker.Item label="Price: Low to High" value="price_asc" />
-									<Picker.Item label="Price: High to Low" value="price_desc" />
-									<Picker.Item label="Name: A to Z" value="name_asc" />
-									<Picker.Item label="Name: Z to A" value="name_desc" />
-									<Picker.Item label="Newest First" value="createdAt_desc" />
-									<Picker.Item label="Oldest First" value="createdAt_asc" />
+									<Picker.Item label={t("sortPriceLowHigh")} value="price_asc" />
+									<Picker.Item label={t("sortPriceHighLow")} value="price_desc" />
+									<Picker.Item label={t("sortNameAZ")} value="name_asc" />
+									<Picker.Item label={t("sortNameZA")} value="name_desc" />
+									<Picker.Item label={t("sortNewest")} value="createdAt_desc" />
+									<Picker.Item label={t("sortOldest")} value="createdAt_asc" />
 								</Picker>
 							</View>
 
@@ -582,6 +811,20 @@ const styles = StyleSheet.create({
 		marginRight: 10,
 	},
 	categoryText: { fontSize: 14, fontWeight: "500", color: "#000000" },
+	subcategoryBar: {
+		backgroundColor: "#fafafa",
+		borderBottomWidth: 1,
+		borderBottomColor: "#eee",
+	},
+	subcategoryBtn: {
+		paddingVertical: 5,
+		paddingHorizontal: 12,
+		borderRadius: 16,
+		marginRight: 8,
+		backgroundColor: "#eee",
+	},
+	subcategoryBtnActive: { backgroundColor: "#f4bb26" },
+	subcategoryText: { fontSize: 13, fontWeight: "500", color: "#333" },
 	grid: { padding: 10 },
 	card: {
 		width: ITEM_WIDTH,

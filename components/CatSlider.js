@@ -18,7 +18,7 @@ const ITEM_WIDTH = width / 4 - 15; // 4 items per row
 const ITEM_HEIGHT = 130;
 
 export default function CategoriesGrid({ refreshTrigger }) {
-	const { t } = useTranslation();
+	const { t, td } = useTranslation();
 
 	const router = useRouter();
 	const [categories, setCategories] = useState([]);
@@ -59,7 +59,7 @@ export default function CategoriesGrid({ refreshTrigger }) {
 				}}
 			>
 				<ActivityIndicator size="large" color="#f4bb26" />
-				<Text>Loading categories...</Text>
+				<Text>{t("loadingCategories")}</Text>
 			</View>
 		);
 	}
@@ -79,7 +79,7 @@ export default function CategoriesGrid({ refreshTrigger }) {
 				/>
 			</View>
 			<Text style={styles.name} numberOfLines={2}>
-				{category.name}
+				{td(category.name)}
 			</Text>
 		</TouchableOpacity>
 	);

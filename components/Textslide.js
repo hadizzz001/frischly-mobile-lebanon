@@ -1,3 +1,4 @@
+import { useTranslation } from "@/contexts/TranslationContext";
 import { Feather } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import {
@@ -14,6 +15,7 @@ import TextTicker from "react-native-text-ticker";
 const { width } = Dimensions.get("window");
 
 const NewsTicker = ({ refreshTrigger }) => {
+	const { t } = useTranslation();
 	const [textItems, setTextItems] = useState([]);
 	const [promoData, setPromoData] = useState([]);
 	const [modalVisible, setModalVisible] = useState(false);
@@ -74,7 +76,7 @@ const NewsTicker = ({ refreshTrigger }) => {
 			>
 				<View style={styles.modalBackground}>
 					<View style={styles.modalContainer}>
-						<Text style={styles.modalTitle}>Announcements</Text>
+						<Text style={styles.modalTitle}>{t("announcements")}</Text>
 						<ScrollView style={styles.scrollView}>
 							{promoData.map((promo, index) => (
 								<View key={index} style={styles.promoCard}>
@@ -87,7 +89,7 @@ const NewsTicker = ({ refreshTrigger }) => {
 							style={styles.closeButton}
 							onPress={() => setModalVisible(false)}
 						>
-							<Text style={styles.closeButtonText}>Close</Text>
+							<Text style={styles.closeButtonText}>{t("close")}</Text>
 						</TouchableOpacity>
 					</View>
 				</View>

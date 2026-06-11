@@ -20,7 +20,7 @@ const ITEM_WIDTH = width / NUM_COLUMNS - 20;
 const ITEM_HEIGHT = 130;
 
 export default function CategoriesGrid() {
-	const { t } = useTranslation();
+	const { t, td } = useTranslation();
 	const router = useRouter();
 	const [categories, setCategories] = useState([]);
 	const [loading, setLoading] = useState(true);
@@ -68,7 +68,7 @@ export default function CategoriesGrid() {
 				/>
 			</View>
 			<Text style={styles.name} numberOfLines={2}>
-				{category.name}
+				{td(category.name)}
 			</Text>
 		</TouchableOpacity>
 	);

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Frischly Lebanon",
+    "name": "Freshly LB",
     "slug": "frischly-lebanon",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -49,8 +49,13 @@
       "expo-video",
       "expo-web-browser",
       "expo-asset",
-      "@react-native-community/datetimepicker"
- 
+      "@react-native-community/datetimepicker",
+      [
+        "expo-notifications",
+        {
+          "color": "#f4bb26"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

@@ -1,14 +1,15 @@
 import { useCart } from "@/contexts/CartContext";
 import { useTranslation } from "@/contexts/TranslationContext";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+	ActivityIndicator,
+	Alert,
+	StyleSheet,
+	Text,
+	TouchableOpacity,
+	View,
 } from "react-native";
 
 const API_BASE_URL = "https://frischly-dash-leb.onrender.com/api";
@@ -30,6 +31,47 @@ export default function RepeatOrderButton() {
 	const { t } = useTranslation();
 	const { addItemsToCart, cart } = useCart();
 	const [loading, setLoading] = useState(false);
+	// Only show this button for logged-in (non-guest) users who already have
+	// at least one previous order.
+	const [hasPreviousOrders, setHasPreviousOrders] = useState(false);
+
+	useEffect(() => {
+		let isMounted = true;
+
+		const checkPreviousOrders = async () => {
+			try {
+				const userData = await AsyncStorage.getItem("userData");
+				const guest = await AsyncStorage.getItem("guest");
+				const token = userData ? JSON.parse(userData)?.token : null;
+				const isGuest = guest === "true";
+
+				// Guests or users without a token never see the button.
+				if (!token || isGuest) {
+					if (isMounted) setHasPreviousOrders(false);
+					return;
+				}
+
+				const response = await fetch(`${API_BASE_URL}/orders`, {
+					headers: {
+						Authorization: `Bearer ${token}`,
+						"Content-Type": "application/json",
+					},
+				});
+				const data = await response.json();
+				const orders = Array.isArray(data?.data) ? data.data : [];
+
+				if (isMounted) setHasPreviousOrders(response.ok && orders.length > 0);
+			} catch {
+				if (isMounted) setHasPreviousOrders(false);
+			}
+		};
+
+		checkPreviousOrders();
+
+		return () => {
+			isMounted = false;
+		};
+	}, []);
 
 	const fetchLatestOrder = async (token) => {
 		const response = await fetch(`${API_BASE_URL}/orders`, {
@@ -134,18 +176,23 @@ export default function RepeatOrderButton() {
 
 	return (
 		<View style={styles.wrapper} pointerEvents="box-none">
-			<TouchableOpacity
-				activeOpacity={0.85}
-				disabled={loading}
-				onPress={handleRepeatOrder}
-				style={[styles.button, loading && styles.disabledButton]}
-			>
-				{loading ? (
-					<ActivityIndicator color="#000000" />
-				) : (
-					<Text style={styles.buttonText}>{t("repeatOrder")}</Text>
-				)}
-			</TouchableOpacity>
+			{hasPreviousOrders && (
+				<TouchableOpacity
+					activeOpacity={0.85}
+					disabled={loading}
+					onPress={handleRepeatOrder}
+					style={[styles.button, loading && styles.disabledButton]}
+				>
+					{loading ? (
+						<ActivityIndicator color="#222222" />
+					) : (
+						<>
+							<MaterialCommunityIcons name="cart" size={20} color="#f4bb26" />
+							<Text style={styles.buttonText}>{t("repeatOrder")}</Text>
+						</>
+					)}
+				</TouchableOpacity>
+			)}
 		</View>
 	);
 }
@@ -153,16 +200,21 @@ export default function RepeatOrderButton() {
 const styles = StyleSheet.create({
 	wrapper: {
 		position: "absolute",
-		left: 16,
 		right: 16,
-		bottom: 42,
+		bottom: "5%",
 		zIndex: 10,
+		alignItems: "flex-end",
 	},
 	button: {
-		backgroundColor: "#f4bb26",
-		borderRadius: 14,
-		paddingVertical: 14,
+		flexDirection: "row",
 		alignItems: "center",
+		gap: 8,
+		backgroundColor: "#ffffff",
+		borderRadius: 30,
+		paddingVertical: 12,
+		paddingHorizontal: 18,
+		borderWidth: 1,
+		borderColor: "#eeeeee",
 		shadowColor: "#000000",
 		shadowOffset: { width: 0, height: 4 },
 		shadowOpacity: 0.18,
@@ -173,8 +225,8 @@ const styles = StyleSheet.create({
 		opacity: 0.75,
 	},
 	buttonText: {
-		color: "#000000",
-		fontSize: 16,
+		color: "#222222",
+		fontSize: 15,
 		fontWeight: "700",
 	},
 });

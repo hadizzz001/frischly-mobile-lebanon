@@ -20,7 +20,7 @@ const ITEM_WIDTH = width / 3 - 12; // Show exactly 3 per row
 const ITEM_HEIGHT = 180;
 
 export default function DiscountCarousel({ refreshTrigger }) {
-	const { t } = useTranslation();
+	const { t, td } = useTranslation();
 	const router = useRouter();
 	const [discountedProducts, setDiscountedProducts] = useState([]);
 	const [loading, setLoading] = useState(true);
@@ -30,11 +30,25 @@ export default function DiscountCarousel({ refreshTrigger }) {
 	const [quantities, setQuantities] = useState({});
 	const [showQty, setShowQty] = useState({}); // Track which products show qty
 
+	// Keep the +/- quantity UI in sync with the actual cart (also reflects a
+	// cart "restore" when switching markets).
+	useEffect(() => {
+		const nextQuantities = {};
+		const nextShowQty = {};
+		cart.forEach((cartItem) => {
+			nextQuantities[cartItem._id] = cartItem.quantity || 1;
+			nextShowQty[cartItem._id] = true;
+		});
+		setQuantities(nextQuantities);
+		setShowQty(nextShowQty);
+	}, [cart]);
+
 	const fetchDiscountProducts = async () => {
 		try {
 			setLoading(true);
+			// Hot sale shows main-store discounted items only (no market products).
 			const res = await fetch(
-				"https://frischly-dash-leb.onrender.com/api/products/discount"
+				`https://frischly-dash-leb.onrender.com/api/products/discount?market=none`
 			);
 			const json = await res.json();
 			const withDiscount = json.data;
@@ -65,10 +79,13 @@ const increaseQty = (product) => {
   }
 
   const newQty = currentQty + 1;
-  setQuantities({ ...quantities, [product._id]: newQty });
-
-  addToCart(product, newQty);
-  setShowQty({ ...showQty, [product._id]: true });
+  // Adding from a different market shows a confirm dialog and is applied
+  // asynchronously, so only reflect the change locally when it was added.
+  const result = addToCart(product, newQty);
+  if (result?.added) {
+    setQuantities({ ...quantities, [product._id]: newQty });
+    setShowQty({ ...showQty, [product._id]: true });
+  }
 };
 
 
@@ -98,7 +115,7 @@ const increaseQty = (product) => {
 				}}
 			>
 				<ActivityIndicator size="large" color="#f4bb26" />
-				<Text>Loading  ...</Text>
+				<Text>{t("loading")}</Text>
 			</View>
 		);
 	}
@@ -145,12 +162,12 @@ const finalPrice =
 				</View>
 
 				<Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
-					{product.name}
+					{td(product.name)}
 				</Text>
  
 <View style={styles.priceRow}>
-  <Text style={styles.basePrice}>€{basePrice.toFixed(2)}</Text>
-  <Text style={styles.finalPrice}>€{finalPrice.toFixed(2)}</Text>
+  <Text style={styles.basePrice}>${basePrice.toFixed(2)}</Text>
+  <Text style={styles.finalPrice}>${finalPrice.toFixed(2)}</Text>
 </View>
 
 

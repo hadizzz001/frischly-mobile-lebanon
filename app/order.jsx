@@ -19,7 +19,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function TestOrder() {
-	const { t } = useTranslation();
+	const { t, td } = useTranslation();
 	const [user, setUser] = useState(null);
 	const [orders, setOrders] = useState([]);
 	const [loading, setLoading] = useState(true);
@@ -218,12 +218,12 @@ export default function TestOrder() {
 		return (
 			<View style={styles.itemRow}>
 				<Image source={image ? { uri: image } : ""} style={styles.itemImage} />
-				<Text style={styles.itemText}>{item.product.name}</Text>
+				<Text style={styles.itemText}>{td(item.product.name)}</Text>
 				<Text style={styles.itemText}>
 					{t("quantity")} {item.quantity}
 				</Text>
 				<Text style={styles.itemText}>
-					{t("price")}: €{item.totalPrice.toFixed(2)}
+					{t("price")}: ${item.totalPrice.toFixed(2)}
 				</Text>
 			</View>
 		);
@@ -234,6 +234,25 @@ export default function TestOrder() {
 			{item.items.map((i) => (
 				<ProductRow key={i._id} item={i} />
 			))}
+
+			{/* Track driver live location — only when a driver is assigned and the
+			    order is still in progress. */}
+			{item.assignedRider &&
+				item.status !== "delivered" &&
+				item.status !== "cancelled" && (
+					<TouchableOpacity
+						style={styles.trackBtn}
+						onPress={() =>
+							router.push({
+								pathname: `/track/${item._id}`,
+								params: { orderNumber: item.orderNumber },
+							})
+						}
+					>
+						<Feather name="map-pin" size={16} color="#fff" />
+						<Text style={styles.trackBtnText}>{t("trackDriver")}</Text>
+					</TouchableOpacity>
+				)}
 
 			{/* ✅ Action Buttons (only if not delivered or cancelled) */}
 			{item.status !== "delivered" && item.status !== "cancelled" && (
@@ -354,13 +373,13 @@ export default function TestOrder() {
 
 				<View style={{ flex: 2 }}>
 					<Text>
-						{t("subtotal")}: €{item.subtotal.toFixed(2)}
+						{t("subtotal")}: ${item.subtotal.toFixed(2)}
 					</Text>
 					<Text>
-						{t("delivery")}: €{item.delivery?.toFixed(2) || "0.00"}
+						{t("delivery")}: ${item.delivery?.toFixed(2) || "0.00"}
 					</Text>
 					<Text style={{ fontWeight: "bold" }}>
-						{t("total")}: €{item.total.toFixed(2)}
+						{t("total")}: ${item.total.toFixed(2)}
 					</Text>
 				</View>
 
@@ -511,6 +530,21 @@ const styles = StyleSheet.create({
 	itemsContainer: {
 		padding: 10,
 		backgroundColor: "#fff",
+	},
+	trackBtn: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "center",
+		gap: 6,
+		backgroundColor: "#22a45d",
+		paddingVertical: 9,
+		borderRadius: 6,
+		marginTop: 8,
+	},
+	trackBtnText: {
+		color: "#fff",
+		fontWeight: "700",
+		fontSize: 13,
 	},
 	itemRow: {
 		flexDirection: "row",

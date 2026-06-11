@@ -1,6 +1,8 @@
 "use client";
 
+import CityPicker from "@/components/CityPicker";
 import { useTranslation } from "@/contexts/TranslationContext";
+import { formatLocalDate, toCalendarISOString } from "@/utils/date";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -138,7 +140,7 @@ const fullPhoneNumber = `${countryCode}${sanitizedPhone}`;
 
 		const userData = {
 			name,
-			dateOfBirth: dateOfBirth.toISOString(),
+			dateOfBirth: toCalendarISOString(dateOfBirth),
 			phoneNumber: fullPhoneNumber,
 			email: email.toLowerCase(),
 			password,
@@ -291,11 +293,7 @@ const fullPhoneNumber = `${countryCode}${sanitizedPhone}`;
   <View pointerEvents="none">
     <InputBox
       placeholder={t("dateOfBirth")}
-      value={
-        dateOfBirth
-          ? dateOfBirth.toISOString().split("T")[0] // YYYY-MM-DD
-          : ""
-      }
+      value={dateOfBirth ? formatLocalDate(dateOfBirth) : ""}
       inputBg={inputBg}
       inputText={inputText}
       placeholderColor={placeholderColor}
@@ -371,13 +369,16 @@ const fullPhoneNumber = `${countryCode}${sanitizedPhone}`;
 						inputText={inputText}
 						placeholderColor={placeholderColor}
 					/>
-					<InputBox
-						placeholder={t("city")}
+					<CityPicker
 						value={city}
-						onChangeText={setCity}
-						inputBg={inputBg}
-						inputText={inputText}
-						placeholderColor={placeholderColor}
+						onValueChange={setCity}
+						placeholder={t("city")}
+						textColor={inputText}
+						style={{
+							marginBottom: 12,
+							backgroundColor: inputBg,
+							minHeight: 55,
+						}}
 					/>
 					<InputBox
 						placeholder={t("state")}

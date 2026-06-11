@@ -1,3 +1,4 @@
+import CityPicker from "@/components/CityPicker";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -145,7 +146,7 @@ export default function EditProfile() {
 				}
 
 				Alert.alert(t("success"), t("profileUpdated"), [
-					{ text: "OK", onPress: () => router.back() }
+					{ text: t("ok"), onPress: () => router.back() }
 				]);
 				return;
 			} else {
@@ -156,7 +157,7 @@ export default function EditProfile() {
 			}
 		} catch (err) {
 			console.error("🔥 Unexpected error:", err);
-			alert("⚠️ Something went wrong! Check console logs.");
+			alert(t("somethingWrong"));
 		}
 	};
 
@@ -179,7 +180,27 @@ export default function EditProfile() {
 				</View>
 			))}
 
-			{["street", "city", "state"].map((key) => (
+			{["street"].map((key) => (
+				<View key={key} style={{ marginBottom: 12 }}>
+					<Text style={styles.label}>{t(key)}</Text>
+					<TextInput
+						style={styles.input}
+						value={form[key]}
+						onChangeText={(val) => setForm({ ...form, [key]: val })}
+					/>
+				</View>
+			))}
+
+			<View style={{ marginBottom: 12 }}>
+				<Text style={styles.label}>{t("city")}</Text>
+				<CityPicker
+					value={form.city}
+					onValueChange={(val) => setForm({ ...form, city: val })}
+					placeholder={t("city")}
+				/>
+			</View>
+
+			{["state"].map((key) => (
 				<View key={key} style={{ marginBottom: 12 }}>
 					<Text style={styles.label}>{t(key)}</Text>
 					<TextInput
@@ -196,7 +217,7 @@ export default function EditProfile() {
 			</View>
 
 			<TouchableOpacity style={styles.saveBtn} onPress={handleUpdate}>
-				<Text style={styles.saveText}>Save Changes</Text>
+				<Text style={styles.saveText}>{t("saveChanges")}</Text>
 			</TouchableOpacity>
 
 			<View style={{ height: 220 }} />

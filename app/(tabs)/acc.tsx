@@ -1,4 +1,5 @@
 import { useTranslation } from "@/contexts/TranslationContext";
+import { removePushTokenFromServer } from "@/hooks/useNotifications";
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -133,7 +134,7 @@ export default function AccScreen() {
 							<Feather name="user" size={20} color="#f4bb26" />
 						</View>
 						<View style={styles.infoContent}>
-							<Text style={styles.infoLabel}>{t("name")}</Text>
+							<Text style={styles.infoLabel}>{t("fullName")}</Text>
 							<Text style={styles.infoValue}>{user.name}</Text>
 						</View>
 					</View>
@@ -143,7 +144,7 @@ export default function AccScreen() {
 							<Feather name="mail" size={20} color="#f4bb26" />
 						</View>
 						<View style={styles.infoContent}>
-							<Text style={styles.infoLabel}>{t("fullName")}</Text>
+							<Text style={styles.infoLabel}>{t("email")}</Text>
 							<Text style={styles.infoValue}>{user.email}</Text>
 						</View>
 					</View>
@@ -169,7 +170,7 @@ export default function AccScreen() {
 							<View style={styles.infoContent}>
 								<Text style={styles.infoLabel}>{t("street")}</Text>
 								<Text style={styles.infoValue}>
-									{user.address?.street || "Not provided"}
+									{user.address?.street || t("notProvided")}
 								</Text>
 							</View>
 						</View>
@@ -181,7 +182,7 @@ export default function AccScreen() {
 							<View style={styles.infoContent}>
 								<Text style={styles.infoLabel}>{t("city")}</Text>
 								<Text style={styles.infoValue}>
-									{user.address?.city || "Not provided"}
+									{user.address?.city || t("notProvided")}
 								</Text>
 							</View>
 						</View>
@@ -193,7 +194,7 @@ export default function AccScreen() {
 							<View style={styles.infoContent}>
 								<Text style={styles.infoLabel}>{t("state")}</Text>
 								<Text style={styles.infoValue}>
-									{user.address?.state || "Not provided"}
+									{user.address?.state || t("notProvided")}
 								</Text>
 							</View>
 						</View>
@@ -288,6 +289,15 @@ export default function AccScreen() {
 						user ? styles.logoutButton : styles.loginButton,
 					]}
 					onPress={async () => {
+						if (user) {
+							try {
+								const raw = await AsyncStorage.getItem("userData");
+								const token = raw ? JSON.parse(raw)?.token : null;
+								await removePushTokenFromServer(token);
+							} catch (e) {
+								console.error(e);
+							}
+						}
 						await AsyncStorage.removeItem("userData");
 						router.replace("/start");
 					}}
@@ -350,7 +360,7 @@ export default function AccScreen() {
 								{t("confirmNewPassword")}
 							</Text>
 							<TextInput
-								placeholder="Enter your password"
+								placeholder={t("enterYourPassword")}
 								secureTextEntry
 								value={passwordInput}
 								onChangeText={setPasswordInput}

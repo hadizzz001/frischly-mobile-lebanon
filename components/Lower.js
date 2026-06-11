@@ -1,10 +1,12 @@
 import Cart from "@/components/Cart";
 import { useBooleanValue } from "@/contexts/CartBoolContext";
+import { useTranslation } from "@/contexts/TranslationContext";
 import { Ionicons } from "@expo/vector-icons";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export default function Lower({ menuOpen, setMenuOpen, categories }) {
   const { isBooleanValue, setBooleanValue } = useBooleanValue();
+  const { t, td } = useTranslation();
 
   return (
     <>
@@ -19,13 +21,13 @@ export default function Lower({ menuOpen, setMenuOpen, categories }) {
           </TouchableOpacity>
 
           <ScrollView contentContainerStyle={styles.menuContent}>
-            <Text style={styles.menuTitle}>All Categories</Text>
+            <Text style={styles.menuTitle}>{t("allCategories")}</Text>
             {categories.map((cat) => (
               <TouchableOpacity
                 key={cat.id}
                 onPress={() => setMenuOpen(false)}
               >
-                <Text style={styles.menuItem}>{cat.name}</Text>
+                <Text style={styles.menuItem}>{td(cat.name)}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>

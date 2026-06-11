@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslation } from "@/contexts/TranslationContext";
+import { syncPushTokenToServer } from "@/hooks/useNotifications";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
@@ -8,17 +9,17 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 
 import {
-	ActivityIndicator,
-	Alert,
-	Dimensions,
-	Image,
-	KeyboardAvoidingView,
-	ScrollView,
-	StyleSheet,
-	Text,
-	TextInput,
-	TouchableOpacity,
-	View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    Image,
+    KeyboardAvoidingView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 export default function Start() {
@@ -62,6 +63,8 @@ export default function Start() {
 					// ✅ Save user data and redirect
 					await AsyncStorage.setItem("userData", JSON.stringify(userData));
 					await AsyncStorage.setItem("guest", "false");
+					// Register this device for push notifications (fire-and-forget)
+					syncPushTokenToServer();
 					router.replace("/(tabs)");
 				} else {
 					Alert.alert(t("emailNotVerified"), t("verifyEmail"));

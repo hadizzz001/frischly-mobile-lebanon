@@ -16,7 +16,7 @@ import Feather from "react-native-vector-icons/Feather";
 const { width } = Dimensions.get("window");
 
 const ProductPage = () => {
-	const { t } = useTranslation();
+	const { t, td } = useTranslation();
 
 	const route = useRoute();
 	const navigation = useNavigation();
@@ -197,7 +197,7 @@ const handleAgeResponse = (response) => {
 
 				{/* Product Info */}
 				<View style={styles.info}>
-					<Text style={styles.title}>{name}</Text>
+					<Text style={styles.title}>{td(name)}</Text>
 
 					<Text>{description}</Text>
 
@@ -221,22 +221,22 @@ const handleAgeResponse = (response) => {
 						return (
 							<View style={styles.priceDetails}>
 								<Text style={styles.basePrice}>
-									{t("baseP")}: €{basePrice.toFixed(2)}
+									{t("baseP")}: ${basePrice.toFixed(2)}
 								</Text>
 								{discountPercent > 0 && (
 									<Text style={styles.discount}>
-										{t("discount")} ({discountPercent}%): -€
+										{t("discount")} ({discountPercent}%): -$
 										{discountAmount.toFixed(2)}
 									</Text>
 								)}
 								{taxPercent > 0 && (
 									<Text style={styles.tax}>
-										{t("tax")} ({taxPercent}%): +€{taxAmount.toFixed(2)}
+										{t("tax")} ({taxPercent}%): +${taxAmount.toFixed(2)}
 									</Text>
 								)}
 								{bottleRefundValue > 0 && (
 									<Text style={styles.bottleRefund}>
-										{t("bottle")}: +€{bottleRefundValue.toFixed(2)}
+										{t("bottle")}: +${bottleRefundValue.toFixed(2)}
 									</Text>
 								)}
 								   <Text
@@ -245,7 +245,7 @@ const handleAgeResponse = (response) => {
 										   discountPercent > 0 && { color: 'red' }
 									   ]}
 								   >
-									   {t("fPrice")}: €{finalPrice.toFixed(2)}
+									   {t("fPrice")}: ${finalPrice.toFixed(2)}
 								   </Text>
 							</View>
 						);
@@ -322,9 +322,9 @@ const handleAgeResponse = (response) => {
 						<Text style={styles.title}>{t("myProfile")}</Text>
 						{user ? (
 							<>
-								<Text style={styles.item}>Name: {user.name}</Text>
-								<Text style={styles.item}>Email: {user.email}</Text>
-								<Text style={styles.item}>Phone: {user.phoneNumber}</Text>
+								<Text style={styles.item}>{t("fullName")}: {user.name}</Text>
+								<Text style={styles.item}>{t("email")}: {user.email}</Text>
+								<Text style={styles.item}>{t("phoneNumber")}: {user.phoneNumber}</Text>
 							</>
 						) : (
 							<Text style={styles.item}>{t("loadingUser")}</Text>
@@ -388,7 +388,7 @@ const handleAgeResponse = (response) => {
 									router.push(`/shop?category=${cat._id}`);
 								}}
 							>
-								<Text style={styles.item}>{cat.name}</Text>
+								<Text style={styles.item}>{td(cat.name)}</Text>
 							</TouchableOpacity>
 						))}
 						<TouchableOpacity

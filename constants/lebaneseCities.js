@@ -1,0 +1,40 @@
+// Major Lebanese cities/towns for address selection.
+// Keep these values aligned with the market "location.city" values used by the
+// backend so city-based market filtering works correctly.
+export const LEBANESE_CITIES = [
+	"Beirut",
+	"Tripoli",
+	"Sidon",
+	"Tyre",
+	"Nabatieh",
+	"Jounieh",
+	"Zahle",
+	"Baalbek",
+	"Byblos",
+	"Aley",
+	"Baabda",
+	"Zgharta",
+	"Bint Jbeil",
+	"Batroun",
+	"Hermel",
+	"Jezzine",
+	"Marjeyoun",
+	"Rashaya",
+	"Hasbaya",
+	"Bcharre",
+	"Amioun",
+	"Halba",
+	"Chtaura",
+	"Bhamdoun",
+	"Broummana",
+	"Dbayeh",
+	"Antelias",
+	"Jdeideh",
+	"Zalka",
+	"Ghazieh",
+	"Damour",
+	"Anjar",
+	"Rayak",
+];
+
+export default LEBANESE_CITIES;

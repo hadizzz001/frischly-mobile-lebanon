@@ -27,7 +27,7 @@ export default function ShopPage() {
 	const { category } = useLocalSearchParams();
 	const { cart, addToCart, removeFromCart } = useCart(); // ✅ Cart context
 	const { isBooleanValue, setBooleanValue } = useBooleanValue();
-	const { t } = useTranslation();
+	const { t, td } = useTranslation();
 
 	const [user, setUser] = useState(null);
 	const [loading, setLoading] = useState(true);
@@ -35,6 +35,19 @@ export default function ShopPage() {
 	const [quantities, setQuantities] = useState({});
 	const [showQty, setShowQty] = useState({}); // track which products show qty
 	const [currentSectionTitle, setCurrentSectionTitle] = useState("");
+
+	// Keep the +/- quantity UI in sync with the actual cart (also reflects a
+	// cart "restore" when switching markets).
+	useEffect(() => {
+		const nextQuantities = {};
+		const nextShowQty = {};
+		cart.forEach((cartItem) => {
+			nextQuantities[cartItem._id] = cartItem.quantity || 1;
+			nextShowQty[cartItem._id] = true;
+		});
+		setQuantities(nextQuantities);
+		setShowQty(nextShowQty);
+	}, [cart]);
 
 	const token =
 		Constants.expoConfig?.extra?.jwtToken || process.env.EXPO_PUBLIC_JWT_TOKEN;
@@ -44,7 +57,7 @@ export default function ShopPage() {
 		try {
 			setLoading(true);
 			const res = await fetch(
-				`https://frischly-dash-leb.onrender.com/api/products?limit=200&sortBy=categorySortOrder&sortOrder=asc&category=${encodeURIComponent(
+				`https://frischly-dash-leb.onrender.com/api/products?limit=200&sortBy=categorySortOrder&sortOrder=asc&market=none&category=${encodeURIComponent(
 					category,
 				)}`,
 			);
@@ -55,7 +68,7 @@ export default function ShopPage() {
 			if (json?.success && json?.data) {
 				const grouped = {};
 				json.data.forEach((item) => {
-					const sub = item?.subcategory?.name || "Other";
+				const sub = item?.subcategory?.name || t("other");
 					if (!grouped[sub]) grouped[sub] = [];
 					grouped[sub].push(item);
 				});
@@ -123,9 +136,13 @@ export default function ShopPage() {
 		if (currentQty >= product.stock) return;
 
 		const newQty = currentQty + 1;
-		setQuantities({ ...quantities, [product._id]: newQty });
-		addToCart(product, newQty);
-		setShowQty({ ...showQty, [product._id]: true });
+		// Adding from a different market shows a confirm dialog and is applied
+		// asynchronously, so only reflect the change locally when it was added.
+		const result = addToCart(product, newQty);
+		if (result?.added) {
+			setQuantities({ ...quantities, [product._id]: newQty });
+			setShowQty({ ...showQty, [product._id]: true });
+		}
 	};
 
 	const decreaseQty = (product) => {
@@ -203,9 +220,9 @@ export default function ShopPage() {
 					</View>
 
 					<Text style={styles.name} numberOfLines={2}>
-						{item.name}
+						{td(item.name)}
 					</Text>
-					<Text style={styles.finalPrice}>€{finalPrice.toFixed(2)}</Text>
+					<Text style={styles.finalPrice}>${finalPrice.toFixed(2)}</Text>
 
 					{/* Add to Cart / Quantity Selector */}
 					<View style={styles.qtyRow}>
@@ -276,7 +293,7 @@ export default function ShopPage() {
 			{/* Floating Sticky Header Alternative */}
 			{currentSectionTitle ? (
 				<View style={styles.floatingHeader}>
-					<Text style={styles.floatingHeaderText}>{currentSectionTitle}</Text>
+					<Text style={styles.floatingHeaderText}>{td(currentSectionTitle)}</Text>
 				</View>
 			) : null}
 
@@ -293,7 +310,7 @@ export default function ShopPage() {
 					</View>
 				)}
 				renderSectionHeader={({ section: { title } }) => (
-					<Text style={styles.subcategoryTitle}>{title}</Text>
+					<Text style={styles.subcategoryTitle}>{td(title)}</Text>
 				)}
 				contentContainerStyle={{
 					paddingBottom: 120,

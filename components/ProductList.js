@@ -24,7 +24,7 @@ const ITEM_WIDTH = width / 3 - 15;
 const LIMIT = 12; // items per fetch
 
 export default function ShopPage({ refreshTrigger, setRefreshing }) {
-	const { t } = useTranslation();
+	const { t, td } = useTranslation();
 	const router = useRouter();
 	const [products, setProducts] = useState([]);
 	const [loading, setLoading] = useState(true);
@@ -39,6 +39,19 @@ export default function ShopPage({ refreshTrigger, setRefreshing }) {
 	const [quantities, setQuantities] = useState({});
 	const [showQty, setShowQty] = useState({}); // track which products show quantity
 
+	// Keep the +/- quantity UI in sync with the actual cart (also reflects a
+	// cart "restore" when switching markets).
+	useEffect(() => {
+		const nextQuantities = {};
+		const nextShowQty = {};
+		cart.forEach((cartItem) => {
+			nextQuantities[cartItem._id] = cartItem.quantity || 1;
+			nextShowQty[cartItem._id] = true;
+		});
+		setQuantities(nextQuantities);
+		setShowQty(nextShowQty);
+	}, [cart]);
+
 	const increaseQty = (product) => {
 		const currentQty = quantities[product._id] || 0;
 
@@ -48,9 +61,13 @@ export default function ShopPage({ refreshTrigger, setRefreshing }) {
 		}
 
 		const newQty = currentQty + 1;
-		setQuantities({ ...quantities, [product._id]: newQty });
-		addToCart(product, newQty);
-		setShowQty({ ...showQty, [product._id]: true });
+		// Adding from a different market shows a confirm dialog and is applied
+		// asynchronously, so only reflect the change locally when it was added.
+		const result = addToCart(product, newQty);
+		if (result?.added) {
+			setQuantities({ ...quantities, [product._id]: newQty });
+			setShowQty({ ...showQty, [product._id]: true });
+		}
 	};
 
 	const decreaseQty = (product) => {
@@ -83,8 +100,9 @@ export default function ShopPage({ refreshTrigger, setRefreshing }) {
 				setHasMore(true);
 			}
 
+			// Home product list shows main-store items only (no market products).
 			const res = await fetch(
-				`https://frischly-dash-leb.onrender.com/api/products?page=${pageNum}&limit=${LIMIT}&isActive=true&inAds=all&stockLevel=Available&sortBy=categorySortOrder&sortOrder=asc`
+				`https://frischly-dash-leb.onrender.com/api/products?page=${pageNum}&limit=${LIMIT}&isActive=true&inAds=all&stockLevel=Available&sortBy=categorySortOrder&sortOrder=asc&market=none`
 			);
 			const json = await res.json();
 			const newProducts = json.data || [];
@@ -182,17 +200,17 @@ export default function ShopPage({ refreshTrigger, setRefreshing }) {
 					)}
 				</View>
 				<Text style={styles.name} numberOfLines={2}>
-					{item.name}
+					{td(item.name)}
 				</Text>
 
 				{basePrice !== finalPrice ? (
 					<View style={styles.priceRow}>
-						<Text style={styles.basePrice}>€{basePrice.toFixed(2)}</Text>
-						<Text style={styles.finalPrice}>€{finalPrice.toFixed(2)}</Text>
+						<Text style={styles.basePrice}>${basePrice.toFixed(2)}</Text>
+						<Text style={styles.finalPrice}>${finalPrice.toFixed(2)}</Text>
 					</View>
 				) : (
 					<View style={styles.priceRow}>
-						<Text style={styles.finalPrice}>€{finalPrice.toFixed(2)}</Text>
+						<Text style={styles.finalPrice}>${finalPrice.toFixed(2)}</Text>
 					</View>
 				)}
 

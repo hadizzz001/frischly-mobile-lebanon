@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
+    Alert,
     Image,
     Modal,
     ScrollView,
@@ -17,9 +18,9 @@ import {
 import { useTranslation } from "@/contexts/TranslationContext";
 
 const Cart = () => {
-	const { t } = useTranslation();
+	const { t, td } = useTranslation();
 
-	const { cart, removeFromCart, subtotal, addToCart, calculatePriceDetails } =
+	const { cart, removeFromCart, subtotal, addToCart, calculatePriceDetails, clearCart } =
 		useCart();
 
 	const { isBooleanValue, setBooleanValue } = useBooleanValue();
@@ -39,6 +40,17 @@ const Cart = () => {
 
 	const handleRemoveFromCart = (itemId) => {
 		removeFromCart(itemId);
+	};
+
+	const handleClearCart = () => {
+		Alert.alert(t("clearCartTitle"), t("clearCartConfirm"), [
+			{ text: t("cancel"), style: "cancel" },
+			{
+				text: t("clearCart"),
+				style: "destructive",
+				onPress: () => clearCart(),
+			},
+		]);
 	};
 
 	const goToCart = () => {
@@ -72,7 +84,7 @@ const Cart = () => {
 								<Image source={{ uri: obj.picture }} style={styles.itemImage} />
 
 								<View style={styles.details}>
-									<Text style={styles.itemTitle}>{obj.name}</Text>
+									<Text style={styles.itemTitle}>{td(obj.name)}</Text>
 
 									<View style={styles.quantityRow}>
 										<Text style={styles.label}>
@@ -81,7 +93,7 @@ const Cart = () => {
 									</View>
 
 									<Text style={styles.price}>
-										€{priceDetails.finalPrice.toFixed(2)}
+										${priceDetails.finalPrice.toFixed(2)}
 									</Text>
 								</View>
 
@@ -101,12 +113,21 @@ const Cart = () => {
 
 			<View style={styles.footer}>
 				<Text style={styles.total}>
-					{t("total")}: €{subtotal.toFixed(2)}{" "}
+					{t("total")}: ${subtotal.toFixed(2)}{" "}
 				</Text>
 
 				<TouchableOpacity style={styles.checkoutBtn} onPress={goToCart}>
 					<Text style={styles.checkoutText}>{t("goToCheckout")}</Text>
 				</TouchableOpacity>
+
+				{cart && cart.length > 0 ? (
+					<TouchableOpacity
+						style={styles.clearCartLink}
+						onPress={handleClearCart}
+					>
+						<Text style={styles.clearCartText}>{t("clearCart")}</Text>
+					</TouchableOpacity>
+				) : null}
 			</View>
 
 
@@ -288,6 +309,16 @@ const styles = StyleSheet.create({
 	checkoutText: {
 		color: "#000000",
 		fontWeight: "bold",
+	},
+	clearCartLink: {
+		alignItems: "center",
+		paddingVertical: 12,
+		marginTop: 4,
+	},
+	clearCartText: {
+		color: "red",
+		fontWeight: "600",
+		textDecorationLine: "underline",
 	},
 	modalBackground: {
 		flex: 1,

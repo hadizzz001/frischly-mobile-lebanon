@@ -1,4 +1,5 @@
 // contexts/TranslationContext.js
+import { translateDynamic } from "@/utils/dynamicTranslations";
 import { translations } from "@/utils/locales";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createContext, useContext, useEffect, useState } from "react";
@@ -39,8 +40,13 @@ useEffect(() => {
 
   const t = (key) => translations[language]?.[key] || translations.en[key] || key;
 
+  // Translate dynamic (backend) names — categories, subcategories, etc. Falls
+  // back to the original text for anything not in the dictionary (brand/product
+  // and kitchen names), so those are shown exactly as stored.
+  const td = (name) => translateDynamic(name, language);
+
   return (
-    <TranslationContext.Provider value={{ t, language, switchLanguage }}>
+    <TranslationContext.Provider value={{ t, td, language, switchLanguage }}>
       {children}
     </TranslationContext.Provider>
   );

@@ -1,5 +1,7 @@
 import CatSlider from "@/components/CatSlider";
 import Footer from "@/components/Footer";
+import KitchenSlider from "@/components/KitchenSlider";
+import MarketsSlider from "@/components/MarketsSlider";
 import ProductList from "@/components/ProductList";
 import ProductSlide from "@/components/ProductSlide";
 import RepeatOrderButton from "@/components/RepeatOrderButton";
@@ -25,6 +27,8 @@ export default function HomeScreen() {
 				}
 			>
 				<NewsTicker refreshTrigger={refreshTrigger} />
+				<MarketsSlider refreshTrigger={refreshTrigger} />
+				<KitchenSlider refreshTrigger={refreshTrigger} />
 				<ProductSlide refreshTrigger={refreshTrigger} />
 				<CatSlider refreshTrigger={refreshTrigger} />
 				<ProductList
