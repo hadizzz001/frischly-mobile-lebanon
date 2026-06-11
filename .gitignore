@@ -18,10 +18,12 @@ expo-env.d.ts
 *.key
 *.mobileprovision
 
-# Firebase (environment-specific, do not commit)
-google-services.json
-GoogleService-Info.plist
+# Firebase
+# NOTE: google-services.json / GoogleService-Info.plist are NOT secrets (they ship
+# inside the app binary) and MUST stay tracked so EAS Build includes them.
+# Only the Admin SDK private key is sensitive - keep it out of git.
 **/firebase-service-account*.json
+*firebase-adminsdk*.json
 
 # Metro
 .metro-health-check*

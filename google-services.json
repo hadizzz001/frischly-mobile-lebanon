@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "458731998907",
+    "project_id": "frischlyshop-lb",
+    "storage_bucket": "frischlyshop-lb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:458731998907:android:d39dc1d17a5bb7c343239e",
+        "android_client_info": {
+          "package_name": "com.frischly.lebanon"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCfBNcQfTPWcYZuUS1ZoZYUUKKxDPUWbXs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
