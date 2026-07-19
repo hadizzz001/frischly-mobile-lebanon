@@ -1,5 +1,6 @@
 import { HapticTab } from "@/components/HapticTab";
 import TabBarBackground from "@/components/ui/TabBarBackground";
+import { API_BASE_URL } from "@/constants/api";
 import { useCart } from "@/contexts/CartContext";
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -46,7 +47,7 @@ useEffect(() => {
 			console.log("📡 Fetching /api/auth/me");
 
 			const res = await fetch(
-				"https://frischly-dash-leb.onrender.com/api/auth/me",
+				`${API_BASE_URL}/auth/me`,
 				{
 					headers: {
 						Authorization: `Bearer ${token}`,

@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useTranslation } from "@/contexts/TranslationContext";
+import { API_BASE_URL } from "@/constants/api";
 
 const { width } = Dimensions.get("window");
 const NUM_COLUMNS = 2;
@@ -29,7 +30,7 @@ export default function CategoriesGrid() {
 		const fetchCategories = async () => {
 			try {
 				const res = await fetch(
-					"https://frischly-dash-leb.onrender.com/api/categories?limit=1000"
+					`${API_BASE_URL}/categories?limit=1000`
 				);
 				const json = await res.json();
 				setCategories(json.data || []);

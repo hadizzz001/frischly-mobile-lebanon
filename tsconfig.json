@@ -11,7 +11,6 @@
 		"**/*.ts",
 		"**/*.tsx",
 		".expo/types/**/*.ts",
-		"expo-env.d.ts",
-		"components/CarCard.js"
+		"expo-env.d.ts"
 	]
 }

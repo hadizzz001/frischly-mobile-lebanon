@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/api";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { removePushTokenFromServer } from "@/hooks/useNotifications";
 import { Feather } from "@expo/vector-icons";
@@ -29,7 +30,7 @@ export default function AccScreen() {
 			const token = parsedUser?.token;
 
 			const res = await fetch(
-				"https://frischly-dash-leb.onrender.com/api/auth/delete-account",
+				`${API_BASE_URL}/auth/delete-account`,
 				{
 					method: "DELETE",
 					headers: {
@@ -77,7 +78,7 @@ export default function AccScreen() {
 						}
 
 						const res = await fetch(
-							"https://frischly-dash-leb.onrender.com/api/auth/me",
+							`${API_BASE_URL}/auth/me`,
 							{
 								headers: {
 									Authorization: `Bearer ${token}`,

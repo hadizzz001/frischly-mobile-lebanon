@@ -12,7 +12,12 @@
           "package_name": "com.frischly.lebanon"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "458731998907-fvi5feqposkpeehj1canj86i4voq1k2b.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCfBNcQfTPWcYZuUS1ZoZYUUKKxDPUWbXs"
@@ -20,7 +25,20 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "458731998907-fvi5feqposkpeehj1canj86i4voq1k2b.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "458731998907-3vchbl8i0ik78688o6i3edlv67n4lfos.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.frischly.lebanon",
+                "app_store_id": "6779262710"
+              }
+            }
+          ]
         }
       }
     }

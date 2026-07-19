@@ -6,16 +6,30 @@ import ProductList from "@/components/ProductList";
 import ProductSlide from "@/components/ProductSlide";
 import RepeatOrderButton from "@/components/RepeatOrderButton";
 import NewsTicker from "@/components/Textslide";
-import { useState } from "react";
-import { RefreshControl, ScrollView, View } from "react-native";
+import { refreshAdminCities } from "@/utils/cityVisibility";
+import { useEffect, useState } from "react";
+import { DeviceEventEmitter, RefreshControl, ScrollView, View } from "react-native";
 
 export default function HomeScreen() {
 	const [refreshing, setRefreshing] = useState(false);
 	const [refreshTrigger, setRefreshTrigger] = useState(0);
 
 	const onRefresh = () => {
+		// Force the admin serving-cities to be re-read so a city change in the
+		// dashboard is reflected immediately on pull-to-refresh.
+		refreshAdminCities();
 		setRefreshTrigger((prev) => prev + 1);
 	};
+
+	// Auto-refresh when the shopper changes their location from the header nav,
+	// so the city-scoped feeds (markets, main store, categories) reload at once.
+	useEffect(() => {
+		const sub = DeviceEventEmitter.addListener("userCityChanged", () => {
+			refreshAdminCities();
+			setRefreshTrigger((prev) => prev + 1);
+		});
+		return () => sub.remove();
+	}, []);
 
 	return (
 		<View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>

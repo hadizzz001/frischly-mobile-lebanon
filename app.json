@@ -2,7 +2,7 @@
   "expo": {
     "name": "Freshly LB",
     "slug": "frischly-lebanon",
-    "version": "1.0.0",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/images1/icon.png",
     "scheme": "frischlylebanon",
@@ -12,7 +12,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.frischly.lebanon",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSMicrophoneUsageDescription": "Freshly LB uses your microphone so you can search for products by voice."
       }
     },
     "android": {
@@ -44,7 +45,18 @@
           "resizeMode": "contain"
         }
       ],
-      "expo-audio",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Freshly LB uses your microphone so you can search for products by voice."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Freshly LB uses your location to automatically fill in your city on registration."
+        }
+      ],
       "expo-font",
       "expo-video",
       "expo-web-browser",
@@ -54,6 +66,12 @@
         "expo-notifications",
         {
           "color": "#f4bb26"
+        }
+      ],
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.463444827922-c9tpcrutal1u0gt6n860sceh83bv612e"
         }
       ]
     ],
