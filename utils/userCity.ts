@@ -1,6 +1,16 @@
 import { AuthService } from "@/services/api";
-import type { User } from "@/types";
+import type { AuthPayload, User } from "@/types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { detectCityFromLocation } from "./cityDetection";
+
+// Google sign-in doesn't collect a city (unlike phone registration, which has
+// a dedicated city picker), so brand-new Google accounts land with no
+// address.city. Falling back to "" makes them see every market/product feed
+// city-unfiltered, which looks like "the city isn't showing" to the shopper.
+// We try to auto-detect it via GPS (same as the register screen), and only
+// fall back to Beirut if that fails.
+const DEFAULT_CITY = "Beirut";
+const DEFAULT_STATE = "Lebanon";
 
 type StoredUserData = {
 	token?: string;
@@ -71,6 +81,53 @@ export const getUserCity = async (): Promise<string> => {
 		// ignore storage/parse errors -> treat as no city (show everything)
 	}
 	return "";
+};
+
+/**
+ * Ensures the given auth payload's user has a city set. Used right after a
+ * Google sign-in/sign-up, which never goes through the manual city picker.
+ *
+ * Tries to auto-detect the city (and street/state) from the device's GPS
+ * location — same helper the register screen uses — and only falls back to
+ * Beirut if detection fails (permission denied, no GPS, no match, etc).
+ *
+ * Best-effort persists the resolved address to the backend via
+ * `/auth/profile` so it sticks across devices/sessions, without blocking the
+ * caller on that network call.
+ *
+ * Returns the (possibly patched) payload to store in AsyncStorage.
+ */
+export const ensureDefaultCity = async (
+	userData: AuthPayload,
+): Promise<AuthPayload> => {
+	const existingCity = userData?.user?.address?.city;
+	if (existingCity) return userData;
+
+	const detected = await detectCityFromLocation();
+	const city = detected?.city || DEFAULT_CITY;
+	const street = detected?.street;
+	const state = detected?.region || DEFAULT_STATE;
+
+	const patched: AuthPayload = {
+		...userData,
+		user: {
+			...userData.user,
+			address: {
+				...userData.user?.address,
+				city,
+				...(street ? { street } : {}),
+				state,
+			},
+		},
+	};
+
+	// Best-effort background sync so the backend/profile also reflects the
+	// resolved address; failures are silently ignored (local value already set).
+	AuthService.updateProfile({
+		address: { city, ...(street ? { street } : {}), ...(state ? { state } : {}) },
+	}).catch(() => {});
+
+	return patched;
 };
 
 export default getUserCity;

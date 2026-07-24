@@ -2,12 +2,14 @@
 
 import AuthLogoVideo from "@/components/AuthLogoVideo";
 import CityPicker from "@/components/CityPicker";
+import LocationPickerMap, { type PickedLocation } from "@/components/LocationPickerMap";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { useGoogleAuth } from "@/hooks/useGoogleAuth";
 import { ApiError, AuthService } from "@/services/api";
 import type { AuthPayload } from "@/types";
-import { detectCityFromLocation } from "@/utils/cityDetection";
+import { detectCityFromLocation, reverseGeocodePoint } from "@/utils/cityDetection";
 import { formatLocalDate, toCalendarISOString } from "@/utils/date";
+import { ensureDefaultCity } from "@/utils/userCity";
 import { Feather } from "@expo/vector-icons";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -98,11 +100,17 @@ export default function Register() {
 	const [street, setStreet] = useState<string>("");
 	const [city, setCity] = useState<string>("");
 	const [stateVal, setStateVal] = useState<string>("");
-const [dateOfBirth, setDateOfBirth] = useState<Date | null>(null); // Date object
+const [dateOfBirth, setDateOfBirth] = useState<Date | null>(new Date(2000, 0, 1)); // Date object, defaults to 1/1/2000
 const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
 // ✅ Auto-detected city (via GPS + reverse geocoding) so the shopper usually
 // doesn't have to pick it manually. "idle" -> "detecting" -> "done"/"failed".
 const [locationStatus, setLocationStatus] = useState<string>("idle");
+// ✅ Exact map pin (auto-detected, editable via the map picker below). Sent
+// to the backend on registration so drivers can be matched by exact
+// delivery-region coverage instead of just city name.
+const [pin, setPin] = useState<PickedLocation | null>(null);
+const [showMapPicker, setShowMapPicker] = useState<boolean>(false);
+const [syncingAddress, setSyncingAddress] = useState<boolean>(false);
 
 
 	const languages = [
@@ -137,9 +145,20 @@ const [locationStatus, setLocationStatus] = useState<string>("idle");
 		const result = await detectCityFromLocation();
 
 		if (result?.city) {
-			setCity((prev) => prev || result.city);
-			setStreet((prev) => prev || result.street || "");
-			setStateVal((prev) => prev || result.region || "");
+			// On the initial silent auto-detect (mount) we only fill in fields that
+			// are still empty. When the shopper explicitly taps "use my location",
+			// always snap everything — especially the map pin — to the freshly
+			// detected, accurate GPS coordinates so it truly reflects where they are.
+			setCity((prev) => (manual ? result.city : prev || result.city));
+			setStreet((prev) => (manual ? result.street || "" : prev || result.street || ""));
+			setStateVal((prev) => (manual ? result.region || "" : prev || result.region || ""));
+			if (
+				typeof result.latitude === "number" &&
+				typeof result.longitude === "number"
+			) {
+				const accuratePin = { latitude: result.latitude, longitude: result.longitude };
+				setPin((prev) => (manual ? accuratePin : prev || accuratePin));
+			}
 			setLocationStatus("done");
 		} else {
 			setLocationStatus("failed");
@@ -168,18 +187,48 @@ const [locationStatus, setLocationStatus] = useState<string>("idle");
 	const handleRegister = async (): Promise<void> => {
 		console.log("Register function called");
 
-		// Phone number is the primary identifier now. Require name, phone,
-		// password and date of birth. Email is optional.
-		if (!name || !phone || !password || !dateOfBirth) {
+		// Email is the primary identifier now. Require name, email, phone,
+		// password and date of birth.
+		if (!name || !email || !phone || !password || !dateOfBirth) {
 			Alert.alert(t("errorTitle"), t("registerMissingFields"));
 			return;
 		}
 
+		const phoneDigits = phone.trim().replace(/^0+/, "");
+		if (!/^\d{7,8}$/.test(phoneDigits)) {
+			Alert.alert(t("errorTitle"), t("phoneMustBe78Digits"));
+			return;
+		}
+
 		if (isAdult(dateOfBirth) < 18) {
-			Alert.alert(
-				t("errorTitle"),
-				t("mustBe18") || "You must be at least 18 years old"
-			);
+			Alert.alert(t("errorTitle"), t("mustBe18"));
+			return;
+		}
+
+		// ✅ The exact map pin is what lets drivers be matched precisely — never
+		// let registration proceed without one. If GPS detection hasn't
+		// resolved yet (e.g. the shopper filled the form very quickly), give it
+		// one last chance here before giving up and asking them to drop the pin
+		// manually via the map picker above.
+		let finalPin = pin;
+		if (!finalPin) {
+			setLocationStatus("detecting");
+			const result = await detectCityFromLocation();
+			if (
+				result &&
+				typeof result.latitude === "number" &&
+				typeof result.longitude === "number"
+			) {
+				finalPin = { latitude: result.latitude, longitude: result.longitude };
+				setPin(finalPin);
+				setLocationStatus("done");
+			} else {
+				setLocationStatus("failed");
+			}
+		}
+
+		if (!finalPin) {
+			Alert.alert(t("errorTitle"), t("pinRequired"));
 			return;
 		}
 
@@ -187,30 +236,39 @@ const [locationStatus, setLocationStatus] = useState<string>("idle");
 			name: string;
 			dateOfBirth: string;
 			password: string;
-			address: { street: string; city: string; state: string; country: string };
-			phoneNumber: string;
-			email?: string;
+			address: {
+				street: string;
+				city: string;
+				state: string;
+				country: string;
+				location?: PickedLocation;
+			};
+			email: string;
+			phoneNumber?: string;
 		} = {
 			name,
 			dateOfBirth: toCalendarISOString(dateOfBirth),
 			password,
-			address: { street, city, state: stateVal, country: "LB" },
-			phoneNumber: `${countryCode}${phone.trim().replace(/^0+/, "")}`,
+			address: {
+				street,
+				city,
+				state: stateVal,
+				country: "LB",
+				location: finalPin,
+			},
+			email: email.trim().toLowerCase(),
+			phoneNumber: `${countryCode}${phoneDigits}`,
 		};
 
-		// Email is optional; only include it if the shopper entered one.
-		if (email?.trim()) {
-			userData.email = email.trim().toLowerCase();
-		}
-
 		try {
+			console.log("Register payload:", JSON.stringify(userData));
 			const res = await AuthService.register(userData);
 
 			if (res) {
 				await AsyncStorage.setItem("userData", JSON.stringify(res.data));
 
-				// Verification link is sent via SMS/WhatsApp to the phone number.
-				Alert.alert(t("confirmPhoneTitle"), t("confirmPhoneBody"), [
+				// Verification link is sent via email.
+				Alert.alert(t("confirmEmailTitle"), t("confirmEmailBody"), [
 					{
 						text: "OK",
 						onPress: () => {
@@ -221,7 +279,19 @@ const [locationStatus, setLocationStatus] = useState<string>("idle");
 				]);
 			}
 		} catch (error) {
-			console.log("Registration caught error:", error);
+			if (error instanceof ApiError) {
+				console.log(
+					"Registration caught error:",
+					"status:",
+					error.status,
+					"message:",
+					error.message,
+					"payload:",
+					JSON.stringify(error.payload)
+				);
+			} else {
+				console.log("Registration caught error:", error);
+			}
 			const message =
 				error instanceof ApiError
 					? (error.payload as { message?: string } | null)?.message
@@ -248,7 +318,22 @@ const [locationStatus, setLocationStatus] = useState<string>("idle");
 				const res = await AuthService.googleSignIn(idToken);
 				const userData = res.data as unknown as AuthPayload | null;
 				if (userData) {
-					await AsyncStorage.setItem("userData", JSON.stringify(userData));
+					if (userData.isNewUser === false) {
+						// This Google account is already registered — don't silently log
+						// them in from the Register screen; send them to Login instead.
+						Alert.alert(
+							t("accountExistsTitle"),
+							t("accountExistsBody"),
+							[
+								{
+									text: "OK",
+									onPress: () => router.replace("/start"),
+								},
+							]
+						);
+						return;
+					}
+					await AsyncStorage.setItem("userData", JSON.stringify(await ensureDefaultCity(userData)));
 					await AsyncStorage.setItem("guest", "false");
 					router.replace("/(tabs)" as never);
 				}
@@ -342,48 +427,35 @@ const [locationStatus, setLocationStatus] = useState<string>("idle");
 							alignItems: "center",
 							marginBottom: 12,
 							width: "100%",
+							minHeight: 55,
 							borderWidth: 1,
 							borderColor: "#000000",
 							borderRadius: 12,
 							backgroundColor: inputBg,
-							minHeight: 55,
-							paddingHorizontal: 10,
+							paddingHorizontal: 12,
 						}}
 					>
-						<View style={{ width: 100, justifyContent: "center" }}>
-							<Text
-								style={{
-									position: "absolute",
-									left: 10,
-									color: inputText,
-									fontSize: 16,
-								}}
-							>
-								{countryCode}
-							</Text>
-						</View>
+						<Text
+							style={{
+								color: inputText,
+								fontSize: 16,
+								fontWeight: "600",
+								marginRight: 8,
+							}}
+						>
+							{countryCode}
+						</Text>
+						<View style={{ width: 1, height: 24, backgroundColor: "#e0e0e0", marginRight: 10 }} />
 						<TextInput
-							placeholder={t("phoneNumber")}
+							placeholder={t("phoneRequired")}
 							keyboardType="phone-pad"
 							value={phone}
-							onChangeText={setPhone}
-							style={{ flex: 1, paddingVertical: 15, color: inputText }}
+							onChangeText={(text) => setPhone(text.replace(/[^\d]/g, "").slice(0, 8))}
+							maxLength={8}
+							style={{ flex: 1, paddingVertical: 15, color: inputText, fontSize: 16 }}
 							placeholderTextColor={placeholderColor}
 						/>
 					</View>
-
-					{/* Free SMS verification note */}
-					<Text
-						style={{
-							width: "100%",
-							color: "#6b7280",
-							fontSize: 13,
-							marginBottom: 12,
-							marginTop: -4,
-						}}
-					>
-						{t("freeSmsVerificationNote")}
-					</Text>
 
 {/* Date of Birth */}
 <TouchableOpacity onPress={() => setShowDatePicker(true)}>
@@ -415,7 +487,7 @@ const [locationStatus, setLocationStatus] = useState<string>("idle");
 
 
 					<InputBox
-						placeholder={t("emailOptional")}
+						placeholder={t("emailRequiredField")}
 						value={email}
 						onChangeText={setEmail}
 						keyboardType="email-address"
@@ -468,15 +540,17 @@ const [locationStatus, setLocationStatus] = useState<string>("idle");
 						placeholderColor={placeholderColor}
 					/>
 
-					{/* ✅ City — auto-detected via GPS when possible, always editable */}
+					{/* ✅ City — auto-detected via GPS/map pin only; read-only so it can
+					    never disagree with the exact delivery pin the shopper set. */}
 					<CityPicker
 						value={city}
 						onValueChange={setCity}
 						placeholder={t("city")}
 						textColor={inputText}
+						disabled
 						style={{
 							marginBottom: 6,
-							backgroundColor: inputBg,
+							backgroundColor: "#f2f2f2",
 							minHeight: 55,
 						}}
 					/>
@@ -486,10 +560,13 @@ const [locationStatus, setLocationStatus] = useState<string>("idle");
 						style={{
 							flexDirection: "row",
 							alignItems: "center",
-							gap: 6,
-							alignSelf: "flex-start",
-							marginBottom: 12,
-							paddingVertical: 4,
+							gap: 8,
+							alignSelf: "stretch",
+							marginBottom: 14,
+							paddingVertical: 10,
+							paddingHorizontal: 12,
+							borderRadius: 10,
+							backgroundColor: locationStatus === "done" ? "#eafaf0" : "#fff8e6",
 						}}
 					>
 						{locationStatus === "detecting" ? (
@@ -497,11 +574,20 @@ const [locationStatus, setLocationStatus] = useState<string>("idle");
 						) : (
 							<Feather
 								name={locationStatus === "done" ? "check-circle" : "map-pin"}
-								size={16}
+								size={18}
 								color={locationStatus === "done" ? "#22a45d" : "#f4bb26"}
 							/>
 						)}
-						<Text style={{ color: "#666666", fontSize: 13 }}>
+						<Text
+							style={{
+								color: locationStatus === "done" ? "#22a45d" : "#7a6a2e",
+								fontSize: 14,
+								fontWeight: "600",
+								lineHeight: 19,
+								flex: 1,
+								flexWrap: "wrap",
+							}}
+						>
 							{locationStatus === "detecting"
 								? t("detectingLocation")
 								: locationStatus === "done"
@@ -510,13 +596,105 @@ const [locationStatus, setLocationStatus] = useState<string>("idle");
 						</Text>
 					</TouchableOpacity>
 
+					{/* ✅ Exact map pin — auto-filled from GPS above, but always
+					    adjustable so the shopper can drop the pin exactly on their
+					    building/entrance for accurate driver matching. */}
+					<TouchableOpacity
+						onPress={() => setShowMapPicker(true)}
+						style={{
+							flexDirection: "row",
+							alignItems: "center",
+							gap: 8,
+							alignSelf: "stretch",
+							marginBottom: 14,
+							paddingVertical: 10,
+							paddingHorizontal: 12,
+							borderRadius: 10,
+							backgroundColor: pin ? "#eafaf0" : "#f3f4f6",
+						}}
+					>
+						<Feather
+							name="map"
+							size={18}
+							color={pin ? "#22a45d" : "#555555"}
+						/>
+						<Text
+							style={{
+								color: pin ? "#22a45d" : "#333333",
+								fontSize: 14,
+								fontWeight: "600",
+								lineHeight: 19,
+								textDecorationLine: "underline",
+								flex: 1,
+								flexWrap: "wrap",
+							}}
+						>
+							{pin ? t("adjustPinOnMap") : t("setPinOnMap")}
+						</Text>
+					</TouchableOpacity>
+
+					<LocationPickerMap
+						visible={showMapPicker}
+						initialLocation={pin}
+						onClose={() => setShowMapPicker(false)}
+						onConfirm={(location) => {
+							setPin(location);
+							setShowMapPicker(false);
+							// Keep city/street/state in sync with the exact point the shopper
+							// just dropped the pin on — reverse-geocode it and overwrite the
+							// address fields so they can never disagree with the map pin.
+							setSyncingAddress(true);
+							reverseGeocodePoint(location.latitude, location.longitude)
+								.then((addr) => {
+									if (addr?.city) setCity(addr.city);
+									if (addr?.street) setStreet(addr.street);
+									if (addr?.region) setStateVal(addr.region);
+								})
+								.finally(() => setSyncingAddress(false));
+						}}
+						title={t("setYourLocation")}
+						confirmLabel={t("confirmLocation")}
+						useMyLocationLabel={t("useMyLocation")}
+					/>
+
+					{syncingAddress && (
+						<View
+							style={{
+								flexDirection: "row",
+								alignItems: "center",
+								gap: 8,
+								marginBottom: 10,
+								paddingVertical: 8,
+								paddingHorizontal: 12,
+								borderRadius: 10,
+								backgroundColor: "#fff8e6",
+							}}
+						>
+							<ActivityIndicator size="small" color="#f4bb26" />
+							<Text
+								style={{
+									color: "#7a6a2e",
+									fontSize: 13,
+									fontWeight: "600",
+									lineHeight: 18,
+									flex: 1,
+									flexWrap: "wrap",
+								}}
+							>
+								{t("syncingAddress")}
+							</Text>
+						</View>
+					)}
+
+					{/* ✅ State — same read-only rule as city: derived only from the
+					    detected location / map pin, never typed manually. */}
 					<InputBox
 						placeholder={t("state")}
 						value={stateVal}
-						onChangeText={setStateVal}
-						inputBg={inputBg}
+						inputBg="#f2f2f2"
 						inputText={inputText}
 						placeholderColor={placeholderColor}
+						editable={false}
 					/>
 					<TouchableOpacity
 						onPress={() => Alert.alert(t("errorTitle"), t("countryFixed"))}

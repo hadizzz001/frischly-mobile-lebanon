@@ -31,7 +31,11 @@ const CARD_WIDTH = (width - 36) / 2;
 export default function KitchenCategoryPage() {
 	const { t, td } = useTranslation();
 	const router = useRouter();
-	const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
+	const { id, name, marketId } = useLocalSearchParams<{
+		id: string;
+		name?: string;
+		marketId?: string;
+	}>();
 	const { addItemsToCart, kitchenCheckoutIds, markKitchenAdded } = useCart();
 
 	const [kitchens, setKitchens] = useState<Kitchen[]>([]);
@@ -39,6 +43,14 @@ export default function KitchenCategoryPage() {
 	// Show the category name straight away (passed from the slider), falling back
 	// to whatever the API reports on the kitchens themselves.
 	const [title, setTitle] = useState(typeof name === "string" ? name : "");
+
+	// Read a kitchen's market id whether `market` is a plain id string or a
+	// populated Market object (same helper as KitchenSlider).
+	const kitchenMarketId = (k: Kitchen): string | null => {
+		const m = k.market;
+		if (!m) return null;
+		return typeof m === "string" ? m : m._id || null;
+	};
 
 	useEffect(() => {
 		const fetchKitchens = async () => {
@@ -59,12 +71,21 @@ export default function KitchenCategoryPage() {
 				const res = await KitchenService.listPublicByCategory(id);
 				const all = Array.isArray(res?.data) ? res.data : [];
 
-				const inCategory = all.filter((k) => {
+				let inCategory = all.filter((k) => {
 					const cat = k?.category;
 					const catId =
 						cat && typeof cat === "object" ? cat._id : cat;
 					return String(catId) === String(id);
 				});
+
+				// Reached from a single market's home page: only show that
+				// market's own kitchens within this category.
+				if (marketId) {
+					inCategory = inCategory.filter(
+						(k) => kitchenMarketId(k) === String(marketId),
+					);
+				}
+
 				const filtered = filterByCity(inCategory, city, adminCities);
 
 				setKitchens(filtered);
@@ -87,7 +108,8 @@ export default function KitchenCategoryPage() {
 		};
 		if (id) fetchKitchens();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [id]);
+	}, [id, marketId]);
+
 
 	// Add all of a kitchen's available items to the cart. Out-of-stock / inactive
 	// items are skipped. The cart enforces a single market source, so a conflict

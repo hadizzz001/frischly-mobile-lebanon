@@ -465,7 +465,7 @@ const CheckoutScreen = () => {
 
 				<TextInput
 					style={styles.input}
-					placeholder={t("emailOptional")}
+					placeholder={t("emailRequiredField")}
 					value={state.inputs.email}
 					//onChangeText={(v) => handleInput("email", v)}
 					keyboardType="email-address"
@@ -497,6 +497,7 @@ const CheckoutScreen = () => {
 					value={state.inputs.city}
 					onValueChange={(v) => handleInput("city", v)}
 					placeholder={t("cityRequired")}
+					disabled
 					style={{
 						borderColor: "#000000",
 						borderRadius: 6,
@@ -505,10 +506,10 @@ const CheckoutScreen = () => {
 				/>
 
 				<TextInput
-					style={styles.input}
+					style={[styles.input, styles.inputDisabled]}
 					placeholder={t("stateRequired")}
 					value={state.inputs.state}
-					onChangeText={(v) => handleInput("state", v)}
+					editable={false}
 				/>
 
 				<View style={styles.row}>
@@ -522,10 +523,10 @@ const CheckoutScreen = () => {
 				</View>
 
 				<TextInput
-					style={styles.input}
+					style={[styles.input, styles.inputDisabled]}
 					placeholder={t("streetRequired")}
 					value={state.inputs.street}
-					onChangeText={(v) => handleInput("street", v)}
+					editable={false}
 				/>
 
 				<Text style={styles.heading}>{t("dtime")}</Text>
@@ -843,6 +844,11 @@ const styles = StyleSheet.create({
 		borderRadius: 6,
 		padding: 10,
 		marginVertical: 6,
+	},
+	inputDisabled: {
+		backgroundColor: "#f2f2f2",
+		borderColor: "#ddd",
+		color: "#666",
 	},
 	row: { flexDirection: "row", alignItems: "center" },
 	cartItem: {

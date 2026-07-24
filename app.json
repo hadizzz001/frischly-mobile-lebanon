@@ -54,7 +54,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Freshly LB uses your location to automatically fill in your city on registration."
+          "locationWhenInUsePermission": "Freshly LB uses your location to automatically fill in your city and set your exact delivery pin on the map."
         }
       ],
       "expo-font",
@@ -72,6 +72,14 @@
         "@react-native-google-signin/google-signin",
         {
           "iosUrlScheme": "com.googleusercontent.apps.463444827922-c9tpcrutal1u0gt6n860sceh83bv612e"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useModularHeaders": true
+          }
         }
       ]
     ],

@@ -16,6 +16,7 @@ type GoogleSigninModule = {
 		configure: (opts: Record<string, unknown>) => void;
 		hasPlayServices: (opts?: Record<string, unknown>) => Promise<boolean>;
 		signIn: () => Promise<unknown>;
+		signOut: () => Promise<unknown>;
 	};
 	isErrorWithCode: (e: unknown) => e is { code: string };
 	statusCodes: { SIGN_IN_CANCELLED: string; IN_PROGRESS: string };
@@ -67,6 +68,15 @@ export function useGoogleAuth(onToken: (idToken: string) => void | Promise<void>
 			await GoogleSignin.hasPlayServices({
 				showPlayServicesUpdateDialog: true,
 			});
+			// Force the native account picker to show every time instead of silently
+			// reusing the last signed-in Google account. Without this, signIn()
+			// returns the cached account and the user can never switch to a
+			// different Google account from the register/login screen.
+			try {
+				await GoogleSignin.signOut();
+			} catch {
+				// Ignore — signOut() throws if no session is cached, which is fine.
+			}
 			const response = await GoogleSignin.signIn();
 
 			// Support both v13+ ({ data: { idToken } }) and older ({ idToken }) shapes.

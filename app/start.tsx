@@ -7,6 +7,7 @@ import { useGoogleAuth } from "@/hooks/useGoogleAuth";
 import { syncPushTokenToServer } from "@/hooks/useNotifications";
 import { ApiError, AuthService } from "@/services/api";
 import type { AuthPayload } from "@/types";
+import { ensureDefaultCity } from "@/utils/userCity";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
@@ -71,13 +72,10 @@ export default function Start() {
 
 			console.log("Login response:", userData?.user);
 
-			// ✅ Check if user data exists and the account has been verified (either
-			// via the phone SMS/WhatsApp link, or — for older accounts — via email).
+			// ✅ Check if user data exists and the account has been verified via
+			// the email confirmation link.
 			if (userData) {
-					if (
-						(userData.user as { emailConfirmed?: boolean })?.emailConfirmed === true ||
-						(userData.user as { phoneVerified?: boolean })?.phoneVerified === true
-					) {
+					if ((userData.user as { emailConfirmed?: boolean })?.emailConfirmed === true) {
 					await persistAuth(userData);
 				} else {
 					Alert.alert(t("accountNotVerified"), t("verifyAccount"));
@@ -118,7 +116,7 @@ export default function Start() {
 				const res = await AuthService.googleSignIn(idToken);
 				const userData = res.data as unknown as AuthPayload | null;
 				if (userData) {
-					await persistAuth(userData);
+					await persistAuth(await ensureDefaultCity(userData));
 				} else {
 					Alert.alert(t("loginFailed"), t("invalidCredentials"));
 				}

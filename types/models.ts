@@ -73,6 +73,12 @@ export interface Address {
 	notes?: string;
 	lat?: number;
 	lng?: number;
+	// ✅ Exact map pin (auto-detected/editable) used to precisely match the
+	// shopper's location against a driver's delivery-region pin + radius.
+	location?: {
+		latitude?: number;
+		longitude?: number;
+	};
 }
 
 export interface User {
@@ -93,6 +99,7 @@ export interface User {
 export interface AuthPayload {
 	token: string;
 	user: User;
+	isNewUser?: boolean;
 }
 
 export type OrderStatus =
@@ -170,6 +177,7 @@ export interface Kitchen {
 	description?: string;
 	city?: string;
 	category?: string | KitchenCategory;
+	market?: string | Market | null;
 	items?: Product[];
 	isActive?: boolean;
 	createdAt?: string;

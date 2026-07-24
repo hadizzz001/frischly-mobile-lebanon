@@ -2,6 +2,7 @@
 
 import CatSlider from "@/components/CatSlider";
 import Footer from "@/components/Footer";
+import KitchenSlider from "@/components/KitchenSlider";
 import ProductList from "@/components/ProductList";
 import ProductSlide from "@/components/ProductSlide";
 import RepeatOrderButton from "@/components/RepeatOrderButton";
@@ -12,12 +13,12 @@ import { Feather } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-	ActivityIndicator,
-	RefreshControl,
-	ScrollView,
-	StyleSheet,
-	TouchableOpacity,
-	View,
+    ActivityIndicator,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 // Market "home" page — mirrors the main (admin) home design, but every section
@@ -97,6 +98,9 @@ export default function MarketHome() {
 				}
 			>
 				{/* Market-scoped sections (same components/design as the main home). */}
+				{/* This market's own kitchens (if any) are shown above the Hot Sale
+				    carousel; the component renders nothing if the market has none. */}
+				<KitchenSlider refreshTrigger={refreshTrigger} marketId={id} />
 				<ProductSlide refreshTrigger={refreshTrigger} marketId={id} />
 				<CatSlider
 					refreshTrigger={refreshTrigger}

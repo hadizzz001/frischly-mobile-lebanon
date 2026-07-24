@@ -10,6 +10,7 @@ interface CityPickerProps {
 	placeholder?: string;
 	textColor?: string;
 	style?: StyleProp<ViewStyle>;
+	disabled?: boolean;
 }
 
 /**
@@ -21,13 +22,18 @@ export default function CityPicker({
 	placeholder,
 	textColor = "#000",
 	style,
+	disabled = false,
 }: CityPickerProps) {
 	const { t } = useTranslation();
 	return (
-		<View style={[styles.wrapper, style]}>
+		<View style={[styles.wrapper, style, disabled && styles.wrapperDisabled]}>
 			<Picker
 				selectedValue={value || ""}
-				onValueChange={(val) => onValueChange(val as string)}
+				onValueChange={(val) => {
+					if (disabled) return;
+					onValueChange(val as string);
+				}}
+				enabled={!disabled}
 				dropdownIconColor={textColor}
 				style={[styles.picker, { color: value ? textColor : "#999" }]}
 				mode="dropdown"
@@ -53,6 +59,10 @@ const styles = StyleSheet.create({
 			android: { height: 55 },
 			default: {},
 		}),
+	},
+	wrapperDisabled: {
+		backgroundColor: "#f2f2f2",
+		borderColor: "#ddd",
 	},
 	picker: {
 		width: "100%",

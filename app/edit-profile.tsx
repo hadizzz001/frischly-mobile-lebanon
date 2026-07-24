@@ -1,12 +1,15 @@
 import CityPicker from "@/components/CityPicker";
+import LocationPickerMap, { type PickedLocation } from "@/components/LocationPickerMap";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { AuthService } from "@/services/api";
 import type { User } from "@/types";
+import { getCityCoordinates, reverseGeocodePoint } from "@/utils/cityDetection";
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
+    ActivityIndicator,
     Alert,
     ScrollView,
     StyleSheet,
@@ -38,6 +41,9 @@ export default function EditProfile() {
 		state: "",
 		country: "LB",
 	});
+	const [pin, setPin] = useState<PickedLocation | null>(null);
+	const [showMapPicker, setShowMapPicker] = useState<boolean>(false);
+	const [syncingAddress, setSyncingAddress] = useState<boolean>(false);
 
 	console.log("user data in EditProfile:", user);
 
@@ -72,6 +78,14 @@ export default function EditProfile() {
 							state: fetchedUser.address?.state || "",
 							country: "LB",
 						});
+						const loc = fetchedUser.address?.location;
+						if (
+							loc &&
+							typeof loc.latitude === "number" &&
+							typeof loc.longitude === "number"
+						) {
+							setPin({ latitude: loc.latitude, longitude: loc.longitude });
+						}
 					} else {
 						console.error("❌ Failed to fetch user");
 					}
@@ -86,6 +100,11 @@ export default function EditProfile() {
 
 	const handleUpdate = async (): Promise<void> => {
 		try {
+			if (!form.phoneNumber || !form.phoneNumber.trim() || form.phoneNumber.trim() === "+961") {
+				Alert.alert(t("warning"), t("phoneRequired"));
+				return;
+			}
+
 			const stored = await AsyncStorage.getItem("userData");
 			if (!stored) {
 				Alert.alert(t("warning"), t("noUserData"));
@@ -102,6 +121,7 @@ export default function EditProfile() {
 					city: form.city,
 					state: form.state,
 					country: form.country,
+					...(pin ? { location: pin } : {}),
 				},
 			};
 
@@ -173,23 +193,121 @@ export default function EditProfile() {
 
 			<View style={styles.fieldGroup}>
 				<Text style={styles.label}>{t("city")}</Text>
+				{/* Editable — picking a city here snaps the map pin to that city's
+				    approximate center (two-way sync with the map pin below). Guarded
+				    against a known @react-native-picker/picker quirk where
+				    onValueChange can fire again with the *same* value once the
+				    "value" prop is updated programmatically (e.g. right after the
+				    profile loads) — without the `val !== form.city` check that
+				    spurious call would silently overwrite the shopper's real saved
+				    pin with just an approximate city-center guess. */}
 				<CityPicker
 					value={form.city}
-					onValueChange={(val: string) => setForm({ ...form, city: val })}
+					onValueChange={(val: string) => {
+						const changed = val !== form.city;
+						setForm((prev) => ({ ...prev, city: val }));
+						if (changed) {
+							const coords = getCityCoordinates(val);
+							if (coords) setPin(coords);
+						}
+					}}
 					placeholder={t("city")}
 				/>
 			</View>
 
-			{(["state"] as (keyof ProfileForm)[]).map((key) => (
-				<View key={key} style={styles.fieldGroup}>
-					<Text style={styles.label}>{t(key)}</Text>
-					<TextInput
-						style={styles.input}
-						value={form[key]}
-						onChangeText={(val) => setForm({ ...form, [key]: val })}
-					/>
+			{/* ✅ Exact map pin — lets the shopper drop/adjust their delivery pin so
+			    drivers can be matched by exact coverage, not just city name. */}
+			<TouchableOpacity
+				onPress={() => setShowMapPicker(true)}
+				style={{
+					flexDirection: "row",
+					alignItems: "center",
+					gap: 6,
+					alignSelf: "stretch",
+					marginBottom: 16,
+					paddingVertical: 4,
+				}}
+			>
+				<Feather name="map" size={16} color={pin ? "#22a45d" : "#f4bb26"} />
+				<Text
+					style={{
+						color: "#555",
+						fontSize: 13,
+						lineHeight: 18,
+						textDecorationLine: "underline",
+						flex: 1,
+						flexWrap: "wrap",
+					}}
+				>
+					{pin ? t("adjustPinOnMap") : t("setPinOnMap")}
+				</Text>
+			</TouchableOpacity>
+
+			<LocationPickerMap
+				visible={showMapPicker}
+				initialLocation={pin}
+				onClose={() => setShowMapPicker(false)}
+				onConfirm={(location) => {
+					setPin(location);
+					setShowMapPicker(false);
+					// Keep city/street/state in sync with the exact point the shopper
+					// just dropped the pin on — reverse-geocode it and overwrite the
+					// address fields so they can never disagree with the map pin.
+					setSyncingAddress(true);
+					reverseGeocodePoint(location.latitude, location.longitude)
+						.then((addr) => {
+							setForm((prev) => ({
+								...prev,
+								city: addr?.city || prev.city,
+								street: addr?.street || prev.street,
+								state: addr?.region || prev.state,
+							}));
+						})
+						.finally(() => setSyncingAddress(false));
+				}}
+				title={t("setYourLocation")}
+				confirmLabel={t("confirmLocation")}
+				useMyLocationLabel={t("useMyLocation")}
+			/>
+
+			{syncingAddress && (
+				<View
+					style={{
+						flexDirection: "row",
+						alignItems: "center",
+						gap: 8,
+						marginBottom: 12,
+						paddingVertical: 8,
+						paddingHorizontal: 12,
+						borderRadius: 10,
+						backgroundColor: "#fff8e6",
+					}}
+				>
+					<ActivityIndicator size="small" color="#f4bb26" />
+					<Text
+						style={{
+							color: "#7a6a2e",
+							fontSize: 13,
+							fontWeight: "600",
+							lineHeight: 18,
+							flex: 1,
+							flexWrap: "wrap",
+						}}
+					>
+						{t("syncingAddress")}
+					</Text>
 				</View>
-			))}
+			)}
+
+			<View style={styles.fieldGroup}>
+				<Text style={styles.label}>{t("state")}</Text>
+				{/* Read-only — derived only from the map pin, never typed. */}
+				<TextInput
+					style={[styles.input, styles.inputDisabled]}
+					value={form.state}
+					editable={false}
+				/>
+			</View>
 
 			<View style={styles.fieldGroup}>
 				<Text style={styles.label}>{t("country")}</Text>
@@ -211,6 +329,7 @@ const styles = StyleSheet.create({
 	bottomSpacer: { height: 220 },
 	label: { marginBottom: 4, color: "#555" },
 	input: { borderWidth: 1, padding: 12, borderRadius: 15, borderColor: "#ccc" },
+	inputDisabled: { backgroundColor: "#f2f2f2", borderColor: "#ddd", color: "#666" },
 	saveBtn: {
 		backgroundColor: "#f4bb26",
 		padding: 16,

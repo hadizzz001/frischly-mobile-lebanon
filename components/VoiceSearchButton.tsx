@@ -14,28 +14,29 @@ import type { Market } from "@/types";
 import { processVoiceQuery } from "@/utils/voiceSearch";
 import { Feather } from "@expo/vector-icons";
 import {
-    RecordingPresets,
-    requestRecordingPermissionsAsync,
-    setAudioModeAsync,
-    useAudioRecorder,
+	RecordingPresets,
+	requestRecordingPermissionsAsync,
+	setAudioModeAsync,
+	useAudioRecorder,
 } from "expo-audio";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import type { StyleProp, ViewStyle } from "react-native";
 import {
-    ActivityIndicator,
-    Animated,
-    Easing,
-    Modal,
-    Pressable,
-    StyleSheet,
-    Text,
-    View,
+	ActivityIndicator,
+	Animated,
+	Easing,
+	Modal,
+	Pressable,
+	StyleSheet,
+	Text,
+	View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Ignore taps shorter than this (ms) so an accidental tap doesn't fire a request.
 const MIN_RECORD_MS = 500;
+// Hard cap on how long a single recording can run (ms) — auto-stops at 1 minute.
+const MAX_RECORD_MS = 60000;
 
 interface VoiceResult {
 	transcript?: string;
@@ -153,6 +154,7 @@ export default function VoiceSearchButton({
 	const [transcript, setTranscript] = useState<string>("");
 	const [errorMsg, setErrorMsg] = useState<string>("");
 	const startedAtRef = useRef<number>(0);
+	const maxDurationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 	// Pulsing ring animation while recording.
 	const pulse = useRef(new Animated.Value(0)).current;
@@ -182,6 +184,12 @@ export default function VoiceSearchButton({
 		return () => loop?.stop();
 	}, [status, pulse]);
 
+	useEffect(() => {
+		return () => {
+			if (maxDurationTimerRef.current) clearTimeout(maxDurationTimerRef.current);
+		};
+	}, []);
+
 	const startRecording = async () => {
 		if (status !== "idle") return;
 		setErrorMsg("");
@@ -199,6 +207,13 @@ export default function VoiceSearchButton({
 			recorder.record();
 			startedAtRef.current = Date.now();
 			setStatus("recording");
+
+			// Safety net: force-stop once the max duration is hit even if the
+			// user keeps holding the button.
+			if (maxDurationTimerRef.current) clearTimeout(maxDurationTimerRef.current);
+			maxDurationTimerRef.current = setTimeout(() => {
+				stopAndProcess();
+			}, MAX_RECORD_MS);
 		} catch (err) {
 			console.warn("VoiceSearch start error:", (err as Error)?.message);
 			setStatus("idle");
@@ -207,6 +222,10 @@ export default function VoiceSearchButton({
 
 	const stopAndProcess = async () => {
 		if (status !== "recording") return;
+		if (maxDurationTimerRef.current) {
+			clearTimeout(maxDurationTimerRef.current);
+			maxDurationTimerRef.current = null;
+		}
 		const elapsed = Date.now() - startedAtRef.current;
 		setStatus("processing");
 		try {
@@ -258,7 +277,6 @@ export default function VoiceSearchButton({
 		setErrorMsg("");
 	};
 
-	const insets = useSafeAreaInsets();
 	const isRecording = status === "recording";
 	const isProcessing = status === "processing";
 
@@ -270,18 +288,25 @@ export default function VoiceSearchButton({
 	};
 
 	// Floating (global FAB) vs inline (inside the header) appearance.
+	// Fixed distance from the bottom of the screen (10em ≈ 160px), completely
+	// independent of the safe-area inset so it never jumps around between
+	// screens — it always sits in exactly the same spot.
+	const FLOATING_BOTTOM_OFFSET = 100;
 	const containerStyle = floating
-		? [styles.floatingWrap, { bottom: Math.max(insets.bottom + 24, 24) }]
+		? [styles.floatingWrap, { bottom: FLOATING_BOTTOM_OFFSET }]
 		: styles.wrap;
-	const buttonBase = floating ? styles.fab : styles.micButton;
-	const buttonActive = floating ? styles.fabActive : styles.micButtonActive;
+	const buttonBase = floating ? styles.fabPill : styles.micButton;
+	const buttonActive = floating ? styles.fabPillActive : styles.micButtonActive;
 	const ringBase = floating ? styles.fabRing : styles.pulseRing;
 	const captionBase = floating ? styles.captionFloating : styles.caption;
-	const micSize = floating ? 28 : size;
+	const micSize = floating ? 26 : size;
 
+	// The floating button always renders as a fixed-size circular icon-only
+	// button, so its footprint never changes and it can't visually "jump" —
+	// only its background color changes between idle and recording states.
 	return (
 		<View style={containerStyle} pointerEvents="box-none">
-			{/* Inline pulse ring — safe to show during the hold (no Modal). */}
+			{/* Pulse ring behind the pill/button while recording (inline, no Modal). */}
 			{isRecording && (
 				<Animated.View pointerEvents="none" style={[ringBase, ringStyle]} />
 			)}
@@ -300,18 +325,22 @@ export default function VoiceSearchButton({
 				]}
 			>
 				{isProcessing ? (
-					<ActivityIndicator size="small" color={color} />
+					<ActivityIndicator
+						size="small"
+						color={floating ? (isRecording ? "#fff" : "#f4bb26") : color}
+					/>
 				) : (
 					<Feather
 						name="mic"
 						size={micSize}
-						color={isRecording ? "#fff" : color}
+						color={isRecording ? "#fff" : floating ? "#f4bb26" : color}
 					/>
 				)}
 			</Pressable>
 
-			{/* Live "listening" caption (inline, no Modal). */}
-			{isRecording && (
+			{/* Live "listening" hint caption — only for the inline (non-floating)
+			    variant, since the floating pill already shows its own label. */}
+			{isRecording && !floating && (
 				<View style={captionBase} pointerEvents="none">
 					<Text style={styles.captionText}>{t("voiceListening")}</Text>
 					<Text style={styles.captionHint}>{t("voiceReleaseHint")}</Text>
@@ -352,7 +381,7 @@ const styles = StyleSheet.create({
 	floatingWrap: {
 		position: "absolute",
 		right: 16,
-		alignItems: "flex-end",
+		alignItems: "center",
 		justifyContent: "center",
 		zIndex: 20,
 		elevation: 6,
@@ -375,30 +404,30 @@ const styles = StyleSheet.create({
 	micButtonActive: {
 		backgroundColor: "#f4bb26",
 	},
-	fab: {
-		width: 60,
-		height: 60,
-		borderRadius: 30,
+	fabPill: {
 		alignItems: "center",
 		justifyContent: "center",
-		backgroundColor: "#ffffff",
-		borderWidth: 1,
-		borderColor: "#eeeeee",
+		width: 56,
+		height: 56,
+		borderRadius: 28,
+		backgroundColor: "#1f1f1f",
+		borderWidth: 2,
+		borderColor: "#f4bb26",
 		shadowColor: "#000000",
 		shadowOffset: { width: 0, height: 4 },
-		shadowOpacity: 0.18,
-		shadowRadius: 8,
-		elevation: 6,
+		shadowOpacity: 0.25,
+		shadowRadius: 10,
+		elevation: 8,
 	},
-	fabActive: {
+	fabPillActive: {
 		backgroundColor: "#f4bb26",
-		borderColor: "#f4bb26",
+		borderColor: "#1f1f1f",
 	},
 	fabRing: {
 		position: "absolute",
-		width: 60,
-		height: 60,
-		borderRadius: 30,
+		width: 56,
+		height: 56,
+		borderRadius: 28,
 		backgroundColor: "#f4bb26",
 	},
 	caption: {
