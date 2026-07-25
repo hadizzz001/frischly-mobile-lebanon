@@ -18,12 +18,23 @@ import { useCart } from "@/contexts/CartContext";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { AuthService, ProductService } from "@/services/api";
 import type { CartItem, Product, User } from "@/types";
-import { isCityServedByAdmin } from "@/utils/cityVisibility";
-import { getUserCity } from "@/utils/userCity";
+import { isServedByAdmin } from "@/utils/cityVisibility";
+import { getUserCityAndPin } from "@/utils/userCity";
 
 const { width } = Dimensions.get("window");
 const ITEM_WIDTH = width / 3 - 15;
 const LIMIT = 12; // items per fetch
+
+function formatWeight(weight: unknown): string {
+	if (weight === null || weight === undefined) return "";
+	if (typeof weight === "string" || typeof weight === "number") return String(weight);
+	if (typeof weight === "object") {
+		const w = weight as { value?: string | number; unit?: string };
+		if (w.value !== undefined) return `${w.value}${w.unit ? ` ${w.unit}` : ""}`;
+		if (w.unit !== undefined) return String(w.unit);
+	}
+	return "";
+}
 
 interface ShopPageProps {
 	refreshTrigger?: number;
@@ -129,10 +140,11 @@ export default function ShopPage({ refreshTrigger, setRefreshing, marketId }: Sh
 			}
 
 			// Main-store (admin) items are only shown to users in a city the admin
-			// serves. The admin now serves an array of cities; guests (no city) and
-			// an admin with no configured cities still see everything.
-			const city = await getUserCity();
-			if (!(await isCityServedByAdmin(city))) {
+			// serves AND whose exact map pin falls inside the admin's configured
+			// delivery-range circle(s), when set. Guests (no city/pin) and an
+			// unconfigured admin still see everything.
+			const { city, pin } = await getUserCityAndPin();
+			if (!(await isServedByAdmin(city, pin))) {
 				setProducts([]);
 				setHasMore(false);
 				return;
@@ -371,6 +383,7 @@ const styles = StyleSheet.create({
 	},
 	discountText: { color: "#fff", fontSize: 12, fontWeight: "700" },
 	name: { fontSize: 13, fontWeight: "500", marginBottom: 4, color: "#777" },
+	weight: { fontSize: 11, color: "#999", marginBottom: 4 },
 	finalPrice: { fontSize: 15, fontWeight: "700", color: "#333" },
 	basePrice: {
 		textDecorationLine: "line-through",

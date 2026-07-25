@@ -7,7 +7,7 @@ import { useTranslation } from "@/contexts/TranslationContext";
 import { useGoogleAuth } from "@/hooks/useGoogleAuth";
 import { ApiError, AuthService } from "@/services/api";
 import type { AuthPayload } from "@/types";
-import { detectCityFromLocation, reverseGeocodePoint } from "@/utils/cityDetection";
+import { detectCityFromLocation, getStateForCity, reverseGeocodePoint } from "@/utils/cityDetection";
 import { formatLocalDate, toCalendarISOString } from "@/utils/date";
 import { ensureDefaultCity } from "@/utils/userCity";
 import { Feather } from "@expo/vector-icons";
@@ -151,7 +151,10 @@ const [syncingAddress, setSyncingAddress] = useState<boolean>(false);
 			// detected, accurate GPS coordinates so it truly reflects where they are.
 			setCity((prev) => (manual ? result.city : prev || result.city));
 			setStreet((prev) => (manual ? result.street || "" : prev || result.street || ""));
-			setStateVal((prev) => (manual ? result.region || "" : prev || result.region || ""));
+			// Always derive the Lebanese governorate from the resolved city rather
+			// than trusting the raw geocoded region text.
+			const derivedState = getStateForCity(result.city) || result.region || "";
+			setStateVal((prev) => (manual ? derivedState : prev || derivedState));
 			if (
 				typeof result.latitude === "number" &&
 				typeof result.longitude === "number"
@@ -648,7 +651,10 @@ const [syncingAddress, setSyncingAddress] = useState<boolean>(false);
 								.then((addr) => {
 									if (addr?.city) setCity(addr.city);
 									if (addr?.street) setStreet(addr.street);
-									if (addr?.region) setStateVal(addr.region);
+									// Always derive the Lebanese governorate from the resolved
+									// city rather than trusting the raw geocoded region text.
+									const derivedState = getStateForCity(addr?.city) || addr?.region;
+									if (derivedState) setStateVal(derivedState);
 								})
 								.finally(() => setSyncingAddress(false));
 						}}

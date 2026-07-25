@@ -3,8 +3,8 @@ import { useCart } from "@/contexts/CartContext";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { KitchenService } from "@/services/api";
 import type { Kitchen } from "@/types";
-import { getAdminCities } from "@/utils/cityVisibility";
-import { getUserCity } from "@/utils/userCity";
+import { getAdminCities, getAdminDeliveryRegions } from "@/utils/cityVisibility";
+import { getUserCityAndPin } from "@/utils/userCity";
 import { Feather } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -57,12 +57,14 @@ export default function KitchenCategoryPage() {
 			try {
 				setLoading(true);
 
-				// Same city rule as the home slider: a logged-in user with a city
-				// only sees kitchens whose market serves that city (plus main-store
-				// kitchens that the admin serves in that city).
-				const [city, adminCities] = await Promise.all([
-					getUserCity(),
+				// Same city + delivery-range rule as the home slider: a logged-in
+				// user only sees kitchens whose market serves that city (plus
+				// main-store kitchens that the admin serves in that city AND whose
+				// delivery-range circle covers the shopper's exact map pin).
+				const [{ city, pin }, adminCities, adminRegions] = await Promise.all([
+					getUserCityAndPin(),
 					getAdminCities(),
+					getAdminDeliveryRegions(),
 				]);
 
 				// NOTE: the public endpoint currently ignores the `category` query
@@ -86,7 +88,7 @@ export default function KitchenCategoryPage() {
 					);
 				}
 
-				const filtered = filterByCity(inCategory, city, adminCities);
+				const filtered = filterByCity(inCategory, city, adminCities, pin, adminRegions);
 
 				setKitchens(filtered);
 

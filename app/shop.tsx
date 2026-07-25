@@ -37,12 +37,43 @@ import {
     cityMatches,
     entityServesCity,
     getAdminCities,
-    isCityServedByAdmin,
+    getAdminDeliveryRegions,
+    isServedByAdmin,
 } from "@/utils/cityVisibility";
-import { getUserCity } from "@/utils/userCity";
+import { pointInAnyRegion } from "@/utils/geo";
+import { getUserCityAndPin } from "@/utils/userCity";
+
+// A market's configured delivery range (map pin(s) + radius). When the
+// shopper's own map pin falls outside every one of a market's regions, that
+// market's products must be hidden from search too — otherwise a market that
+// is correctly hidden from the home slider/browse view would still leak its
+// items into search results, which is confusing and inconsistent.
+const marketInDeliveryRange = (
+	market: unknown,
+	pin: { latitude: number; longitude: number } | null
+): boolean => {
+	const regions = (market as { deliveryRegions?: unknown } | null | undefined)
+		?.deliveryRegions as
+		| { latitude?: number; longitude?: number; radiusKm?: number }[]
+		| undefined;
+	if (!Array.isArray(regions) || !regions.length) return true; // no green zone -> city-based only
+	if (!pin) return true; // no shopper pin -> fall back to city-based rule
+	return pointInAnyRegion(pin.latitude, pin.longitude, regions);
+};
 
 const { width } = Dimensions.get("window");
 const ITEM_WIDTH = width / 3 - 12; // 3 items per row, adjust margin
+
+function formatWeight(weight: unknown): string {
+	if (weight === null || weight === undefined) return "";
+	if (typeof weight === "string" || typeof weight === "number") return String(weight);
+	if (typeof weight === "object") {
+		const w = weight as { value?: string | number; unit?: string };
+		if (w.value !== undefined) return `${w.value}${w.unit ? ` ${w.unit}` : ""}`;
+		if (w.unit !== undefined) return String(w.unit);
+	}
+	return "";
+}
 
 export default function ShopPage() {
 	const { t, td } = useTranslation();
@@ -341,27 +372,36 @@ export default function ShopPage() {
 			const searchActive = String(filters.search || "").trim().length > 0;
 			const globalSearch = !marketParam && !isMultiSearch && searchActive;
 
-			// City is only needed for non-market fetches (main-store gate / global
-			// search per-product filtering); skip the profile call inside a market.
-			const city = marketParam ? "" : await getUserCity();
+			// City + pin are only needed for non-market fetches (main-store gate /
+			// global search per-product filtering); skip the profile call inside a
+			// market. The pin lets a global search enforce a market's delivery-range
+			// circle the same way the home slider does.
+			const { city, pin } = marketParam
+				? { city: "", pin: null }
+				: await getUserCityAndPin();
 
 			// Main-store (admin) items are only shown to users in a city the admin
-			// serves. This gate applies to plain main-store browsing only. It does
-			// NOT apply when browsing a specific market (own city rule) NOR to a
-			// global search: a global search must still surface MARKET items that
-			// serve the user's city even when the admin doesn't, so we filter those
-			// per-product below instead of bailing out here.
+			// serves AND whose exact map pin falls inside the admin's configured
+			// delivery-range circle(s), when set. This gate applies to plain
+			// main-store browsing only. It does NOT apply when browsing a specific
+			// market (own city/range rule) NOR to a global search: a global search
+			// must still surface MARKET items that serve the user's city even when
+			// the admin doesn't, so we filter those per-product below instead of
+			// bailing out here.
 			if (!marketParam && !globalSearch) {
-				if (!(await isCityServedByAdmin(city))) {
+				if (!(await isServedByAdmin(city, pin))) {
 					if (replace || nextPage === 1) setProducts([]);
 					setHasNextPage(false);
 					return;
 				}
 			}
 
-			// Admin serving cities, needed to gate main-store items in a global
-			// search (market items are gated by their own market's cities).
-			const adminCities = globalSearch ? await getAdminCities() : [];
+			// Admin serving cities + delivery-range pins, needed to gate main-store
+			// items in a global search (market items are gated by their own
+			// market's cities/range).
+			const [adminCities, adminRegions] = globalSearch
+				? await Promise.all([getAdminCities(), getAdminDeliveryRegions()])
+				: [[], []];
 
 			const query: ProductQuery = {};
 			query.page = nextPage;
@@ -409,15 +449,31 @@ export default function ShopPage() {
 
 			let newData = Array.isArray(json.data) ? json.data : [];
 
-			// CITY RULE for a global search: drop items the user's city can't see.
-			// Market products are checked against their own market's cities;
-			// main-store products (market === null) against the admin's cities.
+			// CITY + RANGE RULE for a global search: drop items the user's city
+			// can't see, AND drop market items whose delivery-range circle doesn't
+			// cover the shopper's exact map pin (mirrors the home slider's rule —
+			// a market hidden from the slider must stay hidden from search too).
+			// Main-store products are checked against the admin's cities AND the
+			// admin's own configured delivery-range circle(s), when set.
 			// Guests (no city) keep everything.
+			const adminInRange = (): boolean => {
+				if (!adminRegions.length) return true;
+				if (!pin) return true;
+				return pointInAnyRegion(pin.latitude, pin.longitude, adminRegions);
+			};
 			if (globalSearch && city) {
 				newData = newData.filter((p) =>
 					p?.market
-						? entityServesCity(p.market, city)
-						: cityMatches(adminCities, city)
+						? entityServesCity(p.market, city) &&
+						  marketInDeliveryRange(p.market, pin)
+						: cityMatches(adminCities, city) && adminInRange()
+				);
+			} else if (globalSearch) {
+				// Guest global search: still enforce delivery-range circles when a
+				// market/admin has one configured (defensive; guests normally have
+				// no pin).
+				newData = newData.filter((p) =>
+					p?.market ? marketInDeliveryRange(p.market, pin) : adminInRange()
 				);
 			}
 
@@ -456,13 +512,15 @@ export default function ShopPage() {
 			setLoading(true);
 
 			// Voice/multi search fetches BOTH main-store and market products (no
-			// market=none), so we must apply the city rule ourselves: a logged-in
-			// user only sees market items whose market serves their city, and
-			// main-store items only when the admin serves their city. Guests (no
-			// city) and unconfigured cities still see everything.
-			const [city, adminCities] = await Promise.all([
-				getUserCity(),
+			// market=none), so we must apply the city + delivery-range rules
+			// ourselves: a logged-in user only sees market items whose market
+			// serves their city AND whose delivery-range circle covers their exact
+			// map pin, and main-store items only when the admin serves their city.
+			// Guests (no city) and unconfigured cities still see everything.
+			const [{ city, pin }, adminCities, adminRegions] = await Promise.all([
+				getUserCityAndPin(),
 				getAdminCities(),
+				getAdminDeliveryRegions(),
 			]);
 
 			// We match against the category/subcategory taxonomy. It may not be in
@@ -633,17 +691,27 @@ export default function ShopPage() {
 			);
 			const finalProducts = relevant.length ? relevant : merged;
 
-			// CITY RULE: drop items the user's city can't see. Market products are
-			// checked against their own market's cities; main-store products
-			// (market === null) against the admin's serving cities. Guests (no
-			// city) keep everything.
+			// CITY + RANGE RULE: drop items the user's city can't see, AND drop
+			// market items whose delivery-range circle doesn't cover the shopper's
+			// exact map pin. Main-store products (market === null) are checked
+			// against the admin's serving cities AND the admin's own configured
+			// delivery-range circle(s), when set. Guests (no city) keep everything
+			// (aside from the defensive range check below).
+			const adminInRangeMulti = (): boolean => {
+				if (!adminRegions.length) return true;
+				if (!pin) return true;
+				return pointInAnyRegion(pin.latitude, pin.longitude, adminRegions);
+			};
 			const cityFiltered = city
 				? finalProducts.filter((p) =>
 						p?.market
-							? entityServesCity(p.market, city)
-							: cityMatches(adminCities, city)
+							? entityServesCity(p.market, city) &&
+							  marketInDeliveryRange(p.market, pin)
+							: cityMatches(adminCities, city) && adminInRangeMulti()
 				  )
-				: finalProducts;
+				: finalProducts.filter((p) =>
+						p?.market ? marketInDeliveryRange(p.market, pin) : adminInRangeMulti()
+				  );
 
 			// Default sort: highest price first (voice/multi-search merges several
 			// independent fetches, so it can't rely on the API's own sort param).
@@ -1386,6 +1454,7 @@ const styles = StyleSheet.create({
 	},
 	discountText: { color: "#FFFFFF", fontSize: 12, fontWeight: "700" },
 	name: { fontSize: 13, fontWeight: "500", marginBottom: 4, color: "#000000" },
+	weight: { fontSize: 11, color: "#888", marginBottom: 4 },
 	priceRow: { flexDirection: "row", alignItems: "center" },
 	oldPrice: {
 		textDecorationLine: "line-through",

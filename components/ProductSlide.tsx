@@ -1,7 +1,7 @@
 import { useCart } from "@/contexts/CartContext";
 import { ProductService } from "@/services/api";
-import { isCityServedByAdmin } from "@/utils/cityVisibility";
-import { getUserCity } from "@/utils/userCity";
+import { isServedByAdmin } from "@/utils/cityVisibility";
+import { getUserCityAndPin } from "@/utils/userCity";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 
@@ -81,10 +81,12 @@ export default function DiscountCarousel({
 			}
 
 			// Main-store (admin) items are only shown to users in a city the admin
-			// serves (the admin now serves an array of cities). Guests (no city) and
-			// an admin with no configured cities still see everything.
-			const city = await getUserCity();
-			if (!(await isCityServedByAdmin(city))) {
+			// serves AND whose exact map pin falls inside the admin's configured
+			// delivery-range circle(s), when set (same rule already enforced for
+			// markets). Guests (no city/pin) and an unconfigured admin still see
+			// everything.
+			const { city, pin } = await getUserCityAndPin();
+			if (!(await isServedByAdmin(city, pin))) {
 				setDiscountedProducts([]);
 				return;
 			}

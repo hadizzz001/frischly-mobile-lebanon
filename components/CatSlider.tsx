@@ -1,8 +1,8 @@
 import { useTranslation } from "@/contexts/TranslationContext";
 import { CategoryService, MarketService } from "@/services/api";
 import type { Category } from "@/types";
-import { isCityServedByAdmin } from "@/utils/cityVisibility";
-import { getUserCity } from "@/utils/userCity";
+import { isServedByAdmin } from "@/utils/cityVisibility";
+import { getUserCityAndPin } from "@/utils/userCity";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -54,11 +54,12 @@ export default function CategoriesGrid({
 			}
 
 			// Tapping a category opens the main-store (admin) products, so the
-			// category list is only shown to users in a city the admin serves (the
-			// admin now serves an array of cities). Guests (no city) and an admin
-			// with no configured cities still see everything.
-			const city = await getUserCity();
-			if (!(await isCityServedByAdmin(city))) {
+			// category list is only shown to users in a city the admin serves AND
+			// whose exact map pin falls inside the admin's configured delivery-range
+			// circle(s), when set (same rule already enforced for markets). Guests
+			// (no city/pin) and an unconfigured admin still see everything.
+			const { city, pin } = await getUserCityAndPin();
+			if (!(await isServedByAdmin(city, pin))) {
 				setCategories([]);
 				return;
 			}

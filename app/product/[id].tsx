@@ -18,6 +18,17 @@ import Feather from "react-native-vector-icons/Feather";
 
 const { width } = Dimensions.get("window");
 
+function formatWeight(weight: unknown): string {
+	if (weight === null || weight === undefined) return "";
+	if (typeof weight === "string" || typeof weight === "number") return String(weight);
+	if (typeof weight === "object") {
+		const w = weight as { value?: string | number; unit?: string };
+		if (w.value !== undefined) return `${w.value}${w.unit ? ` ${w.unit}` : ""}`;
+		if (w.unit !== undefined) return String(w.unit);
+	}
+	return "";
+}
+
 const ProductPage = () => {
 	const { t, td } = useTranslation();
 
@@ -185,6 +196,8 @@ const handleAgeResponse = (response: "yes" | "no") => {
 				{/* Product Info */}
 				<View style={styles.info}>
 					<Text style={styles.title}>{td(name)}</Text>
+
+					{!!formatWeight(weight) && <Text style={styles.weight}>{formatWeight(weight)}</Text>}
 
 					<Text>{description}</Text>
 
@@ -480,6 +493,7 @@ const styles = StyleSheet.create({
 	swiperImage: { width: width - 40, height: 250, borderRadius: 8 },
 	info: { padding: 16 },
 	title: { fontSize: 20, fontWeight: "bold", marginBottom: 8 },
+	weight: { fontSize: 14, color: "#777", marginBottom: 6 },
 	button: {
 		backgroundColor: "#000",
 		padding: 12,

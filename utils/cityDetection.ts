@@ -213,4 +213,66 @@ export const getCityCoordinates = (
 	return CITY_COORDINATES[city] || null;
 };
 
+// Maps each town in LEBANESE_CITIES to its official Lebanese governorate
+// (Mohafazat). Used so the "state" field is always one of the real Lebanese
+// governorates and stays in sync automatically whenever the city changes —
+// instead of trusting whatever free-text region a reverse-geocoding service
+// happens to return.
+const CITY_TO_STATE: Record<string, string> = {
+	Beirut: "Beirut",
+
+	Jounieh: "Mount Lebanon",
+	Byblos: "Mount Lebanon",
+	Aley: "Mount Lebanon",
+	Baabda: "Mount Lebanon",
+	Bhamdoun: "Mount Lebanon",
+	Broummana: "Mount Lebanon",
+	Dbayeh: "Mount Lebanon",
+	Antelias: "Mount Lebanon",
+	Jdeideh: "Mount Lebanon",
+	Zalka: "Mount Lebanon",
+	Damour: "Mount Lebanon",
+
+	Tripoli: "North Lebanon",
+	Zgharta: "North Lebanon",
+	Batroun: "North Lebanon",
+	Bcharre: "North Lebanon",
+	Amioun: "North Lebanon",
+
+	Halba: "Akkar",
+
+	Sidon: "South Lebanon",
+	Tyre: "South Lebanon",
+	Jezzine: "South Lebanon",
+	Ghazieh: "South Lebanon",
+
+	Nabatieh: "Nabatieh",
+	"Bint Jbeil": "Nabatieh",
+	Marjeyoun: "Nabatieh",
+	Hasbaya: "Nabatieh",
+
+	Zahle: "Bekaa",
+	Chtaura: "Bekaa",
+	Anjar: "Bekaa",
+	Rayak: "Bekaa",
+	Rashaya: "Bekaa",
+
+	Baalbek: "Baalbek-Hermel",
+	Hermel: "Baalbek-Hermel",
+};
+
+/**
+ * Returns the official Lebanese governorate ("state") for a given city from
+ * LEBANESE_CITIES, or null if the city is unknown. Used to keep the
+ * address.state field always a valid Lebanese governorate, auto-derived from
+ * whichever city was picked/detected — rather than trusting free-text region
+ * strings from reverse geocoding.
+ */
+export const getStateForCity = (
+	city: string | null | undefined
+): string | null => {
+	if (!city) return null;
+	return CITY_TO_STATE[city] || null;
+};
+
 export default detectCityFromLocation;

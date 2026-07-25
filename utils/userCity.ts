@@ -130,4 +130,93 @@ export const ensureDefaultCity = async (
 	return patched;
 };
 
+/**
+ * Returns the logged-in user's exact map pin (address.location lat/lng), or
+ * `null` for guests / users who haven't set one.
+ *
+ * Mirrors {@link getUserCity}: refreshes from `/api/auth/me` so a stale local
+ * cache doesn't miss a pin set on another device, falling back to whatever is
+ * stored locally on any network error.
+ *
+ * Used to precisely match the shopper's location against a market's
+ * delivery-region pin + radius (the "green zone" configured on the map),
+ * which is more accurate than city-only matching.
+ */
+export const getUserLocationPin = async (): Promise<{
+	latitude: number;
+	longitude: number;
+} | null> => {
+	const { pin } = await getUserCityAndPin();
+	return pin;
+};
+
+/**
+ * Fetches the logged-in user's city AND exact map pin in a single
+ * `/api/auth/me` round-trip (guests get `{ city: "", pin: null }`).
+ *
+ * This is the combined, race-free version of calling {@link getUserCity} and
+ * {@link getUserLocationPin} separately — both used to independently hit
+ * `/api/auth/me`, which could momentarily disagree if the profile changed
+ * mid-flight. Prefer this when a caller needs both values together (e.g. the
+ * markets slider, which must compare the shopper's pin against a market's
+ * delivery range while also city-scoping the list).
+ */
+export const getUserCityAndPin = async (): Promise<{
+	city: string;
+	pin: { latitude: number; longitude: number } | null;
+}> => {
+	const readPin = (parsed: StoredUserData | null) => {
+		const loc =
+			parsed?.user?.address?.location ||
+			parsed?.data?.user?.address?.location;
+		if (
+			loc &&
+			typeof loc.latitude === "number" &&
+			typeof loc.longitude === "number"
+		) {
+			return { latitude: loc.latitude, longitude: loc.longitude };
+		}
+		return null;
+	};
+
+	try {
+		const stored = await AsyncStorage.getItem("userData");
+		const guest = await AsyncStorage.getItem("guest");
+		if (!stored || guest === "true") return { city: "", pin: null };
+
+		const parsed: StoredUserData = JSON.parse(stored);
+		const token = parsed?.token;
+		const storedCity = readCityFromStored(parsed);
+		const storedPin = readPin(parsed);
+
+		if (!token) return { city: storedCity, pin: storedPin };
+
+		try {
+			const res = await AuthService.me();
+			const freshUser = (res.data as unknown as { user?: User })?.user;
+			if (freshUser) {
+				await AsyncStorage.setItem(
+					"userData",
+					JSON.stringify({ token, user: freshUser })
+				);
+				const loc = freshUser?.address?.location;
+				const freshPin =
+					loc &&
+					typeof loc.latitude === "number" &&
+					typeof loc.longitude === "number"
+						? { latitude: loc.latitude, longitude: loc.longitude }
+						: storedPin;
+				return { city: freshUser?.address?.city || storedCity, pin: freshPin };
+			}
+		} catch {
+			// network error -> fall through to stored values
+		}
+
+		return { city: storedCity, pin: storedPin };
+	} catch {
+		// ignore storage/parse errors -> treat as guest (show everything)
+	}
+	return { city: "", pin: null };
+};
+
 export default getUserCity;

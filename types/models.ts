@@ -163,6 +163,12 @@ export interface Market {
 	isOpen?: boolean;
 	rating?: number;
 	deliveryFee?: number;
+	// Delivery/coverage zone names (references Zone documents with their own
+	// map pin + radius).
+	deliveryZones?: string[];
+	// Multi-pin delivery coverage set on the map (the "green pin" range): each
+	// entry is an independent map pin + radius circle.
+	deliveryRegions?: { latitude?: number; longitude?: number; radiusKm?: number }[];
 	createdAt?: string;
 	updatedAt?: string;
 }

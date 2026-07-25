@@ -1,6 +1,7 @@
 import { LEBANESE_CITIES } from "@/constants/lebaneseCities";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { AuthService } from "@/services/api";
+import { getCityCoordinates, getStateForCity } from "@/utils/cityDetection";
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
@@ -66,6 +67,22 @@ export default function Header() {
     loadCity();
   }, []);
 
+  // Listen for city changes made elsewhere (e.g. the edit-profile screen, its
+  // map pin picker, or this same dropdown on another mount) so the nav pill
+  // updates instantly without needing a screen refresh. The event payload can
+  // be either a plain city string (legacy) or a richer object carrying the
+  // derived state/location too.
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener(
+      "userCityChanged",
+      (payload: string | { city?: string }) => {
+        const city = typeof payload === "string" ? payload : payload?.city;
+        if (city) setUserCity(city);
+      }
+    );
+    return () => sub.remove();
+  }, []);
+
   const handleSelectCity = async (city: string) => {
     setCityDropdownOpen(false);
     if (!city || city === userCity) return;
@@ -73,15 +90,38 @@ export default function Header() {
     setUserCity(city); // optimistic
     setSavingCity(true);
     try {
-      await AuthService.updateProfile({ address: { city } });
+      // Auto-derive the Lebanese governorate (state) from the newly picked
+      // city so the profile's state always stays valid and in sync, without
+      // the shopper needing to set it separately or refresh anything.
+      const state = getStateForCity(city);
+      // Also snap the map pin to this city's approximate center — otherwise
+      // switching city from this nav pill leaves the shopper's saved map pin
+      // pointing at their old city, out of sync with the city shown here.
+      const location = getCityCoordinates(city);
+
+      // The backend replaces the whole `address` object on update rather than
+      // merging it — so we must carry forward the shopper's existing
+      // street alongside the new city, otherwise their previously saved
+      // street address gets silently wiped out just by switching city from
+      // this nav pill.
+      const stored = await AsyncStorage.getItem("userData");
+      const parsed = stored ? JSON.parse(stored) : null;
+      const existingAddress = parsed?.user?.address || {};
+
+      const nextAddress = {
+        ...existingAddress,
+        city,
+        ...(state ? { state } : {}),
+        ...(location ? { location } : {}),
+      };
+
+      await AuthService.updateProfile({ address: nextAddress });
 
       // Keep the local cache in sync so the rest of the app (city-based
       // filtering) picks up the change immediately.
-      const stored = await AsyncStorage.getItem("userData");
-      if (stored) {
-        const parsed = JSON.parse(stored);
+      if (stored && parsed) {
         const nextUser = parsed?.user
-          ? { ...parsed.user, address: { ...parsed.user.address, city } }
+          ? { ...parsed.user, address: nextAddress }
           : parsed?.user;
         await AsyncStorage.setItem(
           "userData",
@@ -89,9 +129,10 @@ export default function Header() {
         );
       }
 
-      // Tell the home screen (and any other listeners) to reload their
-      // city-scoped feeds now that the shopper's city changed.
-      DeviceEventEmitter.emit("userCityChanged", city);
+      // Tell the home screen, edit-profile screen (and any other listeners)
+      // to reload their city-scoped feeds / form fields now that the
+      // shopper's city (and map pin) changed.
+      DeviceEventEmitter.emit("userCityChanged", { city, state, location });
     } catch (err) {
       console.error("Failed to update city:", err);
       setUserCity(previousCity); // revert on failure

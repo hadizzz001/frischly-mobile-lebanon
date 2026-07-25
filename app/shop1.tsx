@@ -4,12 +4,13 @@ import { useCart } from "@/contexts/CartContext";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { AuthService, ProductService } from "@/services/api";
 import type { Product, User } from "@/types";
-import { isCityServedByAdmin } from "@/utils/cityVisibility";
-import { getUserCity } from "@/utils/userCity";
+import { isServedByAdmin } from "@/utils/cityVisibility";
+import { getUserCityAndPin } from "@/utils/userCity";
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
+import type { ViewToken } from "react-native";
 import {
     ActivityIndicator,
     Dimensions,
@@ -20,11 +21,21 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import type { ViewToken } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get("window");
 const ITEM_WIDTH = width / 3 - 13; // three items per row with spacing
+
+function formatWeight(weight: unknown): string {
+	if (weight === null || weight === undefined) return "";
+	if (typeof weight === "string" || typeof weight === "number") return String(weight);
+	if (typeof weight === "object") {
+		const w = weight as { value?: string | number; unit?: string };
+		if (w.value !== undefined) return `${w.value}${w.unit ? ` ${w.unit}` : ""}`;
+		if (w.unit !== undefined) return String(w.unit);
+	}
+	return "";
+}
 
 type ProductSection = {
 	title: string;
@@ -65,10 +76,11 @@ export default function ShopPage() {
 			setLoading(true);
 
 			// Main-store (admin) items are only shown to users in a city the admin
-			// serves (the admin now serves an array of cities). Guests (no city) and
-			// an admin with no configured cities still see everything.
-			const city = await getUserCity();
-			if (!(await isCityServedByAdmin(city))) {
+			// serves AND whose exact map pin falls inside the admin's configured
+			// delivery-range circle(s), when set. Guests (no city/pin) and an
+			// unconfigured admin still see everything.
+			const { city, pin } = await getUserCityAndPin();
+			if (!(await isServedByAdmin(city, pin))) {
 				setSections([]);
 				return;
 			}
@@ -429,6 +441,12 @@ const styles = StyleSheet.create({
 		fontWeight: "500",
 		marginBottom: 4,
 		color: "#000000",
+		textAlign: "center",
+	},
+	weight: {
+		fontSize: 11,
+		color: "#888",
+		marginBottom: 4,
 		textAlign: "center",
 	},
 	finalPrice: {

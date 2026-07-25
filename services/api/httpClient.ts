@@ -89,17 +89,43 @@ async function request<T>(
 	}
 
 	try {
-		const res = await fetch(url, {
-			method,
-			headers: finalHeaders,
-			body:
-				body === undefined
-					? undefined
-					: body instanceof FormData
-						? body
-						: JSON.stringify(body),
-			signal: controller.signal,
-		});
+		let res: Response;
+		try {
+			res = await fetch(url, {
+				method,
+				headers: finalHeaders,
+				body:
+					body === undefined
+						? undefined
+						: body instanceof FormData
+							? body
+							: JSON.stringify(body),
+				signal: controller.signal,
+			});
+		} catch (err) {
+			// Normalize abort/timeout/network errors into a plain ApiError so
+			// callers never have to deal with a raw DOMException/AbortError
+			// (which, if it ever slips through unhandled, can surface as a
+			// scary redbox / crash in Expo Go).
+			const isAbort =
+				(err as { name?: string })?.name === "AbortError" ||
+				(err as { message?: string })?.message === "Aborted";
+			if (isAbort) {
+				const wasExternalAbort = !!signal?.aborted;
+				throw new ApiError(
+					wasExternalAbort
+						? "Request cancelled"
+						: "Request timed out. The server may be waking up — please try again.",
+					0,
+					null,
+				);
+			}
+			throw new ApiError(
+				(err as { message?: string })?.message || "Network request failed",
+				0,
+				null,
+			);
+		}
 
 		let payload: unknown = null;
 		const text = await res.text();

@@ -13,7 +13,7 @@ export const SERVER_BASE_URL: string =
 export const API_BASE_URL: string = `${SERVER_BASE_URL}/api`;
 
 export const API_TIMEOUT_MS: number = Number(
-	process.env.EXPO_PUBLIC_API_TIMEOUT_MS || 15000,
+	process.env.EXPO_PUBLIC_API_TIMEOUT_MS || 30000,
 );
 
 // Google OAuth client IDs. Create these in Google Cloud Console

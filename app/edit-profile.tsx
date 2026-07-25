@@ -3,7 +3,7 @@ import LocationPickerMap, { type PickedLocation } from "@/components/LocationPic
 import { useTranslation } from "@/contexts/TranslationContext";
 import { AuthService } from "@/services/api";
 import type { User } from "@/types";
-import { getCityCoordinates, reverseGeocodePoint } from "@/utils/cityDetection";
+import { getCityCoordinates, getStateForCity, reverseGeocodePoint } from "@/utils/cityDetection";
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
+    DeviceEventEmitter,
     ScrollView,
     StyleSheet,
     Text,
@@ -98,6 +99,29 @@ export default function EditProfile() {
 		checkLogin();
 	}, [router]);
 
+	// Listen for city changes made elsewhere (e.g. the nav header's city
+	// dropdown) so this form's city/state/pin stay in sync instantly, without
+	// needing to leave and reopen this screen.
+	useEffect(() => {
+		const sub = DeviceEventEmitter.addListener(
+			"userCityChanged",
+			(payload: string | { city?: string; state?: string; location?: PickedLocation }) => {
+				const city = typeof payload === "string" ? payload : payload?.city;
+				if (!city) return;
+				const state = typeof payload === "string" ? getStateForCity(city) : payload?.state;
+				const location =
+					typeof payload === "string" ? getCityCoordinates(city) : payload?.location;
+				setForm((prev) => ({
+					...prev,
+					city,
+					...(state ? { state } : {}),
+				}));
+				if (location) setPin(location);
+			}
+		);
+		return () => sub.remove();
+	}, []);
+
 	const handleUpdate = async (): Promise<void> => {
 		try {
 			if (!form.phoneNumber || !form.phoneNumber.trim() || form.phoneNumber.trim() === "+961") {
@@ -134,15 +158,52 @@ export default function EditProfile() {
 					const freshUser = (userData.data as unknown as { user?: User })?.user;
 					// Update AsyncStorage with fresh user data (keep the token)
 					if (freshUser) {
+						// ⚠️ Guard against the backend silently dropping the exact map
+						// pin on update. We just successfully sent `address.location`
+						// above, so if the freshly re-fetched user doesn't have it (or
+						// has an invalid one), the PUT /auth/profile endpoint on the
+						// server likely isn't persisting/returning that field yet.
+						// Patch it back in locally so the map doesn't visually revert
+						// to the Beirut default pin the next time this screen opens
+						// within the same session, and log a clear diagnostic so this
+						// backend gap is easy to spot/fix server-side.
+						const freshLoc = freshUser.address?.location;
+						const freshLocValid =
+							freshLoc &&
+							typeof freshLoc.latitude === "number" &&
+							typeof freshLoc.longitude === "number";
+						if (pin && !freshLocValid) {
+							console.warn(
+								"⚠️ address.location missing from /auth/me response after saving a pin — the backend may not be persisting/returning this field. Patching it back in locally so the UI stays consistent this session."
+							);
+							freshUser.address = { ...freshUser.address, location: pin };
+						}
+
 						const updatedUserData = {
 							token,
 							user: freshUser,
 						};
 						await AsyncStorage.setItem("userData", JSON.stringify(updatedUserData));
 						setUser(freshUser);
+						if (pin && !freshLocValid) setPin(pin);
+
+						// Let the nav header (and any other listeners) know the city
+						// may have changed, so it updates instantly without a refresh.
+						const newCity = freshUser.address?.city;
+						if (newCity) {
+							DeviceEventEmitter.emit("userCityChanged", {
+								city: newCity,
+								state: freshUser.address?.state,
+								location: freshUser.address?.location,
+							});
+						}
 					}
 				} catch (fetchErr) {
-					console.error("⚠️ Failed to re-fetch user data:", fetchErr);
+					// Non-fatal: the profile update itself already succeeded above,
+					// this re-fetch is only to refresh the locally cached user.
+					// Failing here (e.g. a slow/cold-starting server timing out)
+					// should never block the success message or crash the app.
+					console.warn("Failed to re-fetch user data after update:", fetchErr);
 				}
 
 				Alert.alert(t("success"), t("profileUpdated"), [
@@ -205,10 +266,21 @@ export default function EditProfile() {
 					value={form.city}
 					onValueChange={(val: string) => {
 						const changed = val !== form.city;
-						setForm((prev) => ({ ...prev, city: val }));
+						const state = getStateForCity(val);
+						setForm((prev) => ({
+							...prev,
+							city: val,
+							// Auto-derive the Lebanese governorate (state) from the newly
+							// picked city so it always stays valid and in sync.
+							state: state || prev.state,
+						}));
 						if (changed) {
 							const coords = getCityCoordinates(val);
 							if (coords) setPin(coords);
+							// Let the nav header (and any other listeners) update instantly
+							// — this is optimistic (before Save is pressed), matching how
+							// the header's own city dropdown updates the rest of the app.
+							DeviceEventEmitter.emit("userCityChanged", { city: val, state, location: coords });
 						}
 					}}
 					placeholder={t("city")}
@@ -256,12 +328,27 @@ export default function EditProfile() {
 					setSyncingAddress(true);
 					reverseGeocodePoint(location.latitude, location.longitude)
 						.then((addr) => {
-							setForm((prev) => ({
-								...prev,
-								city: addr?.city || prev.city,
-								street: addr?.street || prev.street,
-								state: addr?.region || prev.state,
-							}));
+							setForm((prev) => {
+								const nextCity = addr?.city || prev.city;
+								// Always derive the Lebanese governorate from the resolved
+								// city rather than trusting the raw geocoded region text.
+								const nextState = getStateForCity(nextCity) || prev.state;
+								// Let the nav header (and any other listeners) update
+								// instantly — optimistic, before Save is pressed.
+								if (nextCity !== prev.city || nextState !== prev.state) {
+									DeviceEventEmitter.emit("userCityChanged", {
+										city: nextCity,
+										state: nextState,
+										location,
+									});
+								}
+								return {
+									...prev,
+									city: nextCity,
+									street: addr?.street || prev.street,
+									state: nextState,
+								};
+							});
 						})
 						.finally(() => setSyncingAddress(false));
 				}}

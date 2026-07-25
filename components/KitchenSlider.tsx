@@ -5,8 +5,10 @@ import {
     cityMatches,
     entityServesCity,
     getAdminCities,
+    getAdminDeliveryRegions,
 } from "@/utils/cityVisibility";
-import { getUserCity } from "@/utils/userCity";
+import { pointInAnyRegion, type DeliveryRegion } from "@/utils/geo";
+import { getUserCityAndPin } from "@/utils/userCity";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -44,19 +46,31 @@ export const getKitchenCartItems = (
 // Guests (no city) and entries/admin with no city restriction see everything.
 // Pass `adminCities` (from getAdminCities()) so main-store entries respect the
 // admin's cities; omit it to keep main-store entries always visible.
+// `pin` + `adminRegions` additionally enforce the admin's configured map-pin
+// delivery-range circle(s) on main-store entries, mirroring the rule already
+// applied to markets — when the admin has a range configured, a main-store
+// entry is hidden if the shopper's pin falls outside every circle.
 // Exported so the kitchen-category screen reuses the same rule.
 export const filterByCity = (
 	list: KitchenCategory[],
 	city?: string | null,
 	adminCities: string[] = [],
-): KitchenCategory[] =>
-	city
-		? (list || []).filter((entry) =>
-				entry?.market
-					? entityServesCity(entry.market, city)
-					: cityMatches(adminCities, city),
-		  )
-		: list || [];
+	pin?: { latitude: number; longitude: number } | null,
+	adminRegions: DeliveryRegion[] = [],
+): KitchenCategory[] => {
+	const inAdminRange = (): boolean => {
+		if (!adminRegions.length) return true;
+		if (!pin) return true;
+		return pointInAnyRegion(pin.latitude, pin.longitude, adminRegions);
+	};
+	return (list || []).filter((entry) =>
+		entry?.market
+			? city
+				? entityServesCity(entry.market, city)
+				: true
+			: (city ? cityMatches(adminCities, city) : true) && inAdminRange(),
+	);
+};
 
 // The home screen shows kitchen CATEGORIES (e.g. Pizza, Pasta). Tapping a
 // category opens /kitchen-category/[id], which lists the kitchens inside it;
@@ -125,18 +139,20 @@ export default function KitchenSlider({
 		try {
 			setLoading(true);
 
-			// Determine the logged-in user's city (guests have no city).
-			// getUserCity() refreshes from /api/auth/me so stale logins still work.
-			// Admin cities gate main-store (no-market) kitchen categories.
-			const [city, adminCities] = await Promise.all([
-				getUserCity(),
+			// Determine the logged-in user's city + exact map pin (guests have
+			// neither). getUserCityAndPin() refreshes from /api/auth/me so stale
+			// logins still work. Admin cities + delivery-range pins gate main-store
+			// (no-market) kitchen categories.
+			const [{ city, pin }, adminCities, adminRegions] = await Promise.all([
+				getUserCityAndPin(),
 				getAdminCities(),
+				getAdminDeliveryRegions(),
 			]);
 
 			const res = await KitchenService.categoriesPublic();
 			const all = Array.isArray(res?.data) ? res.data : [];
 
-			setCategories(filterByCity(all, city, adminCities));
+			setCategories(filterByCity(all, city, adminCities, pin, adminRegions));
 		} catch (err) {
 			console.error("KitchenSlider fetch error:", err);
 			setCategories([]);

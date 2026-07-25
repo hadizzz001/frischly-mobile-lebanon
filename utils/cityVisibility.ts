@@ -11,6 +11,7 @@
 // place and accept a string, an array, or an object like { city } / { name }.
 
 import { SettingsService } from "@/services/api";
+import { pointInAnyRegion, type DeliveryRegion } from "@/utils/geo";
 
 // A serving-cities value can arrive in many shapes over the wire.
 type CityValue =
@@ -171,6 +172,87 @@ export const isCityServedByAdmin = async (
 	if (!user) return true; // guests see everything
 	const cities = await getAdminCities(opts);
 	return cityMatches(cities, user);
+};
+
+// ---------------------------------------------------------------------------
+// Admin / main-store delivery-range pins (map pin(s) + radius)
+// ---------------------------------------------------------------------------
+// Mirrors a market's `deliveryRegions`: the main store can now also declare
+// exact map-pin coverage circles on the admin Profile page. When configured,
+// a shopper's exact map pin must fall inside at least one circle to see
+// main-store items/categories/search results — same rule already enforced
+// for markets on the home slider and in search.
+
+let adminRegionsPromise: Promise<DeliveryRegion[]> | null = null;
+let adminRegionsFetchedAt = 0;
+const ADMIN_REGIONS_TTL = 30 * 1000; // 30 seconds
+
+const fetchAdminRegions = async (): Promise<DeliveryRegion[]> => {
+	try {
+		const res = await SettingsService.getPublic();
+		const data = (res?.data ?? res) as { deliveryRegions?: unknown };
+		return Array.isArray(data?.deliveryRegions)
+			? (data.deliveryRegions as DeliveryRegion[])
+			: [];
+	} catch {
+		return [];
+	}
+};
+
+/**
+ * Returns the main store's configured delivery-range pins (cached for the
+ * session). Pass `{ force: true }` to refetch (e.g. on pull-to-refresh).
+ */
+export const getAdminDeliveryRegions = (
+	{ force = false }: { force?: boolean } = {},
+): Promise<DeliveryRegion[]> => {
+	const isStale = Date.now() - adminRegionsFetchedAt > ADMIN_REGIONS_TTL;
+	if (force || isStale || !adminRegionsPromise) {
+		adminRegionsPromise = fetchAdminRegions();
+		adminRegionsFetchedAt = Date.now();
+	}
+	return adminRegionsPromise;
+};
+
+/** Clears the cached admin delivery regions so the next read refetches. */
+export const refreshAdminDeliveryRegions = (): void => {
+	adminRegionsPromise = null;
+	adminRegionsFetchedAt = 0;
+};
+
+/**
+ * Is `pin` inside the main store's configured delivery range? No regions
+ * configured, or no pin available (guest / user hasn't set one) -> allowed
+ * (falls back to the city-based rule instead).
+ */
+export const isAdminInDeliveryRange = async (
+	pin: { latitude: number; longitude: number } | null | undefined,
+	opts?: { force?: boolean },
+): Promise<boolean> => {
+	const regions = await getAdminDeliveryRegions(opts);
+	if (!regions.length) return true; // no green zone -> city-based only
+	if (!pin) return true; // no shopper pin -> city-based fallback
+	return pointInAnyRegion(pin.latitude, pin.longitude, regions);
+};
+
+/**
+ * Combined main-store visibility gate: city AND delivery-range pin must both
+ * pass (each individually no-ops when unconfigured / unavailable). Use this
+ * instead of {@link isCityServedByAdmin} alone wherever main-store items,
+ * categories, or search results are gated, so a shopper outside the admin's
+ * configured pin range is treated exactly like being outside a market's
+ * range — hidden everywhere, including search.
+ */
+export const isServedByAdmin = async (
+	userCity: string | null | undefined,
+	pin: { latitude: number; longitude: number } | null | undefined,
+	opts?: { force?: boolean },
+): Promise<boolean> => {
+	const [cityOk, rangeOk] = await Promise.all([
+		isCityServedByAdmin(userCity, opts),
+		isAdminInDeliveryRange(pin, opts),
+	]);
+	return cityOk && rangeOk;
 };
 
 export default entityServesCity;
