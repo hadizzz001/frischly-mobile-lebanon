@@ -133,6 +133,13 @@ export default function Start() {
 				setGoogleLoading(false);
 			}
 		},
+		(message) => {
+			// Always surface Google Sign-In failures (e.g. DEVELOPER_ERROR from a
+			// SHA-1/OAuth client mismatch on the Play Store build) instead of
+			// silently doing nothing.
+			setGoogleLoading(false);
+			Alert.alert(t("loginFailed"), message);
+		},
 	);
 
 	const handleGoogle = async () => {
@@ -140,7 +147,12 @@ export default function Start() {
 			Alert.alert(t("loginFailed"), t("googleNotConfigured"));
 			return;
 		}
-		await promptGoogle();
+		try {
+			await promptGoogle();
+		} catch (error) {
+			// Safety net in case anything still throws.
+			Alert.alert(t("loginFailed"), (error as Error)?.message || "Google sign-in failed");
+		}
 	};
 
 	const inputBg = "#FFFFFF";

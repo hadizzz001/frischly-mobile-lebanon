@@ -350,6 +350,13 @@ const [syncingAddress, setSyncingAddress] = useState<boolean>(false);
 				setGoogleLoading(false);
 			}
 		},
+		(message) => {
+			// Always surface Google Sign-In failures (e.g. DEVELOPER_ERROR from a
+			// SHA-1/OAuth client mismatch on the Play Store build) instead of
+			// silently doing nothing.
+			setGoogleLoading(false);
+			Alert.alert(t("errorTitle"), message);
+		},
 	);
 
 	const handleGoogle = async () => {
@@ -357,7 +364,12 @@ const [syncingAddress, setSyncingAddress] = useState<boolean>(false);
 			Alert.alert(t("errorTitle"), t("googleNotConfigured"));
 			return;
 		}
-		await promptGoogle();
+		try {
+			await promptGoogle();
+		} catch (error) {
+			// Safety net in case anything still throws.
+			Alert.alert(t("errorTitle"), (error as Error)?.message || "Google sign-in failed");
+		}
 	};
 
 	return (

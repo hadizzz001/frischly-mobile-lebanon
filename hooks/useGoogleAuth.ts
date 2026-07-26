@@ -33,6 +33,29 @@ if (!isExpoGo) {
 }
 
 /**
+ * Turns any thrown value (native module error, JS error, etc.) into a
+ * human-readable string that includes the native error code when present.
+ * Google Sign-In errors on Android are almost always a numeric `code`
+ * (e.g. "10" = DEVELOPER_ERROR, usually a SHA-1/OAuth client mismatch,
+ * "12501" = user cancelled, "7" = NETWORK_ERROR) with little else useful in
+ * `message`, so we surface the code prominently.
+ */
+function describeGoogleError(error: unknown): string {
+	if (error && typeof error === "object") {
+		const code = (error as { code?: unknown }).code;
+		const message =
+			(error as { message?: unknown }).message ||
+			(error as { nativeErrorMessage?: unknown }).nativeErrorMessage;
+		if (code !== undefined) {
+			return `${message ? String(message) : "Google sign-in error"} (code ${code})`;
+		}
+		if (message) return String(message);
+	}
+	if (error instanceof Error) return error.message;
+	return typeof error === "string" ? error : "Unknown Google sign-in error";
+}
+
+/**
  * useGoogleAuth
  *
  * Uses the **native** Google Sign-In SDK (`@react-native-google-signin`).
@@ -42,27 +65,53 @@ if (!isExpoGo) {
  *
  * `isReady` is false in Expo Go / when the native module or web client ID is
  * missing, so the UI can disable the button.
+ *
+ * `onError` is always called (never thrown/swallowed) whenever something goes
+ * wrong — including native SDK failures like DEVELOPER_ERROR (SHA-1 / OAuth
+ * client mismatch, common on Play Store builds signed with Play App Signing)
+ * — so the UI can always show the user *something* instead of silently doing
+ * nothing.
  */
-export function useGoogleAuth(onToken: (idToken: string) => void | Promise<void>) {
+export function useGoogleAuth(
+	onToken: (idToken: string) => void | Promise<void>,
+	onError?: (message: string, rawError: unknown) => void,
+) {
 	const [isReady, setIsReady] = useState(false);
 
 	useEffect(() => {
-		if (!googleModule || !GOOGLE_WEB_CLIENT_ID) {
+		if (!googleModule) {
+			console.warn("[useGoogleAuth] native module not available (Expo Go or not installed)");
 			setIsReady(false);
 			return;
 		}
-		googleModule.GoogleSignin.configure({
-			// The web client ID makes the returned ID token's audience match what
-			// the backend validates.
-			webClientId: GOOGLE_WEB_CLIENT_ID,
-			iosClientId: GOOGLE_IOS_CLIENT_ID || undefined,
-			offlineAccess: false,
-		});
-		setIsReady(true);
+		if (!GOOGLE_WEB_CLIENT_ID) {
+			console.warn("[useGoogleAuth] GOOGLE_WEB_CLIENT_ID is missing");
+			setIsReady(false);
+			return;
+		}
+		try {
+			googleModule.GoogleSignin.configure({
+				// The web client ID makes the returned ID token's audience match what
+				// the backend validates.
+				webClientId: GOOGLE_WEB_CLIENT_ID,
+				iosClientId: GOOGLE_IOS_CLIENT_ID || undefined,
+				offlineAccess: false,
+			});
+			setIsReady(true);
+		} catch (error) {
+			console.warn("[useGoogleAuth] configure() threw", error);
+			setIsReady(false);
+		}
 	}, []);
 
 	const promptAsync = async () => {
-		if (!googleModule) return;
+		if (!googleModule) {
+			onError?.(
+				"Google Sign-In is not available in this build.",
+				new Error("googleModule is null"),
+			);
+			return;
+		}
 		const { GoogleSignin, isErrorWithCode, statusCodes } = googleModule;
 		try {
 			await GoogleSignin.hasPlayServices({
@@ -86,8 +135,15 @@ export function useGoogleAuth(onToken: (idToken: string) => void | Promise<void>
 
 			if (idToken) {
 				await onToken(idToken);
+			} else {
+				console.warn("[useGoogleAuth] signIn() resolved without an idToken", response);
+				onError?.(
+					"Google didn't return a sign-in token. Please try again.",
+					response,
+				);
 			}
 		} catch (error) {
+			console.warn("[useGoogleAuth] error during sign-in", error);
 			if (
 				isErrorWithCode(error) &&
 				(error.code === statusCodes.SIGN_IN_CANCELLED ||
@@ -96,7 +152,7 @@ export function useGoogleAuth(onToken: (idToken: string) => void | Promise<void>
 				// User cancelled or a sign-in is already in progress — ignore.
 				return;
 			}
-			throw error;
+			onError?.(describeGoogleError(error), error);
 		}
 	};
 
