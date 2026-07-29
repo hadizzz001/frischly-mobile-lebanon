@@ -3,6 +3,7 @@ import { MAIN_SOURCE, useCart } from "@/contexts/CartContext";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { ApiError, AuthService, MarketService, PromoCodeService } from "@/services/api";
 import type { User } from "@/types";
+import { isValidLebanesePhone } from "@/utils/phone";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -739,6 +740,14 @@ const CheckoutScreen = () => {
 				<OrderComponent
 					items={cart}
 					customer={state.user}
+					phone={state.inputs.phone}
+					onValidatePhone={() => {
+						if (!isValidLebanesePhone(state.inputs.phone)) {
+							Alert.alert(t("errorTitle"), t("phoneMustBe78Digits"));
+							return false;
+						}
+						return true;
+					}}
 					setShowModal={setShowModal}
 					modalResponse={modalResponse}
 					paymentMethod={paymentMethod}

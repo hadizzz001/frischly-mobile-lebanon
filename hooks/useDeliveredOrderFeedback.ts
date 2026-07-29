@@ -2,7 +2,7 @@ import {
     hasHandledFeedback,
     markFeedbackHandled,
 } from "@/utils/feedbackTracking";
-import { OrderService } from "@/services/api";
+import { FeedbackService, OrderService } from "@/services/api";
 import type { Order } from "@/types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useRef, useState } from "react";
@@ -33,9 +33,23 @@ export default function useDeliveredOrderFeedback(): DeliveredOrderFeedback {
 	// Orders already confirmed (this session) as not needing a prompt —
 	// avoids re-checking AsyncStorage for the same order on every poll.
 	const handledRef = useRef<Set<string>>(new Set());
+	// Order ids the backend confirms ALREADY have feedback submitted for the
+	// logged-in user — the authoritative "done" list, refreshed periodically
+	// so it survives reinstalls / new devices / cleared on-device storage.
+	const submittedOrderIdsRef = useRef<Set<string>>(new Set());
 	// Prevents overlapping checks if a poll fires while a previous one is
 	// still in flight (e.g. a slow network response).
 	const checkingRef = useRef(false);
+
+	const refreshSubmittedFeedback = async () => {
+		try {
+			const res = await FeedbackService.mine();
+			const ids: string[] = (res as any)?.data || [];
+			submittedOrderIdsRef.current = new Set(ids.map(String));
+		} catch (e) {
+			console.warn("Failed to refresh submitted feedback list:", e);
+		}
+	};
 
 	const checkForDeliveredOrders = async () => {
 		if (checkingRef.current) return;
@@ -50,12 +64,25 @@ export default function useDeliveredOrderFeedback(): DeliveredOrderFeedback {
 			const token = parsedUser?.token;
 			if (!token) return;
 
+			// Keep the "already submitted" list fresh (once at start, then on
+			// every poll) so feedback done on another device / after a
+			// reinstall is respected immediately.
+			await refreshSubmittedFeedback();
+
 			const res = await OrderService.list();
 			const orders: Order[] = res.data || [];
 			const deliveredOrders = orders.filter((o) => o.status === "delivered");
 
 			for (const order of deliveredOrders) {
 				if (handledRef.current.has(order._id)) continue;
+
+				// Backend says feedback already exists for this order — never
+				// show the prompt again, regardless of local storage state.
+				if (submittedOrderIdsRef.current.has(String(order._id))) {
+					handledRef.current.add(order._id);
+					markFeedbackHandled(order._id);
+					continue;
+				}
 
 				// eslint-disable-next-line no-await-in-loop
 				const alreadyHandled = await hasHandledFeedback(order._id);

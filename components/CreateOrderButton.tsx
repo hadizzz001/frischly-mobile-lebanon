@@ -1,6 +1,7 @@
 "use client";
-import { OrderService } from "@/services/api";
+import { AuthService, OrderService } from "@/services/api";
 import { useTranslation } from "@/contexts/TranslationContext";
+import { normalizeLebanesePhone } from "@/utils/phone";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -23,6 +24,13 @@ interface AppliedPromo {
 interface CheckoutPageProps {
 	items: CartItem[];
 	customer: User | null;
+	// Current value of the phone field on the checkout form. Required — an
+	// order can't be placed without a valid 7-or-8-digit Lebanese number.
+	phone?: string;
+	// Optional extra gate called right before anything else happens when the
+	// shopper taps "Place Order". Return false to abort (e.g. to show a custom
+	// alert from the parent screen for an invalid phone number).
+	onValidatePhone?: () => boolean;
 	setShowModal: (show: boolean) => void;
 	modalResponse?: string | null;
 	paymentMethod?: string;
@@ -35,6 +43,8 @@ interface CheckoutPageProps {
 const CheckoutPage = ({
 	items,
 	customer,
+	phone,
+	onValidatePhone,
 	setShowModal,
 	modalResponse,
 	paymentMethod = "card",
@@ -68,9 +78,22 @@ const CheckoutPage = ({
 	}, [modalResponse]);
 
 	// -------------------- Place Order --------------------
-	// Main trigger: checks 18+ first
+	// Main trigger: checks phone number, then 18+ first
 	const handlePlaceOrder = () => {
 		console.log("🛒 handlePlaceOrder triggered");
+
+		// -------------------- Phone number required --------------------
+		// A valid 7-or-8-digit Lebanese phone number is mandatory to place an
+		// order (delivery riders need a working contact number). Parent screen
+		// supplies the actual validation (and its own alert) via onValidatePhone;
+		// fall back to a simple normalize check here if it isn't provided.
+		const phoneOk = onValidatePhone
+			? onValidatePhone()
+			: !!normalizeLebanesePhone(phone);
+		if (!phoneOk) {
+			console.log("📵 Invalid/missing phone number -> aborting order");
+			return;
+		}
 
 		if (!items || !customer) {
 			console.log("⚠️ Missing items or customer:", { items, customer });
@@ -97,6 +120,19 @@ const CheckoutPage = ({
 
 			const stored = await AsyncStorage.getItem("userData");
 			if (!stored) return;
+
+			// Sync the phone typed on the checkout form to the profile if it
+			// changed, so the order (which snapshots the customer record fresh
+			// from the DB) actually reflects it. Best-effort but awaited — the
+			// order must carry an up-to-date phone number.
+			const normalizedPhone = normalizeLebanesePhone(phone);
+			if (normalizedPhone && normalizedPhone !== customer?.phoneNumber) {
+				try {
+					await AuthService.updateProfile({ phoneNumber: normalizedPhone });
+				} catch (e) {
+					console.warn("Failed to sync phone number before order:", e);
+				}
+			}
 
 			const validItems = items.filter((item) => item && item._id);
 			const orderItems = validItems.map((item) => ({
