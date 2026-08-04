@@ -2,12 +2,13 @@
 
 import AuthLogoVideo from "@/components/AuthLogoVideo";
 import { SERVER_BASE_URL } from "@/constants/api";
+import { globalStyles } from "@/constants/GlobalStyles";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { useGoogleAuth } from "@/hooks/useGoogleAuth";
 import { syncPushTokenToServer } from "@/hooks/useNotifications";
 import { ApiError, AuthService } from "@/services/api";
 import type { AuthPayload } from "@/types";
-import { ensureDefaultCity } from "@/utils/userCity";
+import { ensureDefaultCity, resolveGoogleAddress } from "@/utils/userCity";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
@@ -113,7 +114,11 @@ export default function Start() {
 		async (idToken) => {
 			setGoogleLoading(true);
 			try {
-				const res = await AuthService.googleSignIn(idToken);
+				// Resolve the address up-front (GPS when allowed, otherwise the
+				// Beirut default + Beirut pin) and send it with the token so the
+				// backend force-saves a complete address on this login.
+				const address = await resolveGoogleAddress();
+				const res = await AuthService.googleSignIn(idToken, address);
 				const userData = res.data as unknown as AuthPayload | null;
 				if (userData) {
 					await persistAuth(await ensureDefaultCity(userData));
@@ -161,37 +166,23 @@ export default function Start() {
 
 	return (
 		<KeyboardAvoidingView
-			style={{ flex: 1, backgroundColor: "#FFFFFF" }}
+			style={styles.screen}
 			behavior="padding"
 		>
 			<ScrollView
-				contentContainerStyle={{ flexGrow: 1 }}
+				contentContainerStyle={styles.scrollContent}
 				keyboardShouldPersistTaps="handled"
 			>
 				{/* Top 40% yellow background */}
 				<View
-					style={{
-						height: screenHeight * 0.4,
-						justifyContent: "center",
-						alignItems: "center",
-						backgroundColor: "#f4bb26",
-						borderBottomLeftRadius: 60,
-						borderBottomRightRadius: 60,
-						overflow: "hidden",
-					}}
+					style={[styles.topBanner, { height: screenHeight * 0.4 }]}
 				>
-					<AuthLogoVideo style={{ width: 200, height: 200 }} />
+					<AuthLogoVideo style={styles.logoVideo} />
 				</View>
 
 				{/* Bottom 60% content */}
 				<View
-					style={{
-						flex: 1,
-						justifyContent: "center",
-						alignItems: "center",
-						paddingHorizontal: 24,
-						backgroundColor: "#ffffff",
-					}}
+					style={styles.bottomContent}
 				>
 					<View style={styles.dropdownContainer}>
 						<TouchableOpacity
@@ -222,14 +213,7 @@ export default function Start() {
 					</View>
 					{/* Phone (primary) or email input */}
 					<View
-						style={{
-							marginBottom: 12,
-							width: "100%",
-							borderWidth: 1,
-							borderColor: "#d1d5db",
-							borderRadius: 12,
-							backgroundColor: inputBg,
-						}}
+						style={[styles.inputWrapper, { backgroundColor: inputBg }]}
 					>
 						<TextInput
 							placeholder={t("phoneOrEmail")}
@@ -237,39 +221,26 @@ export default function Start() {
 							autoCapitalize="none"
 							value={identifier}
 							onChangeText={setIdentifier}
-							style={{ padding: 15, color: inputText }}
+							style={[styles.textInput, { color: inputText }]}
 							placeholderTextColor={placeholderColor}
 						/>
 					</View>
 
 					{/* Password input with eye icon */}
 					<View
-						style={{
-							flexDirection: "row",
-							alignItems: "center",
-							marginBottom: 24,
-							width: "100%",
-							borderWidth: 1,
-							borderColor: "#d1d5db",
-							borderRadius: 12,
-							backgroundColor: inputBg,
-						}}
+						style={[styles.passwordWrapper, { backgroundColor: inputBg }]}
 					>
 						<TextInput
 							placeholder={t("password")}
 							secureTextEntry={!showPassword}
 							value={password}
 							onChangeText={setPassword}
-							style={{
-								flex: 1,
-								padding: 15,
-								color: inputText,
-							}}
+							style={[styles.passwordInput, { color: inputText }]}
 							placeholderTextColor={placeholderColor}
 						/>
 						<TouchableOpacity
 							onPress={() => setShowPassword(!showPassword)}
-							style={{ paddingHorizontal: 10 }}
+							style={styles.eyeButton}
 						>
 							<Ionicons
 								name={showPassword ? "eye-off" : "eye"}
@@ -283,20 +254,16 @@ export default function Start() {
 					<TouchableOpacity
 						onPress={handleLogin}
 						disabled={loading}
-						style={{
-							backgroundColor: loading ? "#cccccc" : "#f4bb26",
-							borderRadius: 15,
-							paddingVertical: 15,
-							width: "100%",
-							alignItems: "center",
-							marginBottom: 12,
-						}}
+						style={[
+							styles.loginButton,
+							{ backgroundColor: loading ? "#cccccc" : "#f4bb26" },
+						]}
 					>
 						{loading ? (
 							<ActivityIndicator size="small" color="#000000" />
 						) : (
 							<Text
-								style={{ color: "#ffffff", fontWeight: "bold", fontSize: 18 }}
+								style={globalStyles.whiteBoldText18}
 							>
 								{t("login")}
 							</Text>
@@ -307,18 +274,7 @@ export default function Start() {
 					<TouchableOpacity
 						onPress={handleGoogle}
 						disabled={googleLoading}
-						style={{
-							flexDirection: "row",
-							backgroundColor: "#ffffff",
-							borderRadius: 15,
-							paddingVertical: 13,
-							width: "100%",
-							alignItems: "center",
-							justifyContent: "center",
-							marginBottom: 16,
-							borderWidth: 1,
-							borderColor: "#d1d5db",
-						}}
+						style={styles.googleButton}
 					>
 						{googleLoading ? (
 							<ActivityIndicator size="small" color="#000000" />
@@ -326,9 +282,9 @@ export default function Start() {
 							<>
 								<Image
 									source={{ uri: "https://developers.google.com/identity/images/g-logo.png" }}
-									style={{ width: 20, height: 20, marginRight: 10 }}
+									style={[globalStyles.size20, globalStyles.marginRight10]}
 								/>
-								<Text style={{ color: "#000", fontWeight: "700", fontSize: 16 }}>
+								<Text style={styles.googleButtonText}>
 									{t("continueWithGoogle")}
 								</Text>
 							</>
@@ -336,9 +292,9 @@ export default function Start() {
 					</TouchableOpacity>
 
 					<TouchableOpacity onPress={() => router.push("/register")}>
-						<Text style={{ color: "#000", fontSize: 18, fontWeight: "700" }}>
+						<Text style={styles.noAccountText}>
 							{t("noAccount")}{" "}
-							<Text style={{ color: "#f4bb26", fontWeight: "700" }}>{t("register")}</Text>
+							<Text style={styles.registerLink}>{t("register")}</Text>
 						</Text>
 					</TouchableOpacity>
 					<TouchableOpacity
@@ -348,9 +304,9 @@ export default function Start() {
 							);
 						}}
 					>
-						<Text style={{ fontSize: 18, textAlign: "center", fontWeight: "700" }}>
-							<Text style={{ color: "#000" }}>
-								<Text style={{ color: "#f4bb26" }}>{t("forget")}</Text>
+						<Text style={styles.centerBoldText}>
+							<Text style={styles.blackText}>
+								<Text style={styles.registerLink}>{t("forget")}</Text>
 							</Text>
 						</Text>
 					</TouchableOpacity>
@@ -361,10 +317,10 @@ export default function Start() {
 							router.replace("/(tabs)");
 						}}
 					>
-						<Text style={{ fontSize: 18, textAlign: "center", fontWeight: "700" }}>
-							<Text style={{ color: "#000" }}>
+						<Text style={styles.centerBoldText}>
+							<Text style={styles.blackText}>
 								{t("continue")}{" "}
-								<Text style={{ color: "#f4bb26" }}>{t("asGuest")}</Text>
+								<Text style={styles.registerLink}>{t("asGuest")}</Text>
 							</Text>
 						</Text>
 					</TouchableOpacity>
@@ -375,6 +331,67 @@ export default function Start() {
 }
 
 const styles = StyleSheet.create({
+	screen: { flex: 1, backgroundColor: "#FFFFFF" },
+	scrollContent: { flexGrow: 1 },
+	topBanner: {
+		justifyContent: "center",
+		alignItems: "center",
+		backgroundColor: "#f4bb26",
+		borderBottomLeftRadius: 60,
+		borderBottomRightRadius: 60,
+		overflow: "hidden",
+	},
+	logoVideo: { width: 200, height: 200 },
+	bottomContent: {
+		flex: 1,
+		justifyContent: "center",
+		alignItems: "center",
+		paddingHorizontal: 24,
+		backgroundColor: "#ffffff",
+	},
+	inputWrapper: {
+		marginBottom: 12,
+		width: "100%",
+		borderWidth: 1,
+		borderColor: "#d1d5db",
+		borderRadius: 12,
+	},
+	textInput: { padding: 15 },
+	passwordWrapper: {
+		flexDirection: "row",
+		alignItems: "center",
+		marginBottom: 24,
+		width: "100%",
+		borderWidth: 1,
+		borderColor: "#d1d5db",
+		borderRadius: 12,
+	},
+	passwordInput: { flex: 1, padding: 15 },
+	eyeButton: { paddingHorizontal: 10 },
+	loginButton: {
+		borderRadius: 15,
+		paddingVertical: 15,
+		width: "100%",
+		alignItems: "center",
+		marginBottom: 12,
+	},
+	googleButton: {
+		flexDirection: "row",
+		backgroundColor: "#ffffff",
+		borderRadius: 15,
+		paddingVertical: 13,
+		width: "100%",
+		alignItems: "center",
+		justifyContent: "center",
+		marginBottom: 16,
+		borderWidth: 1,
+		borderColor: "#d1d5db",
+	},
+	googleButtonText: { color: "#000", fontWeight: "700", fontSize: 16 },
+	noAccountText: { color: "#000", fontSize: 18, fontWeight: "700" },
+	registerLink: { color: "#f4bb26", fontWeight: "700" },
+	centerBoldText: { fontSize: 18, textAlign: "center", fontWeight: "700" },
+	blackText: { color: "#000" },
 	dropdownContainer: {
 		width: "100%",
 		alignItems: "center",

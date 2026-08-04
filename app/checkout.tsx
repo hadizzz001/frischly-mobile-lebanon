@@ -1,9 +1,11 @@
 import CityPicker from "@/components/CityPicker";
+import IOSDatePickerModal from "@/components/IOSDatePickerModal";
 import { MAIN_SOURCE, useCart } from "@/contexts/CartContext";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { ApiError, AuthService, MarketService, PromoCodeService } from "@/services/api";
 import type { User } from "@/types";
 import { isValidLebanesePhone } from "@/utils/phone";
+import { rtlRow, rtlText } from "@/utils/rtl";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -71,7 +73,7 @@ interface CheckoutState {
 }
 
 const CheckoutScreen = () => {
-	const { t } = useTranslation();
+	const { t, isRTL } = useTranslation();
 	const [showModal, setShowModal] = useState<boolean>(false);
 	const [modalResponse, setModalResponse] = useState<string | null>(null);
 	const [paymentMethod, setPaymentMethod] = useState<string>("card"); // "card" or "cash"
@@ -147,8 +149,13 @@ const CheckoutScreen = () => {
 				const userData = await AsyncStorage.getItem("userData");
 				const guest = await AsyncStorage.getItem("guest");
 
-				// ✅ If guest → go to start
-				if (guest !== "false") {
+				// ✅ Guest browsing (explicitly opted in via "Continue as guest") →
+				// go to start to log in before checking out. Logged-in accounts
+				// never set "guest" to "true" (it's "false", or simply never set
+				// for some login paths), so only the explicit "true" value means
+				// guest — matches the check used everywhere else in the app
+				// (CartContext, RepeatOrderButton, userCity, etc).
+				if (guest === "true") {
 					console.log("g = ", guest);
 					console.log("🟡 Guest detected → redirecting to /start");
 					router.replace("/start");
@@ -453,7 +460,7 @@ const CheckoutScreen = () => {
 		<SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
 			<ScrollView
 				style={styles.container}
-				contentContainerStyle={{ paddingBottom: 150 }}
+				contentContainerStyle={styles.scrollContent}
 			>
 				<TouchableOpacity
 					onPress={() => router.back()}
@@ -462,7 +469,7 @@ const CheckoutScreen = () => {
 					<Feather name="chevron-left" size={24} color="#000000" />
 				</TouchableOpacity>
 
-				<Text style={styles.heading}>{t("shippingInformation")}</Text>
+				<Text style={[styles.heading, rtlText(isRTL)]}>{t("shippingInformation")}</Text>
 
 				<TextInput
 					style={styles.input}
@@ -480,7 +487,7 @@ const CheckoutScreen = () => {
 					onChangeText={(v) => handleInput("name", v)}
 				/>
 
-				<View style={{ marginBottom: 12 }}>
+				<View style={styles.countryWrapper}>
 					<TouchableOpacity
 						onPress={() => Alert.alert(t("errorTitle"), t("countryFixed"))}
 					>
@@ -499,11 +506,7 @@ const CheckoutScreen = () => {
 					onValueChange={(v) => handleInput("city", v)}
 					placeholder={t("cityRequired")}
 					disabled
-					style={{
-						borderColor: "#000000",
-						borderRadius: 6,
-						marginVertical: 6,
-					}}
+					style={styles.cityPicker}
 				/>
 
 				<TextInput
@@ -515,7 +518,7 @@ const CheckoutScreen = () => {
 
 				<View style={styles.row}>
 					<TextInput
-						style={[styles.input, { flex: 1 }]}
+						style={[styles.input, styles.flex1]}
 						placeholder={t("phoneRequired")}
 						value={state.inputs.phone}
 						keyboardType="phone-pad"
@@ -530,7 +533,7 @@ const CheckoutScreen = () => {
 					editable={false}
 				/>
 
-				<Text style={styles.heading}>{t("dtime")}</Text>
+				<Text style={[styles.heading, rtlText(isRTL)]}>{t("dtime")}</Text>
 
 				<TouchableOpacity
 					onPress={() => setShowDatePicker(true)}
@@ -548,11 +551,11 @@ const CheckoutScreen = () => {
 						})}
 					</Text>
 
-					{showDatePicker && (
+					{Platform.OS === "android" && showDatePicker && (
 						<DateTimePicker
 							value={deliveryTime}
-							mode={(Platform.OS === "android" ? pickerMode : "datetime") as "date" | "time" | "datetime" | "countdown"}
-							display={Platform.OS === "android" ? "spinner" : "default"}
+							mode={pickerMode as "date" | "time"}
+							display="default"
 							minimumDate={new Date()}
 							onChange={(event, selectedDate) => {
 								if (event.type !== "set") {
@@ -561,29 +564,35 @@ const CheckoutScreen = () => {
 									return;
 								}
 
-								if (Platform.OS === "android") {
-									if (pickerMode === "date") {
-										// user picked date → now pick time
-										const newDate = selectedDate || deliveryTime;
-										setDeliveryTime(newDate);
-										setPickerMode("time");
-									} else {
-										// user picked time → done
-										const newDate = selectedDate || deliveryTime;
-										setDeliveryTime(newDate);
-										setShowDatePicker(false);
-										setPickerMode("date");
-									}
+								if (pickerMode === "date") {
+									// user picked date → now pick time
+									const newDate = selectedDate || deliveryTime;
+									setDeliveryTime(newDate);
+									setPickerMode("time");
 								} else {
-									// iOS
-									setDeliveryTime(selectedDate ?? deliveryTime);
+									// user picked time → done
+									const newDate = selectedDate || deliveryTime;
+									setDeliveryTime(newDate);
 									setShowDatePicker(false);
+									setPickerMode("date");
 								}
 							}}
 						/>
 					)}
 				</TouchableOpacity>
-				<Text style={styles.heading}>{t("paymentMethod")}</Text>
+
+				<IOSDatePickerModal
+					visible={Platform.OS === "ios" && showDatePicker}
+					value={deliveryTime}
+					mode="datetime"
+					minimumDate={new Date()}
+					onConfirm={(selectedDate) => {
+						setDeliveryTime(selectedDate);
+						setShowDatePicker(false);
+					}}
+					onCancel={() => setShowDatePicker(false)}
+				/>
+				<Text style={[styles.heading, rtlText(isRTL)]}>{t("paymentMethod")}</Text>
 
 				<View style={styles.paymentOptions}>
 					<TouchableOpacity
@@ -631,10 +640,10 @@ const CheckoutScreen = () => {
 					</TouchableOpacity>
 				</View>
 
-				<Text style={styles.heading}>{t("promoCode")}</Text>
+				<Text style={[styles.heading, rtlText(isRTL)]}>{t("promoCode")}</Text>
 				<View style={styles.promoCodeContainer}>
 					<TextInput
-						style={[styles.input, { flex: 1, marginRight: 10 }]}
+						style={[styles.input, styles.flex1MarginRight10]}
 						placeholder={t("enterPromoCode")}
 						value={promoCode}
 						onChangeText={(text) => {
@@ -663,7 +672,7 @@ const CheckoutScreen = () => {
 					</TouchableOpacity>
 				</View>
 
-				<Text style={styles.heading}>{t("orderSummary")}</Text>
+				<Text style={[styles.heading, rtlText(isRTL)]}>{t("orderSummary")}</Text>
 
 				{/* Market / source badge */}
 				{(() => {
@@ -676,7 +685,7 @@ const CheckoutScreen = () => {
 								size={15}
 								color={isMain ? "#1a6e2e" : "#7c4700"}
 							/>
-							<Text style={[styles.sourceBadgeText, { color: isMain ? "#1a6e2e" : "#7c4700" }]}>
+							<Text style={[styles.sourceBadgeText, isMain ? styles.textGreen : styles.textOrange]}>
 								{label}
 							</Text>
 						</View>
@@ -695,7 +704,7 @@ const CheckoutScreen = () => {
 									style={styles.cartImage}
 									resizeMode="contain"
 								/>
-								<View style={{ flex: 1 }}>
+								<View style={styles.flex1}>
 									<Text>{item.title}</Text>
 									<Text>
 										{t("quantity")} {quantity}
@@ -714,27 +723,27 @@ const CheckoutScreen = () => {
 					})}
 				</View>
 
-				<View style={styles.summaryRow}>
+				<View style={[styles.summaryRow, rtlRow(isRTL)]}>
 					<Text>{t("subtotal")}</Text>
 					<Text>${subtotal.toFixed(2)}</Text>
 				</View>
-				<View style={styles.summaryRow}>
+				<View style={[styles.summaryRow, rtlRow(isRTL)]}>
 					<Text>{t("delivery")}</Text>
 					<Text>${deliveryFee.toFixed(2)}</Text>
 				</View>
-				<View style={styles.summaryRow}>
+				<View style={[styles.summaryRow, rtlRow(isRTL)]}>
 					<Text>{t("processFees")}</Text>
 					<Text> 0</Text>
 				</View>
 				{discountAmount > 0 && (
-					<View style={styles.summaryRow}>
+					<View style={[styles.summaryRow, rtlRow(isRTL)]}>
 						<Text>{t("discount")}</Text>
 						<Text>-${discountAmount.toFixed(2)}</Text>
 					</View>
 				)}
-				<View style={styles.summaryRow}>
-					<Text style={{ fontWeight: "bold" }}>{t("total")}</Text>
-					<Text style={{ fontWeight: "bold" }}>${total}</Text>
+				<View style={[styles.summaryRow, rtlRow(isRTL)]}>
+					<Text style={styles.boldText}>{t("total")}</Text>
+					<Text style={styles.boldText}>${total}</Text>
 				</View>
 
 				<OrderComponent
@@ -797,6 +806,14 @@ const CheckoutScreen = () => {
 };
 
 const styles = StyleSheet.create({
+	scrollContent: { paddingBottom: 150 },
+	countryWrapper: { marginBottom: 12 },
+	cityPicker: { borderColor: "#000000", borderRadius: 6, marginVertical: 6 },
+	flex1: { flex: 1 },
+	flex1MarginRight10: { flex: 1, marginRight: 10 },
+	textGreen: { color: "#1a6e2e" },
+	textOrange: { color: "#7c4700" },
+	boldText: { fontWeight: "bold" },
 	loadingContainer: {
 		flex: 1,
 		justifyContent: "center",

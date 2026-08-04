@@ -9,8 +9,11 @@ export const AuthService = {
 		httpClient.post<null>("/auth/login-profile", payload),
 
 	// Sign in / sign up with a Google ID token obtained on the device.
-	googleSignIn: (idToken: string) =>
-		httpClient.post<null>("/auth/google", { idToken }),
+	// `address` is optional and carries the GPS-detected address when the
+	// shopper allowed location access; the backend forces the Beirut default
+	// into any field we couldn't detect.
+	googleSignIn: (idToken: string, address?: unknown) =>
+		httpClient.post<null>("/auth/google", { idToken, address }),
 
 	register: (payload: unknown) =>
 		httpClient.post<null>("/auth/register", payload),

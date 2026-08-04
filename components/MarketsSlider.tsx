@@ -3,6 +3,7 @@ import { MarketService, ProductService } from "@/services/api";
 import type { Market } from "@/types";
 import { entityServesCity } from "@/utils/cityVisibility";
 import { pointInAnyRegion } from "@/utils/geo";
+import { rtlRow } from "@/utils/rtl";
 import { getUserCityAndPin } from "@/utils/userCity";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -32,7 +33,7 @@ interface MarketsSliderProps {
 }
 
 export default function MarketsSlider({ refreshTrigger }: MarketsSliderProps) {
-	const { t } = useTranslation();
+	const { t, isRTL } = useTranslation();
 	const router = useRouter();
 
 	const [markets, setMarkets] = useState<Market[]>([]);
@@ -283,7 +284,7 @@ export default function MarketsSlider({ refreshTrigger }: MarketsSliderProps) {
 
 	return (
 		<View style={styles.container}>
-			<View style={styles.header}>
+			<View style={[styles.header, rtlRow(isRTL)]}>
 				<Text style={styles.headerText}>
 					{t("markets") || "Markets"}
 				</Text>

@@ -6,6 +6,7 @@ import { useCart } from "@/contexts/CartContext";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { AuthService, CategoryService, ProductService } from "@/services/api";
 import type { Category, Product, User } from "@/types";
+import { rtlText } from "@/utils/rtl";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Stack, useRouter } from "expo-router";
@@ -30,7 +31,7 @@ function formatWeight(weight: unknown): string {
 }
 
 const ProductPage = () => {
-	const { t, td } = useTranslation();
+	const { t, td, isRTL } = useTranslation();
 
 	const route = useRoute();
 	const navigation = useNavigation();
@@ -139,7 +140,7 @@ const handleAgeResponse = (response: "yes" | "no") => {
 
 
 	return (
-		<View style={{ flex: 1, backgroundColor: "#fff" }}>
+		<View style={styles.root}>
 			<Stack.Screen options={{ headerTitle: "" }} />
 			<TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
 				<Feather name="chevron-left" size={24} color="#777" />
@@ -195,11 +196,15 @@ const handleAgeResponse = (response: "yes" | "no") => {
 
 				{/* Product Info */}
 				<View style={styles.info}>
-					<Text style={styles.title}>{td(name)}</Text>
+					<Text style={[styles.title, rtlText(isRTL)]}>{td(name)}</Text>
 
-					{!!formatWeight(weight) && <Text style={styles.weight}>{formatWeight(weight)}</Text>}
+					{!!formatWeight(weight) && (
+						<Text style={[styles.weight, rtlText(isRTL)]}>
+							{formatWeight(weight)}
+						</Text>
+					)}
 
-					<Text>{description}</Text>
+					<Text style={rtlText(isRTL)}>{description}</Text>
 
 					{/* Price Calculation */}
 					{(() => {
@@ -220,29 +225,30 @@ const handleAgeResponse = (response: "yes" | "no") => {
 
 						return (
 							<View style={styles.priceDetails}>
-								<Text style={styles.basePrice}>
+								<Text style={[styles.basePrice, rtlText(isRTL)]}>
 									{t("baseP")}: ${basePrice.toFixed(2)}
 								</Text>
 								{discountPercent > 0 && (
-									<Text style={styles.discount}>
+									<Text style={[styles.discount, rtlText(isRTL)]}>
 										{t("discount")} ({discountPercent}%): -$
 										{discountAmount.toFixed(2)}
 									</Text>
 								)}
 								{taxPercent > 0 && (
-									<Text style={styles.tax}>
+									<Text style={[styles.tax, rtlText(isRTL)]}>
 										{t("tax")} ({taxPercent}%): +${taxAmount.toFixed(2)}
 									</Text>
 								)}
 								{bottleRefundValue > 0 && (
-									<Text style={styles.bottleRefund}>
+									<Text style={[styles.bottleRefund, rtlText(isRTL)]}>
 										{t("bottle")}: +${bottleRefundValue.toFixed(2)}
 									</Text>
 								)}
 								   <Text
 									   style={[
 										   styles.finalPrice,
-										   discountPercent > 0 && { color: 'red' }
+										   discountPercent > 0 && styles.redText,
+										   rtlText(isRTL),
 									   ]}
 								   >
 									   {t("fPrice")}: ${finalPrice.toFixed(2)}
@@ -319,15 +325,15 @@ const handleAgeResponse = (response: "yes" | "no") => {
 						<Feather name="x" size={28} color="#000" />
 					</TouchableOpacity>
 					<ScrollView contentContainerStyle={styles.overlayContentProfile}>
-						<Text style={styles.title}>{t("myProfile")}</Text>
+						<Text style={[styles.title, rtlText(isRTL)]}>{t("myProfile")}</Text>
 						{user ? (
 							<>
-								<Text style={styles.item}>{t("fullName")}: {user.name}</Text>
-								<Text style={styles.item}>{t("email")}: {user.email}</Text>
-								<Text style={styles.item}>{t("phoneNumber")}: {user.phoneNumber}</Text>
+								<Text style={[styles.item, rtlText(isRTL)]}>{t("fullName")}: {user.name}</Text>
+								<Text style={[styles.item, rtlText(isRTL)]}>{t("email")}: {user.email}</Text>
+								<Text style={[styles.item, rtlText(isRTL)]}>{t("phoneNumber")}: {user.phoneNumber}</Text>
 							</>
 						) : (
-							<Text style={styles.item}>{t("loadingUser")}</Text>
+							<Text style={[styles.item, rtlText(isRTL)]}>{t("loadingUser")}</Text>
 						)}
 						<TouchableOpacity
 							style={styles.row}
@@ -342,9 +348,9 @@ const handleAgeResponse = (response: "yes" | "no") => {
 								name="log-out"
 								size={20}
 								color="red"
-								style={{ marginRight: 6 }}
+								style={styles.iconMarginRight}
 							/>
-							<Text style={[styles.item, { color: "red" }]}>{t("logout")}</Text>
+							<Text style={[styles.item, styles.redText]}>{t("logout")}</Text>
 						</TouchableOpacity>
 						<TouchableOpacity
 							style={styles.row}
@@ -359,9 +365,9 @@ const handleAgeResponse = (response: "yes" | "no") => {
 								name="trash-2"
 								size={20}
 								color="red"
-								style={{ marginRight: 6 }}
+								style={styles.iconMarginRight}
 							/>
-							<Text style={[styles.item, { color: "red" }]}>
+							<Text style={[styles.item, styles.redText]}>
 								{t("requestDeleteAccount")}
 							</Text>
 						</TouchableOpacity>
@@ -379,7 +385,7 @@ const handleAgeResponse = (response: "yes" | "no") => {
 						<Feather name="x" size={28} color="#000" />
 					</TouchableOpacity>
 					<ScrollView contentContainerStyle={styles.overlayContentMenu}>
-						<Text style={styles.title}>{t("categories")}</Text>
+						<Text style={[styles.title, rtlText(isRTL)]}>{t("categories")}</Text>
 						{categories.slice(0, 8).map((cat) => (
 							<TouchableOpacity
 								key={cat._id}
@@ -388,7 +394,7 @@ const handleAgeResponse = (response: "yes" | "no") => {
 									router.push(`/shop?category=${cat._id}`);
 								}}
 							>
-								<Text style={styles.item}>{td(cat.name)}</Text>
+								<Text style={[styles.item, rtlText(isRTL)]}>{td(cat.name)}</Text>
 							</TouchableOpacity>
 						))}
 						<TouchableOpacity
@@ -397,7 +403,7 @@ const handleAgeResponse = (response: "yes" | "no") => {
 								router.push("/shop");
 							}}
 						>
-							<Text style={styles.item}>{t("allCategories")}</Text>
+							<Text style={[styles.item, rtlText(isRTL)]}>{t("allCategories")}</Text>
 						</TouchableOpacity>
 					</ScrollView>
 				</View>
@@ -420,38 +426,23 @@ const handleAgeResponse = (response: "yes" | "no") => {
 	<View style={styles.modalBackground}>
 		<View style={styles.modalContainer}>
 			<Text
-				style={{
-					marginBottom: 20,
-					textAlign: "center",
-					fontWeight: "bold",
-				}}
+				style={styles.ageModalTitle}
 			>
 				{t("ageVerificationTitle")}
 			</Text>
 
-			<Text style={{ marginBottom: 30, textAlign: "center" }}>
+			<Text style={styles.ageModalBody}>
 				{t("ageVerification")}
 			</Text>
 
-			<View style={{ width: "100%" }}>
+			<View style={styles.fullWidth}>
 				{/* YES */}
 				<TouchableOpacity
 					onPress={() => handleAgeResponse("yes")}
-					style={{
-						backgroundColor: "#f4bb26",
-						paddingVertical: 16,
-						borderRadius: 8,
-						marginBottom: 15,
-						width: "100%",
-					}}
+					style={styles.ageYesButton}
 				>
 					<Text
-						style={{
-							color: "black",
-							textAlign: "center",
-							fontWeight: "bold",
-							fontSize: 18,
-						}}
+						style={styles.ageYesButtonText}
 					>
 						{t("yes")}
 					</Text>
@@ -460,19 +451,10 @@ const handleAgeResponse = (response: "yes" | "no") => {
 				{/* NO */}
 				<TouchableOpacity
 					onPress={() => handleAgeResponse("no")}
-					style={{
-						paddingVertical: 16,
-						borderRadius: 8,
-						width: "100%",
-					}}
+					style={styles.ageNoButton}
 				>
 					<Text
-						style={{
-							color: "#f4bb26",
-							textAlign: "center",
-							fontWeight: "bold",
-							fontSize: 18,
-						}}
+						style={styles.ageNoButtonText}
 					>
 						{t("no")}
 					</Text>
@@ -487,6 +469,22 @@ const handleAgeResponse = (response: "yes" | "no") => {
 };
 
 const styles = StyleSheet.create({
+	root: { flex: 1, backgroundColor: "#fff" },
+	redText: { color: "red" },
+	iconMarginRight: { marginRight: 6 },
+	ageModalTitle: { marginBottom: 20, textAlign: "center", fontWeight: "bold" },
+	ageModalBody: { marginBottom: 30, textAlign: "center" },
+	fullWidth: { width: "100%" },
+	ageYesButton: {
+		backgroundColor: "#f4bb26",
+		paddingVertical: 16,
+		borderRadius: 8,
+		marginBottom: 15,
+		width: "100%",
+	},
+	ageYesButtonText: { color: "black", textAlign: "center", fontWeight: "bold", fontSize: 18 },
+	ageNoButton: { paddingVertical: 16, borderRadius: 8, width: "100%" },
+	ageNoButtonText: { color: "#f4bb26", textAlign: "center", fontWeight: "bold", fontSize: 18 },
 	container: { flex: 1, backgroundColor: "#fff" },
 	swiper: { height: 300 },
 	slide: { flex: 1, justifyContent: "center", alignItems: "center" },

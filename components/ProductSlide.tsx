@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { useTranslation } from "@/contexts/TranslationContext";
 import type { CartItem, Product } from "@/types";
+import { rtlRow } from "@/utils/rtl";
 import {
     ActivityIndicator,
     Dimensions,
@@ -34,7 +35,7 @@ export default function DiscountCarousel({
 	refreshTrigger,
 	marketId,
 }: DiscountCarouselProps) {
-	const { t, td } = useTranslation();
+	const { t, td, isRTL } = useTranslation();
 	const router = useRouter();
 	const [discountedProducts, setDiscountedProducts] = useState<Product[]>([]);
 	const [loading, setLoading] = useState<boolean>(true);
@@ -161,13 +162,7 @@ const increaseQty = (product: Product) => {
 
 	if (loading) {
 		return (
-			<View
-				style={{
-					height: ITEM_HEIGHT,
-					justifyContent: "center",
-					alignItems: "center",
-				}}
-			>
+			<View style={styles.loadingContainer}>
 				<ActivityIndicator size="large" color="#f4bb26" />
 				<Text>{t("loading")}</Text>
 			</View>
@@ -275,8 +270,8 @@ const finalPrice =
 		: "/shop?discount=true";
 
 	return (
-		<View style={{ height: ITEM_HEIGHT + 80, backgroundColor: "#FFFFFF" }}>
-			<View style={styles.header}>
+		<View style={styles.wrapper}>
+			<View style={[styles.header, rtlRow(isRTL)]}>
 				<Text style={styles.headerText}>{t("hotSale")}</Text>
 				<View style={styles.headerRight}>
 					<TouchableOpacity
@@ -309,6 +304,8 @@ const finalPrice =
 }
 
 const styles = StyleSheet.create({
+	loadingContainer: { height: ITEM_HEIGHT, justifyContent: "center", alignItems: "center" },
+	wrapper: { height: ITEM_HEIGHT + 80, backgroundColor: "#FFFFFF" },
 	card: {
 		width: ITEM_WIDTH,
 		marginHorizontal: 4,

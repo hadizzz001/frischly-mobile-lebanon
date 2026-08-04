@@ -55,6 +55,51 @@ function buildQuery(
 	return `?${qs}`;
 }
 
+// The Frischly backend wraps LIST responses like:
+//   { success, message, data: { orders: [...], pagination: {...} } }
+//   { success, message, data: { categories: [...], pagination: {...} } }
+//   { success, message, data: { orderIds: [...] } }
+// while service layer callers (and their types) expect `res.data` to be the
+// array itself. Rather than special-case every single service/screen, unwrap
+// that shape here — if `data` is a plain object containing exactly one
+// array-valued property, hoist that array up to `data`.
+//
+// IMPORTANT: single-ENTITY envelopes like `{ data: { user: {...} } }` or
+// `{ data: { product: {...} } }` are deliberately left untouched — callers
+// throughout the app already do `res.data.user` / `res.data.product` for
+// those endpoints, so unwrapping them here would break far more call sites
+// than it fixes. Screens that need the product/user hoisted do so explicitly.
+function normalizeListEnvelope(payload: unknown): unknown {
+	if (
+		!payload ||
+		typeof payload !== "object" ||
+		Array.isArray(payload)
+	) {
+		return payload;
+	}
+
+	const envelope = payload as { data?: unknown; [key: string]: unknown };
+	const { data } = envelope;
+
+	if (
+		!data ||
+		typeof data !== "object" ||
+		Array.isArray(data)
+	) {
+		return payload;
+	}
+
+	const entries = Object.entries(data as Record<string, unknown>);
+
+	const arrayKeys = entries.filter(([, v]) => Array.isArray(v));
+
+	if (arrayKeys.length === 1) {
+		return { ...envelope, data: arrayKeys[0][1] };
+	}
+
+	return payload;
+}
+
 async function request<T>(
 	method: string,
 	path: string,
@@ -144,7 +189,7 @@ async function request<T>(
 			throw new ApiError(String(message), res.status, payload);
 		}
 
-		return payload as ApiResponse<T>;
+		return normalizeListEnvelope(payload) as ApiResponse<T>;
 	} finally {
 		clearTimeout(timeout);
 	}

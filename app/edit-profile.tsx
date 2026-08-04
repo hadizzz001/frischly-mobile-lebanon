@@ -1,9 +1,11 @@
 import CityPicker from "@/components/CityPicker";
+import LoadingButton from "@/components/LoadingButton";
 import LocationPickerMap, { type PickedLocation } from "@/components/LocationPickerMap";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { AuthService } from "@/services/api";
 import type { User } from "@/types";
 import { getCityCoordinates, getStateForCity, reverseGeocodePoint } from "@/utils/cityDetection";
+import { rtlText } from "@/utils/rtl";
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
@@ -32,7 +34,7 @@ interface ProfileForm {
 export default function EditProfile() {
 	const [user, setUser] = useState<User | null>(null);
 	const router = useRouter();
-	const { t } = useTranslation();
+	const { t, isRTL } = useTranslation();
 
 	const [form, setForm] = useState<ProfileForm>({
 		name: "",
@@ -122,7 +124,11 @@ export default function EditProfile() {
 		return () => sub.remove();
 	}, []);
 
+	const [updating, setUpdating] = useState<boolean>(false);
+
 	const handleUpdate = async (): Promise<void> => {
+		if (updating) return;
+		setUpdating(true);
 		try {
 			if (!form.phoneNumber || !form.phoneNumber.trim() || form.phoneNumber.trim() === "+961") {
 				Alert.alert(t("warning"), t("phoneRequired"));
@@ -219,6 +225,8 @@ export default function EditProfile() {
 		} catch (err) {
 			console.error("🔥 Unexpected error:", err);
 			alert(t("somethingWrong"));
+		} finally {
+			setUpdating(false);
 		}
 	};
 
@@ -230,11 +238,11 @@ export default function EditProfile() {
 
 			{(["name", "phoneNumber"] as (keyof ProfileForm)[]).map((key) => (
 				<View key={key} style={styles.fieldGroup}>
-					<Text style={styles.label}>
+					<Text style={[styles.label, rtlText(isRTL)]}>
 						{key === "phoneNumber" ? t("phoneNumber") : t("fullName")}
 					</Text>
 					<TextInput
-						style={styles.input}
+						style={[styles.input, rtlText(isRTL)]}
 						value={form[key]}
 						onChangeText={(val) => setForm({ ...form, [key]: val })}
 					/>
@@ -243,9 +251,9 @@ export default function EditProfile() {
 
 			{(["street"] as (keyof ProfileForm)[]).map((key) => (
 				<View key={key} style={styles.fieldGroup}>
-					<Text style={styles.label}>{t(key)}</Text>
+					<Text style={[styles.label, rtlText(isRTL)]}>{t(key)}</Text>
 					<TextInput
-						style={styles.input}
+						style={[styles.input, rtlText(isRTL)]}
 						value={form[key]}
 						onChangeText={(val) => setForm({ ...form, [key]: val })}
 					/>
@@ -253,7 +261,7 @@ export default function EditProfile() {
 			))}
 
 			<View style={styles.fieldGroup}>
-				<Text style={styles.label}>{t("city")}</Text>
+				<Text style={[styles.label, rtlText(isRTL)]}>{t("city")}</Text>
 				{/* Editable — picking a city here snaps the map pin to that city's
 				    approximate center (two-way sync with the map pin below). Guarded
 				    against a known @react-native-picker/picker quirk where
@@ -291,25 +299,11 @@ export default function EditProfile() {
 			    drivers can be matched by exact coverage, not just city name. */}
 			<TouchableOpacity
 				onPress={() => setShowMapPicker(true)}
-				style={{
-					flexDirection: "row",
-					alignItems: "center",
-					gap: 6,
-					alignSelf: "stretch",
-					marginBottom: 16,
-					paddingVertical: 4,
-				}}
+				style={styles.mapPinButton}
 			>
 				<Feather name="map" size={16} color={pin ? "#22a45d" : "#f4bb26"} />
 				<Text
-					style={{
-						color: "#555",
-						fontSize: 13,
-						lineHeight: 18,
-						textDecorationLine: "underline",
-						flex: 1,
-						flexWrap: "wrap",
-					}}
+					style={styles.mapPinButtonText}
 				>
 					{pin ? t("adjustPinOnMap") : t("setPinOnMap")}
 				</Text>
@@ -359,27 +353,11 @@ export default function EditProfile() {
 
 			{syncingAddress && (
 				<View
-					style={{
-						flexDirection: "row",
-						alignItems: "center",
-						gap: 8,
-						marginBottom: 12,
-						paddingVertical: 8,
-						paddingHorizontal: 12,
-						borderRadius: 10,
-						backgroundColor: "#fff8e6",
-					}}
+					style={styles.syncingContainer}
 				>
 					<ActivityIndicator size="small" color="#f4bb26" />
 					<Text
-						style={{
-							color: "#7a6a2e",
-							fontSize: 13,
-							fontWeight: "600",
-							lineHeight: 18,
-							flex: 1,
-							flexWrap: "wrap",
-						}}
+						style={styles.syncingText}
 					>
 						{t("syncingAddress")}
 					</Text>
@@ -387,23 +365,23 @@ export default function EditProfile() {
 			)}
 
 			<View style={styles.fieldGroup}>
-				<Text style={styles.label}>{t("state")}</Text>
+				<Text style={[styles.label, rtlText(isRTL)]}>{t("state")}</Text>
 				{/* Read-only — derived only from the map pin, never typed. */}
 				<TextInput
-					style={[styles.input, styles.inputDisabled]}
+					style={[styles.input, styles.inputDisabled, rtlText(isRTL)]}
 					value={form.state}
 					editable={false}
 				/>
 			</View>
 
 			<View style={styles.fieldGroup}>
-				<Text style={styles.label}>{t("country")}</Text>
-				<TextInput style={styles.input} value={t("lebanon")} editable={false} />
+				<Text style={[styles.label, rtlText(isRTL)]}>{t("country")}</Text>
+				<TextInput style={[styles.input, rtlText(isRTL)]} value={t("lebanon")} editable={false} />
 			</View>
 
-			<TouchableOpacity style={styles.saveBtn} onPress={handleUpdate}>
+			<LoadingButton style={styles.saveBtn} onPress={handleUpdate} loadingColor="#000">
 				<Text style={styles.saveText}>{t("saveChanges")}</Text>
-			</TouchableOpacity>
+			</LoadingButton>
 
 			<View style={styles.bottomSpacer} />
 		</ScrollView>
@@ -417,6 +395,33 @@ const styles = StyleSheet.create({
 	label: { marginBottom: 4, color: "#555" },
 	input: { borderWidth: 1, padding: 12, borderRadius: 15, borderColor: "#ccc" },
 	inputDisabled: { backgroundColor: "#f2f2f2", borderColor: "#ddd", color: "#666" },
+	mapPinButton: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 6,
+		alignSelf: "stretch",
+		marginBottom: 16,
+		paddingVertical: 4,
+	},
+	mapPinButtonText: {
+		color: "#555",
+		fontSize: 13,
+		lineHeight: 18,
+		textDecorationLine: "underline",
+		flex: 1,
+		flexWrap: "wrap",
+	},
+	syncingContainer: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 8,
+		marginBottom: 12,
+		paddingVertical: 8,
+		paddingHorizontal: 12,
+		borderRadius: 10,
+		backgroundColor: "#fff8e6",
+	},
+	syncingText: { color: "#7a6a2e", fontSize: 13, fontWeight: "600", lineHeight: 18, flex: 1, flexWrap: "wrap" },
 	saveBtn: {
 		backgroundColor: "#f4bb26",
 		padding: 16,

@@ -1,3 +1,4 @@
+import { globalStyles } from "@/constants/GlobalStyles";
 import { Feather } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -184,7 +185,7 @@ export default function LocationPickerMap({
 					originWhitelist={["*"]}
 					source={{ html }}
 					onMessage={handleMessage}
-					style={{ flex: 1 }}
+					style={globalStyles.flex1}
 				/>
 
 				<View style={styles.footer}>

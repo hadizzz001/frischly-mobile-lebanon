@@ -1,8 +1,10 @@
 "use client";
+import LoadingButton from "@/components/LoadingButton";
 import { useCart } from "@/contexts/CartContext";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { AuthService, OrderService, ProductService } from "@/services/api";
 import type { Order, OrderItem, Product, User } from "@/types";
+import { rtlRow, rtlText } from "@/utils/rtl";
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
@@ -28,7 +30,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const POLL_MS = 10000;
 
 export default function TestOrder() {
-	const { t, td, language } = useTranslation();
+	const { t, td, language, isRTL } = useTranslation();
 	const [user, setUser] = useState<User | null>(null);
 	const [orders, setOrders] = useState<Order[]>([]);
 	const [loading, setLoading] = useState<boolean>(true);
@@ -93,6 +95,8 @@ export default function TestOrder() {
 		setCancelModalVisible(true);
 	};
 
+	const [cancelling, setCancelling] = useState<boolean>(false);
+
 	const handleCancel = async (): Promise<void> => {
 		console.log("🚀 Attempting to cancel order:", selectedOrderId);
 		console.log("📝 Cancel Reason:", cancelReason);
@@ -102,6 +106,8 @@ export default function TestOrder() {
 			return;
 		}
 
+		if (cancelling) return;
+		setCancelling(true);
 		try {
 			const userData = await AsyncStorage.getItem("userData");
 			const parsedUser = userData ? JSON.parse(userData) : null;
@@ -135,6 +141,8 @@ export default function TestOrder() {
 		} catch (e) {
 			console.error("🔥 Exception during cancellation:", e);
 			Alert.alert(t("errorTitle"), t("errorOccurred"));
+		} finally {
+			setCancelling(false);
 		}
 	};
 
@@ -328,7 +336,7 @@ export default function TestOrder() {
 		}, []);
 
 		return (
-			<View style={styles.itemRow}>
+			<View style={[styles.itemRow, rtlRow(isRTL)]}>
 				{image ? (
 					<Image source={{ uri: image }} style={styles.itemImage} />
 				) : (
@@ -337,10 +345,10 @@ export default function TestOrder() {
 					</View>
 				)}
 				<View style={styles.itemInfo}>
-					<Text style={styles.itemName} numberOfLines={2}>
+					<Text style={[styles.itemName, rtlText(isRTL)]} numberOfLines={2}>
 						{td(product.name)}
 					</Text>
-					<View style={styles.itemMetaRow}>
+					<View style={[styles.itemMetaRow, rtlRow(isRTL)]}>
 						<Text style={styles.itemMetaText}>
 							{t("quantity")} {item.quantity}
 						</Text>
@@ -444,7 +452,7 @@ export default function TestOrder() {
 		return (
 			<ActivityIndicator
 				size="large"
-				style={{ flex: 1, justifyContent: "center" }}
+				style={styles.loadingIndicator}
 			/>
 		);
 	}
@@ -475,14 +483,14 @@ export default function TestOrder() {
 		return (
 			<View style={styles.orderCard}>
 				<TouchableOpacity
-					style={styles.orderHeader}
+					style={[styles.orderHeader, rtlRow(isRTL)]}
 					activeOpacity={0.7}
 					onPress={() => toggleExpand(item._id, item.status)}
 				>
 					<View style={styles.orderHeaderLeft}>
-						<Text style={styles.orderId}>{item.orderNumber}</Text>
+						<Text style={[styles.orderId, rtlText(isRTL)]}>{item.orderNumber}</Text>
 						{!!item.createdAt && (
-							<Text style={styles.orderDate}>
+							<Text style={[styles.orderDate, rtlText(isRTL)]}>
 								{formatOrderDate(item.createdAt)}
 							</Text>
 						)}
@@ -499,7 +507,7 @@ export default function TestOrder() {
 								{getStatusText(item.status) || t("pending")}
 							</Text>
 						</View>
-						<Text style={styles.paymentMethod}>
+						<Text style={[styles.paymentMethod, rtlText(isRTL)]}>
 							{item.paymentMethod === "cash"
 								? t("cashOnDelivery")
 								: t("onlinePayment")}
@@ -507,13 +515,13 @@ export default function TestOrder() {
 					</View>
 
 					<View style={styles.orderHeaderRight}>
-						<Text style={styles.summaryText}>
+						<Text style={[styles.summaryText, rtlText(isRTL)]}>
 							{t("subtotal")}: ${(item.subtotal ?? 0).toFixed(2)}
 						</Text>
-						<Text style={styles.summaryText}>
+						<Text style={[styles.summaryText, rtlText(isRTL)]}>
 							{t("delivery")}: ${item.delivery?.toFixed(2) || "0.00"}
 						</Text>
-						<Text style={styles.totalText}>
+						<Text style={[styles.totalText, rtlText(isRTL)]}>
 							{t("total")}: ${(item.total ?? 0).toFixed(2)}
 						</Text>
 					</View>
@@ -580,14 +588,15 @@ export default function TestOrder() {
 										{t("cancel")}
 									</Text>
 								</TouchableOpacity>
-								<TouchableOpacity
+								<LoadingButton
 									onPress={handleCancel}
 									style={styles.cancelModalSubmitBtn}
+									loadingColor="#fff"
 								>
 									<Text style={styles.cancelModalSubmitText}>
 										{t("submit")}
 									</Text>
-								</TouchableOpacity>
+								</LoadingButton>
 							</View>
 						</View>
 					</View>
@@ -598,6 +607,7 @@ export default function TestOrder() {
 }
 
 const styles = StyleSheet.create({
+	loadingIndicator: { flex: 1, justifyContent: "center" },
 	backButton: {
 		marginBottom: 15,
 	},

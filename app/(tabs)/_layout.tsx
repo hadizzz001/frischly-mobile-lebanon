@@ -1,6 +1,7 @@
 import { HapticTab } from "@/components/HapticTab";
 import TabBarBackground from "@/components/ui/TabBarBackground";
 import { API_BASE_URL } from "@/constants/api";
+import { globalStyles } from "@/constants/GlobalStyles";
 import { useCart } from "@/contexts/CartContext";
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -91,7 +92,7 @@ useEffect(() => {
 	}
 
 	return (
-		<View style={{ flex: 1 }}>
+		<View style={globalStyles.flex1}>
 
 		     
      

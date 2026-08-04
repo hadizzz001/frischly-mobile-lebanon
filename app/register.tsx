@@ -2,14 +2,17 @@
 
 import AuthLogoVideo from "@/components/AuthLogoVideo";
 import CityPicker from "@/components/CityPicker";
+import IOSDatePickerModal from "@/components/IOSDatePickerModal";
+import LoadingButton from "@/components/LoadingButton";
 import LocationPickerMap, { type PickedLocation } from "@/components/LocationPickerMap";
+import { globalStyles } from "@/constants/GlobalStyles";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { useGoogleAuth } from "@/hooks/useGoogleAuth";
 import { ApiError, AuthService } from "@/services/api";
 import type { AuthPayload } from "@/types";
 import { detectCityFromLocation, getStateForCity, reverseGeocodePoint } from "@/utils/cityDetection";
 import { formatLocalDate, toCalendarISOString } from "@/utils/date";
-import { ensureDefaultCity } from "@/utils/userCity";
+import { ensureDefaultCity, resolveGoogleAddress } from "@/utils/userCity";
 import { Feather } from "@expo/vector-icons";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -46,6 +49,14 @@ interface InputBoxProps {
 	[key: string]: unknown;
 }
 
+// ✅ Beirut fallback address used whenever the shopper denies the location
+// permission (or GPS/reverse-geocoding fails). We never leave city/state/
+// street empty, and the pin is dropped on Beirut city center.
+const DEFAULT_CITY = "Beirut";
+const DEFAULT_STATE = "Beirut";
+const DEFAULT_STREET = "Beirut";
+const DEFAULT_PIN = { latitude: 33.8938, longitude: 35.5018 };
+
 const InputBox = ({
 	placeholder,
 	value,
@@ -58,16 +69,7 @@ const InputBox = ({
 	...props
 }: InputBoxProps) => (
 	<View
-		style={{
-			marginBottom: 12,
-			width: "100%",
-			minHeight: 55,
-			borderWidth: 1,
-			borderColor: "#d1d5db",
-			borderRadius: 12,
-			backgroundColor: inputBg,
-			justifyContent: "center",
-		}}
+		style={[styles.inputBoxWrapper, { backgroundColor: inputBg }]}
 	>
 		<TextInput
 			placeholder={placeholder}
@@ -75,7 +77,7 @@ const InputBox = ({
 			onChangeText={onChangeText}
 			secureTextEntry={secureTextEntry}
 			keyboardType={keyboardType}
-			style={{ padding: 15, color: inputText }}
+			style={[styles.inputBoxText, { color: inputText }]}
 			placeholderTextColor={placeholderColor}
 			{...props}
 		/>
@@ -164,6 +166,14 @@ const [syncingAddress, setSyncingAddress] = useState<boolean>(false);
 			}
 			setLocationStatus("done");
 		} else {
+			// ✅ Permission denied / GPS off / no match — never leave the shopper
+			// with empty address fields. Force the Beirut default (city, state,
+			// street) and drop the pin on Beirut city center so registration can
+			// still complete with a valid, usable address.
+			setCity((prev) => (manual ? DEFAULT_CITY : prev || DEFAULT_CITY));
+			setStreet((prev) => (manual ? DEFAULT_STREET : prev || DEFAULT_STREET));
+			setStateVal((prev) => (manual ? DEFAULT_STATE : prev || DEFAULT_STATE));
+			setPin((prev) => (manual ? DEFAULT_PIN : prev || DEFAULT_PIN));
 			setLocationStatus("failed");
 			if (manual) {
 				Alert.alert(t("errorTitle"), t("locationNotDetected"));
@@ -226,14 +236,18 @@ const [syncingAddress, setSyncingAddress] = useState<boolean>(false);
 				setPin(finalPin);
 				setLocationStatus("done");
 			} else {
+				// Permission denied / GPS unavailable — fall back to the exact
+				// Beirut city-center pin instead of blocking registration.
+				finalPin = DEFAULT_PIN;
+				setPin(DEFAULT_PIN);
 				setLocationStatus("failed");
 			}
 		}
 
-		if (!finalPin) {
-			Alert.alert(t("errorTitle"), t("pinRequired"));
-			return;
-		}
+		// Never send empty address text fields — force the Beirut default.
+		const finalCity = city?.trim() || DEFAULT_CITY;
+		const finalStreet = street?.trim() || DEFAULT_STREET;
+		const finalState = stateVal?.trim() || DEFAULT_STATE;
 
 		const userData: {
 			name: string;
@@ -253,9 +267,9 @@ const [syncingAddress, setSyncingAddress] = useState<boolean>(false);
 			dateOfBirth: toCalendarISOString(dateOfBirth),
 			password,
 			address: {
-				street,
-				city,
-				state: stateVal,
+				street: finalStreet,
+				city: finalCity,
+				state: finalState,
 				country: "LB",
 				location: finalPin,
 			},
@@ -318,7 +332,11 @@ const [syncingAddress, setSyncingAddress] = useState<boolean>(false);
 		async (idToken) => {
 			setGoogleLoading(true);
 			try {
-				const res = await AuthService.googleSignIn(idToken);
+				// Resolve the address up-front (GPS when allowed, otherwise the
+				// Beirut default + Beirut pin) and send it with the token so the
+				// backend force-saves a complete address on this sign-up.
+				const googleAddress = await resolveGoogleAddress();
+				const res = await AuthService.googleSignIn(idToken, googleAddress);
 				const userData = res.data as unknown as AuthPayload | null;
 				if (userData) {
 					if (userData.isNewUser === false) {
@@ -374,24 +392,16 @@ const [syncingAddress, setSyncingAddress] = useState<boolean>(false);
 
 	return (
 		<KeyboardAvoidingView
-			style={{ flex: 1, backgroundColor: "#FFFFFF" }}
+			style={styles.screen}
 			behavior={Platform.OS === "ios" ? "padding" : undefined}
 		>
 			<ScrollView
 				keyboardShouldPersistTaps="handled"
-				contentContainerStyle={{ paddingBottom: 50 }}
+				contentContainerStyle={styles.scrollContent}
 			>
 				{/* Top Yellow Section */}
 				<View
-					style={{
-						height: screenHeight * 0.4,
-						justifyContent: "center",
-						alignItems: "center",
-						backgroundColor: "#f4bb26",
-						borderBottomLeftRadius: 60,
-						borderBottomRightRadius: 60,
-						overflow: "hidden",
-					}}
+					style={[styles.topBanner, { height: screenHeight * 0.4 }]}
 				>
 					<AuthLogoVideo style={styles.logoVideo} />
 				</View>
@@ -425,7 +435,7 @@ const [syncingAddress, setSyncingAddress] = useState<boolean>(false);
 				</View>
 
 				{/* Bottom Inputs */}
-				<View style={{ paddingHorizontal: 24, marginTop: 20 }}>
+				<View style={styles.bottomInputsContainer}>
 					<InputBox
 						placeholder={t("fullName")}
 						value={name}
@@ -437,37 +447,21 @@ const [syncingAddress, setSyncingAddress] = useState<boolean>(false);
 
 					{/* Phone input */}
 					<View
-						style={{
-							flexDirection: "row",
-							alignItems: "center",
-							marginBottom: 12,
-							width: "100%",
-							minHeight: 55,
-							borderWidth: 1,
-							borderColor: "#000000",
-							borderRadius: 12,
-							backgroundColor: inputBg,
-							paddingHorizontal: 12,
-						}}
+						style={[styles.phoneRow, { backgroundColor: inputBg }]}
 					>
 						<Text
-							style={{
-								color: inputText,
-								fontSize: 16,
-								fontWeight: "600",
-								marginRight: 8,
-							}}
+							style={[styles.countryCodeText, { color: inputText }]}
 						>
 							{countryCode}
 						</Text>
-						<View style={{ width: 1, height: 24, backgroundColor: "#e0e0e0", marginRight: 10 }} />
+						<View style={styles.phoneDivider} />
 						<TextInput
 							placeholder={t("phoneRequired")}
 							keyboardType="phone-pad"
 							value={phone}
 							onChangeText={(text) => setPhone(text.replace(/[^\d]/g, "").slice(0, 8))}
 							maxLength={8}
-							style={{ flex: 1, paddingVertical: 15, color: inputText, fontSize: 16 }}
+							style={[styles.phoneInput, { color: inputText }]}
 							placeholderTextColor={placeholderColor}
 						/>
 					</View>
@@ -486,11 +480,11 @@ const [syncingAddress, setSyncingAddress] = useState<boolean>(false);
   </View>
 </TouchableOpacity>
 
-{showDatePicker && (
+{Platform.OS === "android" && showDatePicker && (
   <DateTimePicker
     value={dateOfBirth || new Date(2000, 0, 1)}
     mode="date"
-    display={Platform.OS === "ios" ? "spinner" : "default"}
+    display="default"
     maximumDate={new Date()} // 🔒 no future dates
     onChange={(event, selectedDate) => {
       setShowDatePicker(false);
@@ -498,6 +492,18 @@ const [syncingAddress, setSyncingAddress] = useState<boolean>(false);
     }}
   />
 )}
+
+<IOSDatePickerModal
+  visible={Platform.OS === "ios" && showDatePicker}
+  value={dateOfBirth || new Date(2000, 0, 1)}
+  mode="date"
+  maximumDate={new Date()} // 🔒 no future dates
+  onConfirm={(selectedDate) => {
+    setDateOfBirth(selectedDate);
+    setShowDatePicker(false);
+  }}
+  onCancel={() => setShowDatePicker(false)}
+/>
 
 
 
@@ -514,28 +520,19 @@ const [syncingAddress, setSyncingAddress] = useState<boolean>(false);
 
 					{/* Password */}
 					<View
-						style={{
-							flexDirection: "row",
-							alignItems: "center",
-							marginBottom: 12,
-							width: "100%",
-							borderWidth: 1,
-							borderColor: "#000000",
-							borderRadius: 12,
-							backgroundColor: inputBg,
-						}}
+						style={[styles.passwordRow, { backgroundColor: inputBg }]}
 					>
 						<TextInput
 							placeholder={t("password")}
 							secureTextEntry={!showPassword}
 							value={password}
 							onChangeText={setPassword}
-							style={{ flex: 1, padding: 15, color: inputText }}
+							style={[styles.passwordInput, { color: inputText }]}
 							placeholderTextColor={placeholderColor}
 						/>
 						<TouchableOpacity
 							onPress={() => setShowPassword(!showPassword)}
-							style={{ paddingHorizontal: 10 }}
+							style={styles.eyeButton}
 						>
 							<Ionicons
 								name={showPassword ? "eye-off" : "eye"}
@@ -563,26 +560,15 @@ const [syncingAddress, setSyncingAddress] = useState<boolean>(false);
 						placeholder={t("city")}
 						textColor={inputText}
 						disabled
-						style={{
-							marginBottom: 6,
-							backgroundColor: "#f2f2f2",
-							minHeight: 55,
-						}}
+						style={styles.cityPicker}
 					/>
 					<TouchableOpacity
 						onPress={() => runLocationDetection({ manual: true })}
 						disabled={locationStatus === "detecting"}
-						style={{
-							flexDirection: "row",
-							alignItems: "center",
-							gap: 8,
-							alignSelf: "stretch",
-							marginBottom: 14,
-							paddingVertical: 10,
-							paddingHorizontal: 12,
-							borderRadius: 10,
-							backgroundColor: locationStatus === "done" ? "#eafaf0" : "#fff8e6",
-						}}
+						style={[
+							styles.locationButton,
+							{ backgroundColor: locationStatus === "done" ? "#eafaf0" : "#fff8e6" },
+						]}
 					>
 						{locationStatus === "detecting" ? (
 							<ActivityIndicator size="small" color="#f4bb26" />
@@ -594,14 +580,10 @@ const [syncingAddress, setSyncingAddress] = useState<boolean>(false);
 							/>
 						)}
 						<Text
-							style={{
-								color: locationStatus === "done" ? "#22a45d" : "#7a6a2e",
-								fontSize: 14,
-								fontWeight: "600",
-								lineHeight: 19,
-								flex: 1,
-								flexWrap: "wrap",
-							}}
+							style={[
+								styles.locationButtonText,
+								{ color: locationStatus === "done" ? "#22a45d" : "#7a6a2e" },
+							]}
 						>
 							{locationStatus === "detecting"
 								? t("detectingLocation")
@@ -616,17 +598,10 @@ const [syncingAddress, setSyncingAddress] = useState<boolean>(false);
 					    building/entrance for accurate driver matching. */}
 					<TouchableOpacity
 						onPress={() => setShowMapPicker(true)}
-						style={{
-							flexDirection: "row",
-							alignItems: "center",
-							gap: 8,
-							alignSelf: "stretch",
-							marginBottom: 14,
-							paddingVertical: 10,
-							paddingHorizontal: 12,
-							borderRadius: 10,
-							backgroundColor: pin ? "#eafaf0" : "#f3f4f6",
-						}}
+						style={[
+							styles.mapPinButton,
+							{ backgroundColor: pin ? "#eafaf0" : "#f3f4f6" },
+						]}
 					>
 						<Feather
 							name="map"
@@ -634,15 +609,10 @@ const [syncingAddress, setSyncingAddress] = useState<boolean>(false);
 							color={pin ? "#22a45d" : "#555555"}
 						/>
 						<Text
-							style={{
-								color: pin ? "#22a45d" : "#333333",
-								fontSize: 14,
-								fontWeight: "600",
-								lineHeight: 19,
-								textDecorationLine: "underline",
-								flex: 1,
-								flexWrap: "wrap",
-							}}
+							style={[
+								styles.mapPinButtonText,
+								{ color: pin ? "#22a45d" : "#333333" },
+							]}
 						>
 							{pin ? t("adjustPinOnMap") : t("setPinOnMap")}
 						</Text>
@@ -677,27 +647,11 @@ const [syncingAddress, setSyncingAddress] = useState<boolean>(false);
 
 					{syncingAddress && (
 						<View
-							style={{
-								flexDirection: "row",
-								alignItems: "center",
-								gap: 8,
-								marginBottom: 10,
-								paddingVertical: 8,
-								paddingHorizontal: 12,
-								borderRadius: 10,
-								backgroundColor: "#fff8e6",
-							}}
+							style={styles.syncingContainer}
 						>
 							<ActivityIndicator size="small" color="#f4bb26" />
 							<Text
-								style={{
-									color: "#7a6a2e",
-									fontSize: 13,
-									fontWeight: "600",
-									lineHeight: 18,
-									flex: 1,
-									flexWrap: "wrap",
-								}}
+								style={styles.syncingText}
 							>
 								{t("syncingAddress")}
 							</Text>
@@ -728,31 +682,21 @@ const [syncingAddress, setSyncingAddress] = useState<boolean>(false);
 					</TouchableOpacity>
 
 					{/* Register Button */}
-					<TouchableOpacity
+					<LoadingButton
 						onPress={handleRegister}
 						style={styles.registerButton}
+						loadingColor="#000"
 					>
 						<Text style={styles.registerButtonText}>
 							{t("register")}
 						</Text>
-					</TouchableOpacity>
+					</LoadingButton>
 
 					{/* Google Sign-In Button */}
 					<TouchableOpacity
 						onPress={handleGoogle}
 						disabled={googleLoading}
-						style={{
-							flexDirection: "row",
-							backgroundColor: "#ffffff",
-							borderRadius: 15,
-							paddingVertical: 13,
-							width: "100%",
-							alignItems: "center",
-							justifyContent: "center",
-							marginTop: 12,
-							borderWidth: 1,
-							borderColor: "#d1d5db",
-						}}
+						style={styles.googleButton}
 					>
 						{googleLoading ? (
 							<ActivityIndicator size="small" color="#000000" />
@@ -760,9 +704,9 @@ const [syncingAddress, setSyncingAddress] = useState<boolean>(false);
 							<>
 								<Image
 									source={{ uri: "https://developers.google.com/identity/images/g-logo.png" }}
-									style={{ width: 20, height: 20, marginRight: 10 }}
+									style={[globalStyles.size20, globalStyles.marginRight10]}
 								/>
-								<Text style={{ color: "#000", fontWeight: "700", fontSize: 16 }}>
+								<Text style={styles.googleButtonText}>
 									{t("continueWithGoogle")}
 								</Text>
 							</>
@@ -786,6 +730,99 @@ const [syncingAddress, setSyncingAddress] = useState<boolean>(false);
 }
 
 const styles = StyleSheet.create({
+	screen: { flex: 1, backgroundColor: "#FFFFFF" },
+	scrollContent: { paddingBottom: 50 },
+	topBanner: {
+		justifyContent: "center",
+		alignItems: "center",
+		backgroundColor: "#f4bb26",
+		borderBottomLeftRadius: 60,
+		borderBottomRightRadius: 60,
+		overflow: "hidden",
+	},
+	bottomInputsContainer: { paddingHorizontal: 24, marginTop: 20 },
+	inputBoxWrapper: {
+		marginBottom: 12,
+		width: "100%",
+		minHeight: 55,
+		borderWidth: 1,
+		borderColor: "#d1d5db",
+		borderRadius: 12,
+		justifyContent: "center",
+	},
+	inputBoxText: { padding: 15 },
+	phoneRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		marginBottom: 12,
+		width: "100%",
+		minHeight: 55,
+		borderWidth: 1,
+		borderColor: "#000000",
+		borderRadius: 12,
+		paddingHorizontal: 12,
+	},
+	countryCodeText: { fontSize: 16, fontWeight: "600", marginRight: 8 },
+	phoneDivider: { width: 1, height: 24, backgroundColor: "#e0e0e0", marginRight: 10 },
+	phoneInput: { flex: 1, paddingVertical: 15, fontSize: 16 },
+	passwordRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		marginBottom: 12,
+		width: "100%",
+		borderWidth: 1,
+		borderColor: "#000000",
+		borderRadius: 12,
+	},
+	passwordInput: { flex: 1, padding: 15 },
+	eyeButton: { paddingHorizontal: 10 },
+	cityPicker: { marginBottom: 6, backgroundColor: "#f2f2f2", minHeight: 55 },
+	locationButton: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 8,
+		alignSelf: "stretch",
+		marginBottom: 14,
+		paddingVertical: 10,
+		paddingHorizontal: 12,
+		borderRadius: 10,
+	},
+	locationButtonText: { fontSize: 14, fontWeight: "600", lineHeight: 19, flex: 1, flexWrap: "wrap" },
+	mapPinButton: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 8,
+		alignSelf: "stretch",
+		marginBottom: 14,
+		paddingVertical: 10,
+		paddingHorizontal: 12,
+		borderRadius: 10,
+	},
+	mapPinButtonText: { fontSize: 14, fontWeight: "600", lineHeight: 19, textDecorationLine: "underline", flex: 1, flexWrap: "wrap" },
+	syncingContainer: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 8,
+		marginBottom: 10,
+		paddingVertical: 8,
+		paddingHorizontal: 12,
+		borderRadius: 10,
+		backgroundColor: "#fff8e6",
+	},
+	syncingText: { color: "#7a6a2e", fontSize: 13, fontWeight: "600", lineHeight: 18, flex: 1, flexWrap: "wrap" },
+	googleButton: {
+		flexDirection: "row",
+		backgroundColor: "#ffffff",
+		borderRadius: 15,
+		paddingVertical: 13,
+		width: "100%",
+		alignItems: "center",
+		justifyContent: "center",
+		marginTop: 12,
+		borderWidth: 1,
+		borderColor: "#d1d5db",
+	},
+	googleButtonText: { color: "#000", fontWeight: "700", fontSize: 16 },
 	logoVideo: {
 		width: 200,
 		height: 200,

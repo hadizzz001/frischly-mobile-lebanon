@@ -1,6 +1,8 @@
+import LoadingButton from "@/components/LoadingButton";
 import { API_BASE_URL } from "@/constants/api";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { removePushTokenFromServer } from "@/hooks/useNotifications";
+import { rtlRow, rtlText } from "@/utils/rtl";
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -17,13 +19,17 @@ import {
 } from "react-native";
 
 export default function AccScreen() {
-	const { t } = useTranslation();
+	const { t, isRTL } = useTranslation();
 	const [user, setUser] = useState<any>(null);
 	const router = useRouter();
 	const [showDeleteModal, setShowDeleteModal] = useState(false);
 	const [passwordInput, setPasswordInput] = useState("");
 
+	const [deleting, setDeleting] = useState<boolean>(false);
+
 	const handleDeleteAccount = async () => {
+		if (deleting) return;
+		setDeleting(true);
 		try {
 			const userData = await AsyncStorage.getItem("userData");
 			const parsedUser = userData ? JSON.parse(userData) : null;
@@ -55,6 +61,8 @@ export default function AccScreen() {
 		} catch (err) {
 			console.error(err);
 			Alert.alert(t("errorTitle"), t("somethingWrong"));
+		} finally {
+			setDeleting(false);
 		}
 	};
 
@@ -106,10 +114,7 @@ export default function AccScreen() {
 		<ScrollView
 			style={styles.container}
 			showsVerticalScrollIndicator={true}
-			contentContainerStyle={{
-				paddingBottom: 160,
-				flexGrow: 1,
-			}}
+			contentContainerStyle={styles.scrollContent}
 		>
 			{/* Header Section */}
 			<View style={styles.header}>
@@ -118,8 +123,8 @@ export default function AccScreen() {
 						<Feather name="user" size={40} color="#f4bb26" />
 					</View>
 				</View>
-				<Text style={styles.title}>{t("myProfile")}</Text>
-				<Text style={styles.subtitle}>
+				<Text style={[styles.title, rtlText(isRTL)]}>{t("myProfile")}</Text>
+				<Text style={[styles.subtitle, rtlText(isRTL)]}>
 					{user ? t("manageAccount") : t("welcome")}
 				</Text>
 			</View>
@@ -127,86 +132,86 @@ export default function AccScreen() {
 			{/* User Info Card */}
 			{user ? (
 				<View style={styles.infoCard}>
-					<Text style={styles.cardTitle}>{t("accountInfo")}</Text>
+					<Text style={[styles.cardTitle, rtlText(isRTL)]}>{t("accountInfo")}</Text>
 
 					{/* Basic Information Section */}
-					<View style={styles.infoRow}>
+					<View style={[styles.infoRow, rtlRow(isRTL)]}>
 						<View style={styles.iconContainer}>
 							<Feather name="user" size={20} color="#f4bb26" />
 						</View>
 						<View style={styles.infoContent}>
-							<Text style={styles.infoLabel}>{t("fullName")}</Text>
-							<Text style={styles.infoValue}>{user.name}</Text>
+							<Text style={[styles.infoLabel, rtlText(isRTL)]}>{t("fullName")}</Text>
+							<Text style={[styles.infoValue, rtlText(isRTL)]}>{user.name}</Text>
 						</View>
 					</View>
 
-					<View style={styles.infoRow}>
+					<View style={[styles.infoRow, rtlRow(isRTL)]}>
 						<View style={styles.iconContainer}>
 							<Feather name="mail" size={20} color="#f4bb26" />
 						</View>
 						<View style={styles.infoContent}>
-							<Text style={styles.infoLabel}>{t("email")}</Text>
-							<Text style={styles.infoValue}>{user.email}</Text>
+							<Text style={[styles.infoLabel, rtlText(isRTL)]}>{t("email")}</Text>
+							<Text style={[styles.infoValue, rtlText(isRTL)]}>{user.email}</Text>
 						</View>
 					</View>
 
-					<View style={styles.infoRow}>
+					<View style={[styles.infoRow, rtlRow(isRTL)]}>
 						<View style={styles.iconContainer}>
 							<Feather name="phone" size={20} color="#f4bb26" />
 						</View>
 						<View style={styles.infoContent}>
-							<Text style={styles.infoLabel}>{t("phoneNumber")}</Text>
-							<Text style={styles.infoValue}>{user.phoneNumber}</Text>
+							<Text style={[styles.infoLabel, rtlText(isRTL)]}>{t("phoneNumber")}</Text>
+							<Text style={[styles.infoValue, rtlText(isRTL)]}>{user.phoneNumber}</Text>
 						</View>
 					</View>
 
 					{/* Address Section */}
 					<View style={styles.addressSection}>
-						<Text style={styles.sectionTitle}>{t("address")}</Text>
+						<Text style={[styles.sectionTitle, rtlText(isRTL)]}>{t("address")}</Text>
 
-						<View style={styles.infoRow}>
+						<View style={[styles.infoRow, rtlRow(isRTL)]}>
 							<View style={styles.iconContainer}>
 								<Feather name="map-pin" size={20} color="#f4bb26" />
 							</View>
 							<View style={styles.infoContent}>
-								<Text style={styles.infoLabel}>{t("street")}</Text>
-								<Text style={styles.infoValue}>
+								<Text style={[styles.infoLabel, rtlText(isRTL)]}>{t("street")}</Text>
+								<Text style={[styles.infoValue, rtlText(isRTL)]}>
 									{user.address?.street || t("notProvided")}
 								</Text>
 							</View>
 						</View>
 
-						<View style={styles.infoRow}>
+						<View style={[styles.infoRow, rtlRow(isRTL)]}>
 							<View style={styles.iconContainer}>
 								<Feather name="map" size={20} color="#f4bb26" />
 							</View>
 							<View style={styles.infoContent}>
-								<Text style={styles.infoLabel}>{t("city")}</Text>
-								<Text style={styles.infoValue}>
+								<Text style={[styles.infoLabel, rtlText(isRTL)]}>{t("city")}</Text>
+								<Text style={[styles.infoValue, rtlText(isRTL)]}>
 									{user.address?.city || t("notProvided")}
 								</Text>
 							</View>
 						</View>
 
-						<View style={styles.infoRow}>
+						<View style={[styles.infoRow, rtlRow(isRTL)]}>
 							<View style={styles.iconContainer}>
 								<Feather name="navigation" size={20} color="#f4bb26" />
 							</View>
 							<View style={styles.infoContent}>
-								<Text style={styles.infoLabel}>{t("state")}</Text>
-								<Text style={styles.infoValue}>
+								<Text style={[styles.infoLabel, rtlText(isRTL)]}>{t("state")}</Text>
+								<Text style={[styles.infoValue, rtlText(isRTL)]}>
 									{user.address?.state || t("notProvided")}
 								</Text>
 							</View>
 						</View>
 
-						<View style={styles.infoRow}>
+						<View style={[styles.infoRow, rtlRow(isRTL)]}>
 							<View style={styles.iconContainer}>
 								<Feather name="globe" size={20} color="#f4bb26" />
 							</View>
 							<View style={styles.infoContent}>
-								<Text style={styles.infoLabel}>{t("country")}</Text>
-								<Text style={styles.infoValue}>
+								<Text style={[styles.infoLabel, rtlText(isRTL)]}>{t("country")}</Text>
+								<Text style={[styles.infoValue, rtlText(isRTL)]}>
 									{t("lebanon")}
 								</Text>
 							</View>
@@ -227,13 +232,13 @@ export default function AccScreen() {
 					<>
 						{/* Row with Edit & Change Password */}
 						<View
-							style={{ flexDirection: "row", justifyContent: "space-between" }}
+							style={styles.rowSpaceBetween}
 						>
 							<TouchableOpacity
 								style={[
 									styles.actionButton,
 									styles.loginButton,
-									{ flex: 1, marginRight: 4 },
+									styles.flex1MarginRight,
 								]}
 								onPress={() => router.push("/edit-profile")}
 							>
@@ -250,7 +255,7 @@ export default function AccScreen() {
 								style={[
 									styles.actionButton,
 									styles.loginButton,
-									{ flex: 1, marginLeft: 4 },
+									styles.flex1MarginLeft,
 								]}
 								onPress={() => router.push("/changepass")}
 							>
@@ -339,24 +344,13 @@ export default function AccScreen() {
 					onRequestClose={() => setShowDeleteModal(false)}
 				>
 					<View
-						style={{
-							flex: 1,
-							justifyContent: "center",
-							alignItems: "center",
-							backgroundColor: "rgba(0,0,0,0.5)",
-						}}
+						style={styles.modalOverlay}
 					>
 						<View
-							style={{
-								backgroundColor: "#fff",
-								padding: 20,
-								borderRadius: 12,
-								width: "80%",
-								alignItems: "center",
-							}}
+							style={styles.modalBox}
 						>
 							<Text
-								style={{ fontSize: 18, fontWeight: "bold", marginBottom: 10 }}
+								style={[styles.modalTitle, rtlText(isRTL)]}
 							>
 								{t("confirmNewPassword")}
 							</Text>
@@ -365,45 +359,34 @@ export default function AccScreen() {
 								secureTextEntry
 								value={passwordInput}
 								onChangeText={setPasswordInput}
-								style={{
-									borderWidth: 1,
-									borderColor: "#ccc",
-									borderRadius: 8,
-									padding: 10,
-									width: "100%",
-									marginBottom: 15,
-								}}
+								style={[styles.modalInput, rtlText(isRTL)]}
 							/>
 							<View
-								style={{
-									flexDirection: "row",
-									justifyContent: "space-between",
-									width: "100%",
-								}}
+								style={styles.modalButtonRow}
 							>
 								<TouchableOpacity
 									style={[
 										styles.actionButton,
-										{ flex: 1, backgroundColor: "#ccc", marginRight: 5 },
+										styles.modalCancelButton,
 									]}
 									onPress={() => setShowDeleteModal(false)}
 								>
-									<Text style={{ color: "#000", fontWeight: "bold" }}>
+									<Text style={styles.blackBoldText}>
 										{t("cancel")}
 									</Text>
 								</TouchableOpacity>
 
-								<TouchableOpacity
+								<LoadingButton
 									style={[
 										styles.actionButton,
-										{ flex: 1, backgroundColor: "#FF4444", marginLeft: 5 },
+										styles.modalDeleteButton,
 									]}
 									onPress={handleDeleteAccount}
 								>
-									<Text style={{ color: "#fff", fontWeight: "bold" }}>
+									<Text style={styles.whiteBoldText}>
 										{t("deleteAccount")}
 									</Text>
-								</TouchableOpacity>
+								</LoadingButton>
 							</View>
 						</View>
 					</View>
@@ -414,6 +397,37 @@ export default function AccScreen() {
 }
 
 const styles = StyleSheet.create({
+	scrollContent: { paddingBottom: 160, flexGrow: 1 },
+	rowSpaceBetween: { flexDirection: "row", justifyContent: "space-between" },
+	flex1MarginRight: { flex: 1, marginRight: 4 },
+	flex1MarginLeft: { flex: 1, marginLeft: 4 },
+	modalOverlay: {
+		flex: 1,
+		justifyContent: "center",
+		alignItems: "center",
+		backgroundColor: "rgba(0,0,0,0.5)",
+	},
+	modalBox: {
+		backgroundColor: "#fff",
+		padding: 20,
+		borderRadius: 12,
+		width: "80%",
+		alignItems: "center",
+	},
+	modalTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 10 },
+	modalInput: {
+		borderWidth: 1,
+		borderColor: "#ccc",
+		borderRadius: 8,
+		padding: 10,
+		width: "100%",
+		marginBottom: 15,
+	},
+	modalButtonRow: { flexDirection: "row", justifyContent: "space-between", width: "100%" },
+	modalCancelButton: { flex: 1, backgroundColor: "#ccc", marginRight: 5 },
+	modalDeleteButton: { flex: 1, backgroundColor: "#FF4444", marginLeft: 5 },
+	blackBoldText: { color: "#000", fontWeight: "bold" },
+	whiteBoldText: { color: "#fff", fontWeight: "bold" },
 	container: {
 		flex: 1,
 		backgroundColor: "#FFFFFF",

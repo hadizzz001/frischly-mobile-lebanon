@@ -328,7 +328,7 @@ export default function ShopPage({ refreshTrigger, setRefreshing, marketId }: Sh
 							Array.from({ length: 3 - row.length }).map((_, i) => (
 								<View
 									key={`spacer-${rowIndex}-${i}`}
-									style={{ width: ITEM_WIDTH, margin: 5 }}
+									style={styles.gridItem}
 								/>
 							))}
 					</View>
@@ -346,6 +346,7 @@ export default function ShopPage({ refreshTrigger, setRefreshing, marketId }: Sh
 }
 
 const styles = StyleSheet.create({
+	gridItem: { width: ITEM_WIDTH, margin: 5 },
 	container: { flex: 1 },
 	grid: { padding: 10 },
 	row: { flexDirection: "row" },

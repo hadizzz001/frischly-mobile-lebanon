@@ -1,5 +1,8 @@
-import { CategoryService } from "@/services/api";
+import { globalStyles } from "@/constants/GlobalStyles";
 import { useTranslation } from "@/contexts/TranslationContext";
+import { CategoryService } from "@/services/api";
+import type { Category } from "@/types";
+import { rtlRow } from "@/utils/rtl";
 import { AntDesign, FontAwesome } from "@expo/vector-icons";
 import { useRouter } from "expo-router"; // or next/navigation / @react-navigation/native
 import { useEffect, useState } from "react";
@@ -11,7 +14,6 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import type { Category } from "@/types";
 
 export default function Footer() {
 	const [categories, setCategories] = useState<Category[]>([]);
@@ -19,13 +21,13 @@ export default function Footer() {
 	const [showCustomerCare, setShowCustomerCare] = useState<boolean>(false);
 	const [showCategories, setShowCategories] = useState<boolean>(false);
 	const router = useRouter();
-	const { t, td } = useTranslation();
+	const { t, td, isRTL } = useTranslation();
 
 	useEffect(() => {
 		const fetchCategories = async () => {
 			try {
 				const res = await CategoryService.list();
-				setCategories(res.data || []);
+				setCategories(Array.isArray(res?.data) ? res.data : []);
 			} catch (e) {
 				console.error("Error fetching categories:", e);
 			}
@@ -67,12 +69,15 @@ export default function Footer() {
 	];
 
 	return (
-		<SafeAreaView edges={["bottom"]} style={{ backgroundColor: "#f8f8f8" }}>
+		<SafeAreaView edges={["bottom"]} style={globalStyles.lightGrayBg}>
 			<View style={styles.footer}>
 				{/* Sections */}
 				{sections.map((sec, i) => (
 					<View key={i} style={styles.section}>
-						<TouchableOpacity onPress={sec.toggle} style={styles.sectionHeader}>
+						<TouchableOpacity
+							onPress={sec.toggle}
+							style={[styles.sectionHeader, rtlRow(isRTL)]}
+						>
 							<Text style={styles.sectionTitle}>{sec.label}</Text>
 							<AntDesign
 								name={sec.isOpen ? "up" : "down"}
@@ -101,7 +106,7 @@ export default function Footer() {
 							)
 						}
 					>
-						<View style={[styles.circle, { backgroundColor: "#E1306C" }]}>
+						<View style={[styles.circle, styles.instagramBg]}>
 							<FontAwesome name="instagram" size={24} color="white" />
 						</View>
 					</TouchableOpacity>
@@ -117,6 +122,7 @@ export default function Footer() {
 }
 
 const styles = StyleSheet.create({
+	instagramBg: { backgroundColor: "#E1306C" },
 	footer: { backgroundColor: "#f8f8f8", padding: 20, paddingBottom: 60 },
 	iconRow: {
 		flexDirection: "row",

@@ -5,6 +5,7 @@ import { useTranslation } from "@/contexts/TranslationContext";
 import { AuthService, ProductService } from "@/services/api";
 import type { Product, User } from "@/types";
 import { isServedByAdmin } from "@/utils/cityVisibility";
+import { rtlRow } from "@/utils/rtl";
 import { getUserCityAndPin } from "@/utils/userCity";
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -48,7 +49,7 @@ export default function ShopPage() {
 	const { category } = useLocalSearchParams<{ category?: string }>();
 	const { cart, addToCart, removeFromCart } = useCart(); // ✅ Cart context
 	const { isBooleanValue, setBooleanValue } = useBooleanValue();
-	const { t, td } = useTranslation();
+	const { t, td, isRTL } = useTranslation();
 
 	const [user, setUser] = useState<User | null>(null);
 	const [loading, setLoading] = useState(true);
@@ -306,14 +307,14 @@ export default function ShopPage() {
 	return (
 		<SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
 			{/* Back Button */}
-			<View style={styles.header}>
+			<View style={[styles.header, rtlRow(isRTL)]}>
 				<TouchableOpacity
 					onPress={() => router.back()}
 					style={styles.backButton}
 				>
 					<Feather name="chevron-left" size={24} color="#000" />
 				</TouchableOpacity>
-				<Text style={styles.headerTitle}>{category}</Text>
+				<Text style={styles.headerTitle}>{td(category)}</Text>
 			</View>
 
 			{/* Floating Sticky Header Alternative */}
@@ -338,10 +339,7 @@ export default function ShopPage() {
 				renderSectionHeader={({ section: { title } }) => (
 					<Text style={styles.subcategoryTitle}>{td(title)}</Text>
 				)}
-				contentContainerStyle={{
-					paddingBottom: 120,
-					paddingHorizontal: 10,
-				}}
+				contentContainerStyle={styles.listContentPadding}
 				showsVerticalScrollIndicator={false}
 				initialNumToRender={10}
 				maxToRenderPerBatch={10}
@@ -361,6 +359,7 @@ export default function ShopPage() {
 
 const styles = StyleSheet.create({
 	container: { flex: 1, backgroundColor: "#FFFFFF" },
+	listContentPadding: { paddingBottom: 120, paddingHorizontal: 10 },
 	loader: {
 		flex: 1,
 		justifyContent: "center",

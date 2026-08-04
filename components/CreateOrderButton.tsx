@@ -154,9 +154,15 @@ const CheckoutPage = ({
 
 			const data = await OrderService.create(orderPayload);
 
+			// `data` is the full API response envelope. The server returns
+			// `{ success, message, data: { populatedOrder, paymentUrl } }`.
+			// Send the inner `data` object to the `/done` page so `paymentUrl`
+			// is available at the top-level there.
+			const envelopePayload = (data as any)?.data ?? data;
+
 			router.push({
 				pathname: "/done",
-				params: { yourData: JSON.stringify(data) },
+				params: { yourData: JSON.stringify(envelopePayload) },
 			});
 		} catch (err) {
 			Alert.alert(t("errorTitle"), (err as Error)?.message || t("errorOccurred"));

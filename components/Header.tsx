@@ -21,7 +21,7 @@ import {
 export default function Header() {
   const router = useRouter();
   const [searchText, setSearchText] = useState("");
-  const { t, language, switchLanguage } = useTranslation();
+  const { t, language, switchLanguage, isRTL } = useTranslation();
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   // Editable location pill: shows the logged-in shopper's saved city, and lets
@@ -190,12 +190,18 @@ export default function Header() {
       {!isGuest && (
         <View style={styles.locationContainer}>
           <TouchableOpacity
-            style={styles.locationButton}
+            style={[styles.locationButton, isRTL && styles.rowReverse]}
             onPress={() => setCityDropdownOpen(!cityDropdownOpen)}
             disabled={savingCity}
           >
             <Feather name="map-pin" size={16} color="#f4bb26" />
-            <Text style={styles.locationText} numberOfLines={1}>
+            <Text
+              style={[
+                styles.locationText,
+                isRTL ? styles.marginRightSmall : null,
+              ]}
+              numberOfLines={1}
+            >
               {userCity || t("selectCity")}
             </Text>
             <Text style={styles.arrow}>{cityDropdownOpen ? "▲" : "▼"}</Text>
@@ -206,7 +212,7 @@ export default function Header() {
               {LEBANESE_CITIES.map((city) => (
                 <TouchableOpacity
                   key={city}
-                  style={styles.dropdownItem}
+                  style={[styles.dropdownItem, isRTL && styles.rowReverse]}
                   onPress={() => handleSelectCity(city)}
                 >
                   <Text
@@ -227,7 +233,7 @@ export default function Header() {
       {/* Custom Language Dropdown */}
       <View style={styles.dropdownContainer}>
         <TouchableOpacity
-          style={styles.dropdownButton}
+          style={[styles.dropdownButton, isRTL && styles.rowReverse]}
           onPress={() => setDropdownOpen(!dropdownOpen)}
         >
           <Image source={{ uri: selectedLang.flag }} style={styles.flag} />
@@ -239,7 +245,7 @@ export default function Header() {
             {languages.map((lang) => (
               <TouchableOpacity
                 key={lang.code}
-                style={styles.dropdownItem}
+                style={[styles.dropdownItem, isRTL && styles.rowReverse]}
                 onPress={() => {
                   switchLanguage(lang.code);
                   setDropdownOpen(false);
@@ -261,7 +267,8 @@ const styles = StyleSheet.create({
     height: 80,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 10,
+    paddingLeft: 10,
+    paddingRight: 0,
     backgroundColor: "#fff",
     zIndex: 100,
     marginTop: 30,
@@ -271,7 +278,7 @@ const styles = StyleSheet.create({
     height: 60,
   },
   searchWrapper: {
-    flex: 0.7,
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     height: 42,
@@ -291,21 +298,22 @@ const styles = StyleSheet.create({
   },
   locationContainer: {
     position: "relative",
-    marginLeft: 6,
+    marginLeft: 2,
+    flexShrink: 0,
   },
   locationButton: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 6,
+    paddingHorizontal: 2,
     paddingVertical: 6,
-    maxWidth: 90,
+    maxWidth: 70,
   },
   locationText: {
     color: "#000",
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "600",
-    marginLeft: 3,
-    maxWidth: 55,
+    marginLeft: 2,
+    maxWidth: 40,
   },
   cityDropdownList: {
     position: "absolute",
@@ -329,27 +337,29 @@ const styles = StyleSheet.create({
   },
   dropdownContainer: {
     position: "relative",
-    marginLeft: 10,
+    marginLeft: 2,
+    marginRight: 8,
+    flexShrink: 0,
   },
   dropdownButton: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 8,
+    paddingHorizontal: 0,
     paddingVertical: 6,
   },
   flag: {
-    width: 24,
-    height: 16,
+    width: 20,
+    height: 14,
     borderRadius: 3,
-    marginRight: 6,
+    marginRight: 3,
   },
   dropdownText: {
     color: "#000",
     fontSize: 14,
   },
   arrow: {
-    marginLeft: 5,
-    fontSize: 12,
+    marginLeft: 2,
+    fontSize: 11,
     color: "#333",
   },
   dropdownList: {
@@ -372,5 +382,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 8,
     paddingHorizontal: 10,
+  },
+  rowReverse: {
+    flexDirection: "row-reverse",
+  },
+  marginRightSmall: {
+    marginLeft: 0,
+    marginRight: 2,
   },
 });

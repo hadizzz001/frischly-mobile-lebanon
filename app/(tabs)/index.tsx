@@ -6,9 +6,10 @@ import ProductList from "@/components/ProductList";
 import ProductSlide from "@/components/ProductSlide";
 import RepeatOrderButton from "@/components/RepeatOrderButton";
 import NewsTicker from "@/components/Textslide";
+import { globalStyles } from "@/constants/GlobalStyles";
 import { refreshAdminCities } from "@/utils/cityVisibility";
 import { useEffect, useState } from "react";
-import { DeviceEventEmitter, RefreshControl, ScrollView, View } from "react-native";
+import { DeviceEventEmitter, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 
 export default function HomeScreen() {
 	const [refreshing, setRefreshing] = useState(false);
@@ -32,10 +33,10 @@ export default function HomeScreen() {
 	}, []);
 
 	return (
-		<View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
+		<View style={styles.container}>
 			<ScrollView
-				style={{ flex: 1 }}
-				contentContainerStyle={{ paddingBottom: 150 }}
+				style={globalStyles.flex1}
+				contentContainerStyle={styles.scrollContent}
 				refreshControl={
 					<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
 				}
@@ -55,3 +56,8 @@ export default function HomeScreen() {
 		</View>
 	);
 }
+
+const styles = StyleSheet.create({
+	container: { flex: 1, backgroundColor: "#FFFFFF" },
+	scrollContent: { paddingBottom: 150 },
+});

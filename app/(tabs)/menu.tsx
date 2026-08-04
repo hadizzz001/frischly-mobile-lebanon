@@ -33,7 +33,13 @@ export default function CategoriesGrid() {
 					`${API_BASE_URL}/categories?limit=1000`
 				);
 				const json = await res.json();
-				setCategories(json.data || []);
+				const data = json?.data;
+				const list = Array.isArray(data)
+					? data
+					: Array.isArray(data?.categories)
+						? data.categories
+						: [];
+				setCategories(list);
 			} catch (err) {
 				console.error(err);
 			} finally {

@@ -11,6 +11,14 @@
 // and item names are shown exactly as stored.
 //
 // Keys are matched case-insensitively and trimmed (see translateDynamic).
+//
+// Anything NOT in this static dictionary (brand/product names, kitchen
+// names, market names, offers, ...) is now translated on the fly via a chain
+// of free translation APIs — see services/translationApi.ts and
+// `ensureDynamicTranslation` below, wired up automatically for every `td()`
+// call through TranslationContext.
+
+import { getCachedTranslation, translateText } from "@/services/translationApi";
 
 export const dynamicAr: Record<string, string> = {
 	// ---- Categories (main store) ----
@@ -159,5 +167,48 @@ export const translateDynamic = (
 ): string => {
 	if (!name || language !== "ar") return name;
 	const key = String(name).trim().toLowerCase();
-	return dynamicAr[key] || name;
+	if (dynamicAr[key]) return dynamicAr[key];
+	// Anything the static dictionary doesn't cover (product/kitchen/market
+	// names, offers, etc.) may already have been fetched from the free
+	// translation API in a previous call/session — return that immediately if
+	// so, so callers see it on the very next render. Otherwise the original
+	// text is returned for now and `ensureDynamicTranslation` (called by the
+	// TranslationContext) kicks off a background fetch to fill it in.
+	const cached = getCachedTranslation(name, "ar");
+	return cached || name;
+};
+
+// Names we've already requested (or given up on) this session, so we don't
+// keep re-firing network requests for the same string on every re-render.
+const requested = new Set<string>();
+
+/**
+ * Fire-and-forget: if `name` isn't already covered by the static dictionary
+ * or the persisted API cache, ask the free translation API chain
+ * (services/translationApi.ts) to translate it, then invoke `onReady` (used
+ * by TranslationContext to trigger a re-render) once it resolves. Safe to
+ * call on every render — internally de-duplicates per string.
+ */
+export const ensureDynamicTranslation = (
+	name: string,
+	language: string,
+	onReady: () => void,
+): void => {
+	if (!name || language !== "ar") return;
+	const key = String(name).trim().toLowerCase();
+	if (dynamicAr[key]) return; // static dictionary already covers it
+	if (getCachedTranslation(name, "ar")) return; // already fetched before
+
+	const dedupeKey = `ar::${name}`;
+	if (requested.has(dedupeKey)) return;
+	requested.add(dedupeKey);
+
+	translateText(name, "ar")
+		.then((result) => {
+			if (result) onReady();
+		})
+		.catch(() => {
+			// swallow — original text keeps showing, and we don't retry this
+			// session to avoid hammering the free APIs on every render.
+		});
 };

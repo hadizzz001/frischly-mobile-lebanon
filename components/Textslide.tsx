@@ -1,5 +1,6 @@
-import { AnnouncementService } from "@/services/api";
 import { useTranslation } from "@/contexts/TranslationContext";
+import { AnnouncementService } from "@/services/api";
+import type { Announcement } from "@/types";
 import { Feather } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import {
@@ -12,7 +13,6 @@ import {
     View,
 } from "react-native";
 import TextTicker from "react-native-text-ticker";
-import type { Announcement } from "@/types";
 
 const { width } = Dimensions.get("window");
 
@@ -21,7 +21,7 @@ interface NewsTickerProps {
 }
 
 const NewsTicker = ({ refreshTrigger }: NewsTickerProps) => {
-	const { t } = useTranslation();
+	const { t, td, language } = useTranslation();
 	const [textItems, setTextItems] = useState<string[]>([]);
 	const [promoData, setPromoData] = useState<Announcement[]>([]);
 	const [modalVisible, setModalVisible] = useState<boolean>(false);
@@ -33,9 +33,6 @@ const NewsTicker = ({ refreshTrigger }: NewsTickerProps) => {
 				const items = res.data || [];
 				if (Array.isArray(items)) {
 					setPromoData(items);
-					setTextItems(
-						items.map((item) => `${item.title}: ${item.description}`),
-					);
 				}
 			} catch (error) {
 				console.error("Error fetching announcement data:", error);
@@ -44,6 +41,18 @@ const NewsTicker = ({ refreshTrigger }: NewsTickerProps) => {
 
 		fetchData();
 	}, [refreshTrigger]);
+
+	// Build the ticker strings through `td()` so the offer/announcement text
+	// coming from the API is translated too (static dictionary first, then the
+	// free translation API chain). Recomputed on every language change.
+	useEffect(() => {
+		setTextItems(
+			promoData.map(
+				(item) => `${td(item.title)}: ${td(item.description)}`,
+			),
+		);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [promoData, language, td]);
 
 	const combinedText = textItems.join("     •     "); // Professional separator
 
@@ -84,8 +93,8 @@ const NewsTicker = ({ refreshTrigger }: NewsTickerProps) => {
 						<ScrollView style={styles.scrollView}>
 							{promoData.map((promo, index) => (
 								<View key={index} style={styles.promoCard}>
-									<Text style={styles.companyName}>{promo.title}</Text>
-									<Text style={styles.description}>{promo.description}</Text>
+									<Text style={styles.companyName}>{td(promo.title)}</Text>
+									<Text style={styles.description}>{td(promo.description)}</Text>
 								</View>
 							))}
 						</ScrollView>

@@ -8,6 +8,7 @@ import {
     getAdminDeliveryRegions,
 } from "@/utils/cityVisibility";
 import { pointInAnyRegion, type DeliveryRegion } from "@/utils/geo";
+import { rtlRow } from "@/utils/rtl";
 import { getUserCityAndPin } from "@/utils/userCity";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -90,7 +91,7 @@ export default function KitchenSlider({
 	refreshTrigger,
 	marketId,
 }: KitchenSliderProps) {
-	const { t, td } = useTranslation();
+	const { t, td, isRTL } = useTranslation();
 	const router = useRouter();
 
 	const [categories, setCategories] = useState<KitchenCategory[]>([]);
@@ -191,7 +192,7 @@ export default function KitchenSlider({
 		if (!marketCategories.length) return null;
 		return (
 			<View style={styles.container}>
-				<View style={styles.header}>
+				<View style={[styles.header, rtlRow(isRTL)]}>
 					<Text style={styles.headerText}>{t("kitchens")}</Text>
 				</View>
 
@@ -242,7 +243,7 @@ export default function KitchenSlider({
 
 	return (
 		<View style={styles.container}>
-			<View style={styles.header}>
+			<View style={[styles.header, rtlRow(isRTL)]}>
 				<Text style={styles.headerText}>{t("kitchens")}</Text>
 			</View>
 

@@ -108,13 +108,13 @@ export default function KitchenPage() {
 	);
 
 	return (
-		<View style={{ flex: 1, backgroundColor: "#fff" }}>
+		<View style={styles.root}>
 			<Stack.Screen options={{ headerTitle: "" }} />
 			<TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
 				<Feather name="chevron-left" size={24} color="#222" />
 			</TouchableOpacity>
 
-			<ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
+			<ScrollView contentContainerStyle={styles.scrollContent}>
 				{/* Main image */}
 				<View style={styles.mainImageWrapper}>
 					{kitchen.picture ? (
@@ -362,4 +362,6 @@ const styles = StyleSheet.create({
 		marginTop: 20,
 		paddingHorizontal: 16,
 	},
+	root: { flex: 1, backgroundColor: "#fff" },
+	scrollContent: { paddingBottom: 120 },
 });

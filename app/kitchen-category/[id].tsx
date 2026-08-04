@@ -4,6 +4,7 @@ import { useTranslation } from "@/contexts/TranslationContext";
 import { KitchenService } from "@/services/api";
 import type { Kitchen } from "@/types";
 import { getAdminCities, getAdminDeliveryRegions } from "@/utils/cityVisibility";
+import { rtlRow } from "@/utils/rtl";
 import { getUserCityAndPin } from "@/utils/userCity";
 import { Feather } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
@@ -29,7 +30,7 @@ const CARD_WIDTH = (width - 36) / 2;
 // the home screen's category slider. Tapping a kitchen opens /kitchen/[id]
 // (the existing screen) with that kitchen's items.
 export default function KitchenCategoryPage() {
-	const { t, td } = useTranslation();
+	const { t, td, isRTL } = useTranslation();
 	const router = useRouter();
 	const { id, name, marketId } = useLocalSearchParams<{
 		id: string;
@@ -141,10 +142,10 @@ export default function KitchenCategoryPage() {
 	};
 
 	return (
-		<View style={{ flex: 1, backgroundColor: "#fff" }}>
+		<View style={styles.root}>
 			<Stack.Screen options={{ headerShown: false }} />
 			<SafeAreaView edges={["top"]} style={styles.safeArea}>
-				<View style={styles.topBar}>
+				<View style={[styles.topBar, rtlRow(isRTL)]}>
 					<TouchableOpacity
 						onPress={() => router.back()}
 						style={styles.backButton}
@@ -154,7 +155,7 @@ export default function KitchenCategoryPage() {
 					<Text style={styles.topTitle} numberOfLines={1}>
 						{title ? td(title) : t("kitchens")}
 					</Text>
-					<View style={{ width: 36 }} />
+					<View style={styles.spacer36} />
 				</View>
 
 				{loading ? (
@@ -341,4 +342,6 @@ const styles = StyleSheet.create({
 		textAlign: "center",
 		paddingHorizontal: 16,
 	},
+	root: { flex: 1, backgroundColor: "#fff" },
+	spacer36: { width: 36 },
 });

@@ -9,6 +9,7 @@ import {
 import type { MarketCategory } from "@/services/api/marketService";
 import type { ProductQuery } from "@/services/api/productService";
 import type { Category, Market, Product, Subcategory, User } from "@/types";
+import { rtlRow } from "@/utils/rtl";
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Picker } from "@react-native-picker/picker";
@@ -76,7 +77,7 @@ function formatWeight(weight: unknown): string {
 }
 
 export default function ShopPage() {
-	const { t, td } = useTranslation();
+	const { t, td, isRTL } = useTranslation();
 
 	const router = useRouter();
 	const searchParams = useLocalSearchParams<{
@@ -900,13 +901,13 @@ export default function ShopPage() {
 								horizontal
 								showsHorizontalScrollIndicator={false}
 								style={styles.categoryBar}
-								contentContainerStyle={{ alignItems: "center" }}
+								contentContainerStyle={styles.centerAlignItems}
 							>
 								{/* All button */}
 								<TouchableOpacity
 									style={[
 										styles.categoryBtn,
-										!marketCatId && { backgroundColor: "#f4bb26" },
+										!marketCatId && styles.activeYellowBg,
 									]}
 									onPress={() => {
 										setMarketCatId("");
@@ -916,7 +917,7 @@ export default function ShopPage() {
 									<Text
 										style={[
 											styles.categoryText,
-											!marketCatId && { color: "#000", fontWeight: "700" },
+											!marketCatId && styles.activeLabelText,
 										]}
 									>
 										{t("all")}
@@ -931,7 +932,7 @@ export default function ShopPage() {
 											key={cat._id}
 											style={[
 												styles.categoryBtn,
-												isSelected && { backgroundColor: "#f4bb26" },
+												isSelected && styles.activeYellowBg,
 											]}
 											onPress={() => {
 												setMarketCatId(String(cat._id));
@@ -941,7 +942,7 @@ export default function ShopPage() {
 											<Text
 												style={[
 													styles.categoryText,
-													isSelected && { color: "#000", fontWeight: "700" },
+													isSelected && styles.activeLabelText,
 												]}
 											>
 												{td(cat.name)}
@@ -951,10 +952,10 @@ export default function ShopPage() {
 								})}
 							</ScrollView>
 						) : (
-							<View style={{ flex: 1, paddingHorizontal: 10 }}>
+							<View style={styles.flex1PaddingH10}>
 								<Text
 									numberOfLines={1}
-									style={{ fontSize: 18, fontWeight: "700", color: "#000" }}
+									style={styles.marketNameTitle}
 								>
 									{marketNameParam || t("market")}
 								</Text>
@@ -965,7 +966,7 @@ export default function ShopPage() {
 							horizontal
 							showsHorizontalScrollIndicator={false}
 							style={styles.categoryBar}
-							contentContainerStyle={{ alignItems: "center" }}
+							contentContainerStyle={styles.centerAlignItems}
 						>
 							{/* All button */}
 							<TouchableOpacity
@@ -1040,11 +1041,7 @@ export default function ShopPage() {
 							horizontal
 							showsHorizontalScrollIndicator={false}
 							style={styles.subcategoryBar}
-							contentContainerStyle={{
-								alignItems: "center",
-								paddingHorizontal: 8,
-								paddingVertical: 8,
-							}}
+							contentContainerStyle={styles.subcategoryScrollContent}
 						>
 							<TouchableOpacity
 								style={[
@@ -1056,7 +1053,7 @@ export default function ShopPage() {
 								<Text
 									style={[
 										styles.subcategoryText,
-										!marketSubId && { color: "#000", fontWeight: "700" },
+										!marketSubId && styles.activeLabelText,
 									]}
 								>
 									{t("all")}
@@ -1077,14 +1074,14 @@ export default function ShopPage() {
 										<Text
 											style={[
 												styles.subcategoryText,
-												isSel && { color: "#000", fontWeight: "700" },
+												isSel && styles.activeLabelText,
 											]}
-									>
-										{td(sub.name)}
-									</Text>
-								</TouchableOpacity>
-							);
-						})}
+										>
+											{td(sub.name)}
+										</Text>
+									</TouchableOpacity>
+								);
+							})}
 						</ScrollView>
 					)}
 
@@ -1094,16 +1091,16 @@ export default function ShopPage() {
 					   header, so markets don't get condensed together. */
 					<SectionList
 						sections={searchSections}
-						contentContainerStyle={{ paddingBottom: 120 }}
+						contentContainerStyle={styles.listContentPadding120}
 						keyExtractor={(row, index) =>
 							`row-${row[0]?._id || "x"}-${index}`
 						}
 						stickySectionHeadersEnabled={false}
 						renderSectionHeader={({ section }) => (
-							<View style={styles.sectionHeader}>
+							<View style={[styles.sectionHeader, rtlRow(isRTL)]}>
 								<Feather name="shopping-bag" size={15} color="#e0a106" />
 								<Text style={styles.sectionHeaderText} numberOfLines={1}>
-									{section.title}
+									{td(section.title)}
 								</Text>
 								<Text style={styles.sectionHeaderCount}>
 									({section.count})
@@ -1117,8 +1114,8 @@ export default function ShopPage() {
 						)}
 						ListEmptyComponent={
 							!loading ? (
-								<View style={{ paddingVertical: 40, alignItems: "center" }}>
-									<Text style={{ color: "#777", fontSize: 14 }}>
+								<View style={styles.emptyStateContainer}>
+									<Text style={styles.emptyStateText}>
 										{t("searchNoResults")}
 									</Text>
 								</View>
@@ -1127,7 +1124,7 @@ export default function ShopPage() {
 					/>
 				) : (
 					<FlatList
-						contentContainerStyle={{ paddingBottom: 120 }}
+						contentContainerStyle={styles.listContentPadding120}
 						data={displayedProducts}
 						keyExtractor={(item) => item._id}
 						renderItem={renderProduct}
@@ -1161,8 +1158,8 @@ export default function ShopPage() {
 						}
 						ListEmptyComponent={
 							!loading ? (
-								<View style={{ paddingVertical: 40, alignItems: "center" }}>
-									<Text style={{ color: "#777", fontSize: 14 }}>
+								<View style={styles.emptyStateContainer}>
+									<Text style={styles.emptyStateText}>
 										{isMultiSearch
 											? t("voiceNoResults")
 											: t("noProductsInCategory")}
@@ -1189,7 +1186,7 @@ export default function ShopPage() {
 							<Feather name="x" size={28} color="#000" />
 						</TouchableOpacity>
 
-						<ScrollView contentContainerStyle={{ padding: 20 }}>
+						<ScrollView contentContainerStyle={styles.filterScrollContent}>
 							<Text style={styles.title}>{t("filterProducts")}</Text>
 
 							{/* Search Field */}
@@ -1206,7 +1203,7 @@ export default function ShopPage() {
 							   include market products. */}
 							{!marketParam && (
 								<>
-									<Text style={{ marginTop: 20, marginBottom: 5 }}>
+									<Text style={styles.filterLabel}>
 										{t("category")}
 									</Text>
 									<View style={styles.input}>
@@ -1227,7 +1224,7 @@ export default function ShopPage() {
 										</Picker>
 									</View>
 
-									<Text style={{ marginTop: 20, marginBottom: 5 }}>
+									<Text style={styles.filterLabel}>
 										{t("subcategory")}
 									</Text>
 									<View style={styles.input}>
@@ -1251,7 +1248,7 @@ export default function ShopPage() {
 							)}
 
 							{/* Sort Dropdown */}
-							<Text style={{ marginTop: 20, marginBottom: 5 }}>
+							<Text style={styles.filterLabel}>
 								{t("sortBy")}
 							</Text>
 							<View style={styles.input}>
@@ -1278,7 +1275,7 @@ export default function ShopPage() {
 								}
 								style={styles.checkboxRow}
 							>
-								<Text style={{ color: "#000" }}>{t("onlyDiscounted")}</Text>
+								<Text style={styles.blackText}>{t("onlyDiscounted")}</Text>
 								<View
 									style={[
 										styles.checkbox,
@@ -1288,7 +1285,7 @@ export default function ShopPage() {
 							</TouchableOpacity>
 
 							{/* Price Range Picker */}
-							<Text style={{ marginTop: 20, marginBottom: 5 }}>
+							<Text style={styles.filterLabel}>
 								{t("priceRange")}
 							</Text>
 							<View style={styles.input}>
@@ -1328,6 +1325,18 @@ export default function ShopPage() {
 
 const styles = StyleSheet.create({
 	container: { flex: 1, backgroundColor: "#FFFFFF" },
+	centerAlignItems: { alignItems: "center" },
+	activeYellowBg: { backgroundColor: "#f4bb26" },
+	activeLabelText: { color: "#000", fontWeight: "700" },
+	flex1PaddingH10: { flex: 1, paddingHorizontal: 10 },
+	marketNameTitle: { fontSize: 18, fontWeight: "700", color: "#000" },
+	subcategoryScrollContent: { alignItems: "center", paddingHorizontal: 8, paddingVertical: 8 },
+	listContentPadding120: { paddingBottom: 120 },
+	emptyStateContainer: { paddingVertical: 40, alignItems: "center" },
+	emptyStateText: { color: "#777", fontSize: 14 },
+	filterScrollContent: { padding: 20 },
+	filterLabel: { marginTop: 20, marginBottom: 5 },
+	blackText: { color: "#000" },
 	voiceHeader: {
 		paddingHorizontal: 12,
 		paddingTop: 10,

@@ -6,6 +6,7 @@ import KitchenSlider from "@/components/KitchenSlider";
 import ProductList from "@/components/ProductList";
 import ProductSlide from "@/components/ProductSlide";
 import RepeatOrderButton from "@/components/RepeatOrderButton";
+import { globalStyles } from "@/constants/GlobalStyles";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { MarketService } from "@/services/api";
 import type { Market } from "@/types";
@@ -79,7 +80,7 @@ export default function MarketHome() {
 	}
 
 	return (
-		<View style={{ flex: 1, backgroundColor: "#FFFFFF" }}>
+		<View style={styles.root}>
 			<Stack.Screen options={{ headerTitle: "" }} />
 
 			<TouchableOpacity
@@ -91,8 +92,8 @@ export default function MarketHome() {
 			</TouchableOpacity>
 
 			<ScrollView
-				style={{ flex: 1 }}
-				contentContainerStyle={{ paddingBottom: 150 , marginTop: 40}}
+				style={globalStyles.flex1}
+				contentContainerStyle={styles.scrollContent}
 				refreshControl={
 					<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
 				}
@@ -136,4 +137,6 @@ const styles = StyleSheet.create({
 		borderRadius: 20,
 		padding: 6,
 	},
+	root: { flex: 1, backgroundColor: "#FFFFFF" },
+	scrollContent: { paddingBottom: 150, marginTop: 40 },
 });

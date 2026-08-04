@@ -44,7 +44,8 @@ export default function useDeliveredOrderFeedback(): DeliveredOrderFeedback {
 	const refreshSubmittedFeedback = async () => {
 		try {
 			const res = await FeedbackService.mine();
-			const ids: string[] = (res as any)?.data || [];
+			const data = (res as any)?.data;
+			const ids: string[] = Array.isArray(data) ? data : [];
 			submittedOrderIdsRef.current = new Set(ids.map(String));
 		} catch (e) {
 			console.warn("Failed to refresh submitted feedback list:", e);
@@ -70,7 +71,7 @@ export default function useDeliveredOrderFeedback(): DeliveredOrderFeedback {
 			await refreshSubmittedFeedback();
 
 			const res = await OrderService.list();
-			const orders: Order[] = res.data || [];
+			const orders: Order[] = Array.isArray(res?.data) ? res.data : [];
 			const deliveredOrders = orders.filter((o) => o.status === "delivered");
 
 			for (const order of deliveredOrders) {

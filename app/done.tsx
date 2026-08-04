@@ -23,13 +23,17 @@ export default function CheckoutSuccessPage() {
 	const [loading, setLoading] = useState<boolean>(true);
 
 	const params = useLocalSearchParams<{ yourData: string }>();
-	const parsed: { paymentUrl?: string; data?: { paymentMethod?: string } } =
-		JSON.parse(params.yourData);
-	const paymentUrl = parsed.paymentUrl;
-	const paymentMethod = parsed.data?.paymentMethod || "card";
+	const parsedRaw = JSON.parse(params.yourData);
 
-	console.log("Payment URL:", paymentUrl);
-	console.log("Payment Method:", paymentMethod);
+	// The create order flow historically forwarded the full API envelope
+	// (`{ success, message, data: { populatedOrder, paymentUrl } }`) but
+	// some callers pass only the inner `data` object. Accept both shapes.
+	const parsed = parsedRaw?.data ? parsedRaw.data : parsedRaw;
+	const paymentUrl = parsed?.paymentUrl;
+	const paymentMethod = parsed?.data?.paymentMethod || parsed?.paymentMethod || "card";
+
+	console.log("Payment URL (resolved):", paymentUrl);
+	console.log("Payment Method (resolved):", paymentMethod);
 
 
 	useEffect(() => {

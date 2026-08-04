@@ -2,6 +2,7 @@ import { useTranslation } from "@/contexts/TranslationContext";
 import { CategoryService, MarketService } from "@/services/api";
 import type { Category } from "@/types";
 import { isServedByAdmin } from "@/utils/cityVisibility";
+import { rtlRow } from "@/utils/rtl";
 import { getUserCityAndPin } from "@/utils/userCity";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -33,7 +34,7 @@ export default function CategoriesGrid({
 	marketId,
 	marketName,
 }: CategoriesGridProps) {
-	const { t, td } = useTranslation();
+	const { t, td, isRTL } = useTranslation();
 
 	const router = useRouter();
 	const [categories, setCategories] = useState<Category[]>([]);
@@ -86,13 +87,7 @@ export default function CategoriesGrid({
 
 	if (loading) {
 		return (
-			<View
-				style={{
-					height: ITEM_HEIGHT,
-					justifyContent: "center",
-					alignItems: "center",
-				}}
-			>
+			<View style={styles.loadingContainer}>
 				<ActivityIndicator size="large" color="#f4bb26" />
 				<Text>{t("loadingCategories")}</Text>
 			</View>
@@ -145,7 +140,7 @@ export default function CategoriesGrid({
 
 	return (
 		<View style={styles.sectionContainer}>
-			<View style={styles.header}>
+			<View style={[styles.header, rtlRow(isRTL)]}>
 				<Text style={styles.headerText}>{t("shopByCategory")}</Text>
 				<View style={styles.headerRight}>
 					<TouchableOpacity
@@ -172,6 +167,7 @@ export default function CategoriesGrid({
 }
 
 const styles = StyleSheet.create({
+	loadingContainer: { height: ITEM_HEIGHT, justifyContent: "center", alignItems: "center" },
 	sectionContainer: {
 		backgroundColor: "#fff",
 		marginTop: 30,

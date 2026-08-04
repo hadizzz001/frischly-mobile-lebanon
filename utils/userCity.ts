@@ -14,6 +14,10 @@ import { detectCityFromLocation } from "./cityDetection";
 const DEFAULT_CITY = "Beirut";
 const DEFAULT_STATE = "Beirut";
 const DEFAULT_STREET = "Beirut";
+// Exact Beirut city-center map pin. Used whenever the shopper denied the
+// location permission (or GPS failed), so the account still gets a real,
+// usable pin instead of an empty one.
+const DEFAULT_PIN = { latitude: 33.8938, longitude: 35.5018 };
 
 // Treats anything that isn't a real, meaningful string as "missing" — this is
 // the "null OR undefined OR empty OR 0 OR 'Not provided'" check the caller
@@ -104,6 +108,38 @@ export const getUserCity = async (): Promise<string> => {
 };
 
 /**
+ * Resolves the address to send along with a Google sign-in / sign-up.
+ *
+ * Tries GPS + reverse geocoding first (best effort, never throws, never
+ * blocks). If the shopper DENIED the location permission — or GPS/geocoding
+ * failed for any reason — every field falls back to the Beirut default and
+ * the pin is dropped exactly on Beirut city center.
+ *
+ * The result is always a complete address (city + state + street + country +
+ * location), so the backend never has to store an empty/"Not provided" field.
+ */
+export const resolveGoogleAddress = async (): Promise<{
+	street: string;
+	city: string;
+	state: string;
+	country: string;
+	location: { latitude: number; longitude: number };
+}> => {
+	const detected = await detectCityFromLocation().catch(() => null);
+
+	return {
+		street: detected?.street || DEFAULT_STREET,
+		city: detected?.city || DEFAULT_CITY,
+		state: detected?.region || DEFAULT_STATE,
+		country: "LB",
+		location: {
+			latitude: detected?.latitude ?? DEFAULT_PIN.latitude,
+			longitude: detected?.longitude ?? DEFAULT_PIN.longitude,
+		},
+	};
+};
+
+/**
  * Ensures the given auth payload's user has city/state/street set. Used right
  * after a Google sign-in/sign-up, which never goes through the manual city
  * picker.
@@ -130,17 +166,28 @@ export const ensureDefaultCity = async (
 	const needsCity = isMissing(existingAddress.city);
 	const needsState = isMissing(existingAddress.state);
 	const needsStreet = isMissing(existingAddress.street);
+	const needsPin =
+		isMissing(existingAddress.location?.latitude) ||
+		isMissing(existingAddress.location?.longitude);
 
 	// Nothing to fix — every field already has a real value.
-	if (!needsCity && !needsState && !needsStreet) return userData;
+	if (!needsCity && !needsState && !needsStreet && !needsPin) return userData;
 
 	// Best-effort GPS auto-detect (never throws) — only used to fill in
 	// whichever fields are actually missing; never overrides existing values.
+	// When the shopper denies the location permission this simply returns null
+	// and every field below falls back to the Beirut defaults.
 	const detected = await detectCityFromLocation().catch(() => null);
 
 	const city = needsCity ? (detected?.city || DEFAULT_CITY) : existingAddress.city;
 	const street = needsStreet ? (detected?.street || DEFAULT_STREET) : existingAddress.street;
 	const state = needsState ? (detected?.region || DEFAULT_STATE) : existingAddress.state;
+	const location = needsPin
+		? {
+				latitude: detected?.latitude ?? DEFAULT_PIN.latitude,
+				longitude: detected?.longitude ?? DEFAULT_PIN.longitude,
+			}
+		: existingAddress.location;
 
 	const patched: AuthPayload = {
 		...userData,
@@ -151,6 +198,8 @@ export const ensureDefaultCity = async (
 				city,
 				street,
 				state,
+				country: existingAddress.country || "LB",
+				location,
 			},
 		},
 	};
@@ -163,7 +212,7 @@ export const ensureDefaultCity = async (
 	// time the profile is opened/saved.
 	try {
 		await AuthService.updateProfile({
-			address: { city, street, state },
+			address: { city, street, state, country: existingAddress.country || "LB", location },
 		});
 	} catch {
 		// ignore — non-fatal, local value already applied

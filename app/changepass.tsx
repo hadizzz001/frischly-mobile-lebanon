@@ -108,15 +108,7 @@ export default function ChangePassword() {
 				keyboardShouldPersistTaps="handled"
 			>
 				<View
-					style={{
-						height: screenHeight * 0.4,
-						justifyContent: "center",
-						alignItems: "center",
-						backgroundColor: "#f4bb26",
-						borderBottomLeftRadius: 60,
-						borderBottomRightRadius: 60,
-						overflow: "hidden",
-					}}
+					style={[styles.topBanner, { height: screenHeight * 0.4 }]}
 				>
 					<Text style={styles.headerTitle}>
 						{t("changePassword")}
@@ -143,14 +135,10 @@ export default function ChangePassword() {
 					<TouchableOpacity
 						onPress={handleChangePassword}
 						disabled={loading}
-						style={{
-							backgroundColor: loading ? "#cccccc" : "#f4bb26",
-							borderRadius: 15,
-							paddingVertical: 15,
-							width: "100%",
-							alignItems: "center",
-							marginTop: 20,
-						}}
+						style={[
+							styles.updateButton,
+							{ backgroundColor: loading ? "#cccccc" : "#f4bb26" },
+						]}
 					>
 						{loading ? (
 							<ActivityIndicator size="small" color="#000" />
@@ -169,6 +157,21 @@ export default function ChangePassword() {
 }
 
 const styles = StyleSheet.create({
+	topBanner: {
+		justifyContent: "center",
+		alignItems: "center",
+		backgroundColor: "#f4bb26",
+		borderBottomLeftRadius: 60,
+		borderBottomRightRadius: 60,
+		overflow: "hidden",
+	},
+	updateButton: {
+		borderRadius: 15,
+		paddingVertical: 15,
+		width: "100%",
+		alignItems: "center",
+		marginTop: 20,
+	},
 	flexWhite: {
 		flex: 1,
 		backgroundColor: "#fff",
