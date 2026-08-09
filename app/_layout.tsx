@@ -36,7 +36,8 @@ export default function RootLayout() {
 	// interval + whenever the app returns to the foreground) and pops the
 	// feedback modal the moment one becomes "delivered" — from ANY screen,
 	// no need to open the Orders page or refresh anything.
-	const { feedbackOrderId, closeFeedbackModal } = useDeliveredOrderFeedback();
+	const { feedbackOrderId, skipFeedbackModal, submitFeedbackModal } =
+		useDeliveredOrderFeedback();
 
 
 
@@ -133,8 +134,8 @@ export default function RootLayout() {
 					<FeedbackModal
 						visible={showFeedbackModal}
 						orderId={feedbackOrderId}
-						onClose={closeFeedbackModal}
-						onSubmitted={closeFeedbackModal}
+						onSkip={skipFeedbackModal}
+						onSubmitted={submitFeedbackModal}
 					/>
 					<StatusBar style="auto" />
 				</View>

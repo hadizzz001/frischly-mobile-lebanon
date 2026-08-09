@@ -10,6 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
+      "usesAppleSignIn": true,
       "bundleIdentifier": "com.frischly.lebanon",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
@@ -38,6 +39,7 @@
     "plugins": [
       "expo-dev-client",
       "expo-router",
+      "expo-apple-authentication",
       [
         "expo-splash-screen",
         {
@@ -71,7 +73,7 @@
       [
         "@react-native-google-signin/google-signin",
         {
-          "iosUrlScheme": "com.googleusercontent.apps.463444827922-c9tpcrutal1u0gt6n860sceh83bv612e"
+          "iosUrlScheme": "com.googleusercontent.apps.458731998907-3vchbl8i0ik78688o6i3edlv67n4lfos"
         }
       ],
       [

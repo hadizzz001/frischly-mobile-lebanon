@@ -4,6 +4,7 @@ import AuthLogoVideo from "@/components/AuthLogoVideo";
 import { SERVER_BASE_URL } from "@/constants/api";
 import { globalStyles } from "@/constants/GlobalStyles";
 import { useTranslation } from "@/contexts/TranslationContext";
+import { useAppleAuth } from "@/hooks/useAppleAuth";
 import { useGoogleAuth } from "@/hooks/useGoogleAuth";
 import { syncPushTokenToServer } from "@/hooks/useNotifications";
 import { ApiError, AuthService } from "@/services/api";
@@ -20,6 +21,7 @@ import {
     Dimensions,
     Image,
     KeyboardAvoidingView,
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -38,6 +40,7 @@ export default function Start() {
 	const [showPassword, setShowPassword] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const [googleLoading, setGoogleLoading] = useState(false);
+	const [appleLoading, setAppleLoading] = useState(false);
 	const languages = [
 		{ code: "en", name: "English", flag: "https://flagcdn.com/w40/gb.png" },
 		{ code: "ar", name: "العربية", flag: "https://flagcdn.com/w40/lb.png" },
@@ -158,6 +161,47 @@ export default function Start() {
 			// Safety net in case anything still throws.
 			Alert.alert(t("loginFailed"), (error as Error)?.message || "Google sign-in failed");
 		}
+	};
+
+	// Sign in with Apple — the guideline 4.8 equivalent login option offered
+	// alongside Google on iOS.
+	const { signInAsync: promptApple, isAvailable: appleAvailable } = useAppleAuth(
+		async (credential) => {
+			setAppleLoading(true);
+			try {
+				const address = await resolveGoogleAddress();
+				const res = await AuthService.appleSignIn({ ...credential, address });
+				const userData = res.data as unknown as AuthPayload | null;
+				if (userData) {
+					await persistAuth(await ensureDefaultCity(userData));
+				} else {
+					Alert.alert(t("loginFailed"), t("invalidCredentials"));
+				}
+			} catch (error) {
+				const payload =
+					error instanceof ApiError
+						? (error.payload as { message?: string; error?: string } | null)
+						: null;
+				Alert.alert(
+					t("loginFailed"),
+					payload?.message || payload?.error || (error as Error)?.message || "Apple sign-in failed",
+				);
+			} finally {
+				setAppleLoading(false);
+			}
+		},
+		(message) => {
+			setAppleLoading(false);
+			Alert.alert(t("loginFailed"), message);
+		},
+	);
+
+	const handleApple = async () => {
+		if (!appleAvailable) {
+			Alert.alert(t("loginFailed"), t("appleNotAvailable"));
+			return;
+		}
+		await promptApple();
 	};
 
 	const inputBg = "#FFFFFF";
@@ -291,6 +335,31 @@ export default function Start() {
 						)}
 					</TouchableOpacity>
 
+					{/* Sign in with Apple (iOS only) — required by App Store guideline 4.8 */}
+					{Platform.OS === "ios" && appleAvailable && (
+						<TouchableOpacity
+							onPress={handleApple}
+							disabled={appleLoading}
+							style={styles.appleButton}
+						>
+							{appleLoading ? (
+								<ActivityIndicator size="small" color="#ffffff" />
+							) : (
+								<>
+									<Ionicons
+										name="logo-apple"
+										size={20}
+										color="#ffffff"
+										style={globalStyles.marginRight10}
+									/>
+									<Text style={styles.appleButtonText}>
+										{t("continueWithApple")}
+									</Text>
+								</>
+							)}
+						</TouchableOpacity>
+					)}
+
 					<TouchableOpacity onPress={() => router.push("/register")}>
 						<Text style={styles.noAccountText}>
 							{t("noAccount")}{" "}
@@ -388,6 +457,17 @@ const styles = StyleSheet.create({
 		borderColor: "#d1d5db",
 	},
 	googleButtonText: { color: "#000", fontWeight: "700", fontSize: 16 },
+	appleButton: {
+		flexDirection: "row",
+		backgroundColor: "#000000",
+		borderRadius: 15,
+		paddingVertical: 13,
+		width: "100%",
+		alignItems: "center",
+		justifyContent: "center",
+		marginTop: 12,
+	},
+	appleButtonText: { color: "#fff", fontWeight: "700", fontSize: 16 },
 	noAccountText: { color: "#000", fontSize: 18, fontWeight: "700" },
 	registerLink: { color: "#f4bb26", fontWeight: "700" },
 	centerBoldText: { fontSize: 18, textAlign: "center", fontWeight: "700" },

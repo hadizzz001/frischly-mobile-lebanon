@@ -15,6 +15,20 @@ export const AuthService = {
 	googleSignIn: (idToken: string, address?: unknown) =>
 		httpClient.post<null>("/auth/google", { idToken, address }),
 
+	// Sign in / sign up with an Apple identity token obtained on the device
+	// (Sign in with Apple — required by App Store guideline 4.8 as an equivalent
+	// login option next to Google). Apple only returns the full name / email on
+	// the *first* authorization, so we forward them when present and the backend
+	// keeps whatever it already stored otherwise.
+	appleSignIn: (payload: {
+		identityToken: string;
+		authorizationCode?: string | null;
+		userId?: string | null;
+		email?: string | null;
+		fullName?: string | null;
+		address?: unknown;
+	}) => httpClient.post<null>("/auth/apple", payload),
+
 	register: (payload: unknown) =>
 		httpClient.post<null>("/auth/register", payload),
 

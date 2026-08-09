@@ -17,17 +17,21 @@ import StarRating from "./StarRating";
 interface FeedbackModalProps {
 	visible: boolean;
 	orderId?: string | null;
-	onClose?: () => void;
+	/** Shopper dismissed the modal without submitting ("Maybe Later", swipe
+	 *  down, or hardware back). Distinct from onSubmitted so the caller can
+	 *  snooze future prompts only when the shopper actually skips. */
+	onSkip?: () => void;
+	/** Feedback was submitted successfully. */
 	onSubmitted?: () => void;
 }
 
-// Post-checkout feedback modal: asks the shopper to rate BOTH the order and
+// Post-delivery feedback modal: asks the shopper to rate BOTH the order and
 // the driver (each a 0-5 star rating, unfilled by default) with an optional
-// description underneath each. Shown right after an order is created.
+// comment underneath each. Shown automatically once an order is delivered.
 export default function FeedbackModal({
 	visible,
 	orderId,
-	onClose,
+	onSkip,
 	onSubmitted,
 }: FeedbackModalProps) {
 	const { t } = useTranslation();
@@ -45,10 +49,10 @@ export default function FeedbackModal({
 		setDriverDescription("");
 	};
 
-	const handleClose = () => {
+	const handleSkip = () => {
 		if (submitting) return;
 		resetForm();
-		onClose?.();
+		onSkip?.();
 	};
 
 	const handleSubmit = async () => {
@@ -60,7 +64,7 @@ export default function FeedbackModal({
 		}
 
 		if (!orderId) {
-			handleClose();
+			handleSkip();
 			return;
 		}
 
@@ -70,7 +74,7 @@ export default function FeedbackModal({
 			const stored = await AsyncStorage.getItem("userData");
 			const token = stored ? JSON.parse(stored)?.token : null;
 			if (!token) {
-				handleClose();
+				handleSkip();
 				return;
 			}
 
@@ -85,11 +89,24 @@ export default function FeedbackModal({
 			Alert.alert(t("success"), t("feedbackThanks"));
 			resetForm();
 			onSubmitted?.();
-			onClose?.();
 		} catch (err) {
+			const message = (err as Error)?.message || "";
+
+			// The backend enforces one feedback submission per order. If a
+			// duplicate slips through here (e.g. a race with another device,
+			// or a delayed retry), the desired end state — no more prompt for
+			// this order — is exactly the same as a successful submission, so
+			// treat it as "already done" rather than a scary error and close
+			// the modal instead of leaving the shopper stuck on it.
+			if (/already been submitted/i.test(message)) {
+				resetForm();
+				onSubmitted?.();
+				return;
+			}
+
 			Alert.alert(
 				t("errorTitle"),
-				(err as Error)?.message || t("feedbackSubmitError"),
+				message || t("feedbackSubmitError"),
 			);
 		} finally {
 			setSubmitting(false);
@@ -101,10 +118,13 @@ export default function FeedbackModal({
 			visible={visible}
 			transparent
 			animationType="slide"
-			onRequestClose={handleClose}
+			onRequestClose={handleSkip}
 		>
 			<View style={styles.modalBackground}>
 				<View style={styles.modalContainer}>
+					<View style={styles.headerBadge}>
+						<Text style={styles.headerBadgeText}>⭐</Text>
+					</View>
 					<Text style={styles.title}>{t("feedbackModalTitle")}</Text>
 					<Text style={styles.subtitle}>{t("feedbackModalSubtitle")}</Text>
 
@@ -152,7 +172,7 @@ export default function FeedbackModal({
 					</TouchableOpacity>
 
 					<TouchableOpacity
-						onPress={handleClose}
+						onPress={handleSkip}
 						disabled={submitting}
 						style={styles.skipBtn}
 					>
@@ -173,13 +193,31 @@ const styles = StyleSheet.create({
 	},
 	modalContainer: {
 		backgroundColor: "#fff",
-		padding: 20,
-		borderRadius: 12,
-		width: "88%",
+		padding: 22,
+		borderRadius: 18,
+		width: "90%",
 		maxHeight: "85%",
+		shadowColor: "#000",
+		shadowOffset: { width: 0, height: 6 },
+		shadowOpacity: 0.15,
+		shadowRadius: 16,
+		elevation: 8,
+	},
+	headerBadge: {
+		alignSelf: "center",
+		width: 52,
+		height: 52,
+		borderRadius: 26,
+		backgroundColor: "#FFF6DC",
+		alignItems: "center",
+		justifyContent: "center",
+		marginBottom: 10,
+	},
+	headerBadgeText: {
+		fontSize: 24,
 	},
 	title: {
-		fontSize: 18,
+		fontSize: 19,
 		fontWeight: "700",
 		textAlign: "center",
 		color: "#000",
@@ -189,11 +227,13 @@ const styles = StyleSheet.create({
 		textAlign: "center",
 		color: "#666",
 		marginTop: 4,
-		marginBottom: 16,
+		marginBottom: 18,
 	},
 	section: {
 		marginBottom: 16,
-		paddingBottom: 4,
+		paddingBottom: 14,
+		borderBottomWidth: 1,
+		borderBottomColor: "#f1f1f1",
 	},
 	sectionTitle: {
 		fontSize: 15,
@@ -204,20 +244,26 @@ const styles = StyleSheet.create({
 	textArea: {
 		marginTop: 10,
 		borderWidth: 1,
-		borderColor: "#ddd",
-		borderRadius: 8,
+		borderColor: "#e2e2e2",
+		borderRadius: 10,
 		padding: 10,
-		minHeight: 70,
+		minHeight: 64,
 		textAlignVertical: "top",
 		color: "#000",
 		fontSize: 14,
+		backgroundColor: "#fafafa",
 	},
 	submitBtn: {
 		backgroundColor: "#f4bb26",
 		paddingVertical: 14,
-		borderRadius: 8,
+		borderRadius: 10,
 		alignItems: "center",
 		marginTop: 6,
+		shadowColor: "#f4bb26",
+		shadowOffset: { width: 0, height: 3 },
+		shadowOpacity: 0.35,
+		shadowRadius: 6,
+		elevation: 3,
 	},
 	submitBtnDisabled: {
 		opacity: 0.7,

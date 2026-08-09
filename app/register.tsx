@@ -7,6 +7,7 @@ import LoadingButton from "@/components/LoadingButton";
 import LocationPickerMap, { type PickedLocation } from "@/components/LocationPickerMap";
 import { globalStyles } from "@/constants/GlobalStyles";
 import { useTranslation } from "@/contexts/TranslationContext";
+import { useAppleAuth } from "@/hooks/useAppleAuth";
 import { useGoogleAuth } from "@/hooks/useGoogleAuth";
 import { ApiError, AuthService } from "@/services/api";
 import type { AuthPayload } from "@/types";
@@ -390,6 +391,54 @@ const [syncingAddress, setSyncingAddress] = useState<boolean>(false);
 		}
 	};
 
+	// Sign in with Apple — the guideline 4.8 equivalent login option offered
+	// alongside Google on iOS.
+	const [appleLoading, setAppleLoading] = useState(false);
+	const { signInAsync: promptApple, isAvailable: appleAvailable } = useAppleAuth(
+		async (credential) => {
+			setAppleLoading(true);
+			try {
+				const appleAddress = await resolveGoogleAddress();
+				const res = await AuthService.appleSignIn({ ...credential, address: appleAddress });
+				const userData = res.data as unknown as AuthPayload | null;
+				if (userData) {
+					if (userData.isNewUser === false) {
+						Alert.alert(t("accountExistsTitle"), t("accountExistsBody"), [
+							{ text: "OK", onPress: () => router.replace("/start") },
+						]);
+						return;
+					}
+					await AsyncStorage.setItem(
+						"userData",
+						JSON.stringify(await ensureDefaultCity(userData)),
+					);
+					await AsyncStorage.setItem("guest", "false");
+					router.replace("/(tabs)" as never);
+				}
+			} catch (error) {
+				const message =
+					error instanceof ApiError
+						? (error.payload as { message?: string } | null)?.message
+						: undefined;
+				Alert.alert(t("errorTitle"), message || t("registerFailed"));
+			} finally {
+				setAppleLoading(false);
+			}
+		},
+		(message) => {
+			setAppleLoading(false);
+			Alert.alert(t("errorTitle"), message);
+		},
+	);
+
+	const handleApple = async () => {
+		if (!appleAvailable) {
+			Alert.alert(t("errorTitle"), t("appleNotAvailable"));
+			return;
+		}
+		await promptApple();
+	};
+
 	return (
 		<KeyboardAvoidingView
 			style={styles.screen}
@@ -713,6 +762,31 @@ const [syncingAddress, setSyncingAddress] = useState<boolean>(false);
 						)}
 					</TouchableOpacity>
 
+					{/* Sign in with Apple (iOS only) — required by App Store guideline 4.8 */}
+					{Platform.OS === "ios" && appleAvailable && (
+						<TouchableOpacity
+							onPress={handleApple}
+							disabled={appleLoading}
+							style={styles.appleButton}
+						>
+							{appleLoading ? (
+								<ActivityIndicator size="small" color="#ffffff" />
+							) : (
+								<>
+									<Ionicons
+										name="logo-apple"
+										size={20}
+										color="#ffffff"
+										style={globalStyles.marginRight10}
+									/>
+									<Text style={styles.appleButtonText}>
+										{t("continueWithApple")}
+									</Text>
+								</>
+							)}
+						</TouchableOpacity>
+					)}
+
 					<View
 						style={styles.loginPromptContainer}
 					>
@@ -823,6 +897,17 @@ const styles = StyleSheet.create({
 		borderColor: "#d1d5db",
 	},
 	googleButtonText: { color: "#000", fontWeight: "700", fontSize: 16 },
+	appleButton: {
+		flexDirection: "row",
+		backgroundColor: "#000000",
+		borderRadius: 15,
+		paddingVertical: 13,
+		width: "100%",
+		alignItems: "center",
+		justifyContent: "center",
+		marginTop: 12,
+	},
+	appleButtonText: { color: "#fff", fontWeight: "700", fontSize: 16 },
 	logoVideo: {
 		width: 200,
 		height: 200,
