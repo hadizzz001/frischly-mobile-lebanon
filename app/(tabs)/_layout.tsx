@@ -7,7 +7,8 @@ import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Tabs, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { ActivityIndicator, View } from "react-native";
+import { styles } from "@/styles/app/(tabs)/_layout.styles";
 
 export default function TabLayout() {
 	const { cart } = useCart();
@@ -160,21 +161,3 @@ useEffect(() => {
 		</View>
 	);
 }
-
-const styles = StyleSheet.create({
-	loader: {
-		flex: 1,
-		justifyContent: "center",
-		alignItems: "center",
-		backgroundColor: "#FFFFFF",
-	},
-	cartBadge: {
-		position: "absolute",
-		right: -6,
-		top: -3,
-		backgroundColor: "#f4bb26",
-		borderRadius: 8,
-		width: 12,
-		height: 12,
-	},
-});

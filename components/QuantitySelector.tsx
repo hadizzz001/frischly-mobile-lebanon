@@ -1,11 +1,11 @@
 import { ProductService } from "@/services/api";
 import { useEffect, useState } from "react";
+import { styles } from "@/styles/components/QuantitySelector.styles";
 import {
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+	Text,
+	TextInput,
+	TouchableOpacity,
+	View,
 } from "react-native";
 
 interface QuantitySelectorProps {
@@ -14,11 +14,11 @@ interface QuantitySelectorProps {
 	onChange: (qty: number) => void;
 }
 
-const QuantitySelector = ({
+export default function QuantitySelector({
 	initialQty = 1,
 	productId,
 	onChange,
-}: QuantitySelectorProps) => {
+}: QuantitySelectorProps) {
 	const [qty, setQty] = useState<number>(initialQty);
 	const [maxStock, setMaxStock] = useState<number | null>(null);
 
@@ -80,38 +80,4 @@ const QuantitySelector = ({
 			</TouchableOpacity>
 		</View>
 	);
-};
-
-const styles = StyleSheet.create({
-	container: {
-		flexDirection: "row",
-		alignItems: "center",
-	},
-	button: {
-		width: 30,
-		height: 30,
-		backgroundColor: "#FFFFFF",
-		justifyContent: "center",
-		alignItems: "center",
-		marginHorizontal: 5,
-		borderRadius: 4,
-	},
-	disabledButton: {
-		opacity: 0.5,
-	},
-	buttonText: {
-		fontWeight: "900",
-		fontSize: 18,
-	},
-	input: {
-		width: 40,
-		height: 30,
-		textAlign: "center",
-		borderColor: "#000000",
-		borderWidth: 1,
-		borderRadius: 4,
-		paddingVertical: 0,
-	},
-});
-
-export default QuantitySelector;
+}

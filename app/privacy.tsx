@@ -1,7 +1,8 @@
 import { useTranslation } from "@/contexts/TranslationContext";
-import { ScrollView, StyleSheet, Text } from "react-native";
+import { ScrollView, Text } from "react-native";
+import { styles } from "@/styles/app/privacy.styles";
 
-const PrivacyPolicy = () => {
+export default function PrivacyPolicy() {
 	const { t } = useTranslation();
 
 	return (
@@ -39,29 +40,4 @@ const PrivacyPolicy = () => {
 			</Text>
 		</ScrollView>
 	);
-};
-
-const styles = StyleSheet.create({
-	container: {
-		padding: 20,
-		backgroundColor: "#fff",
-	},
-	title: {
-		fontSize: 28,
-		fontWeight: "bold",
-		marginBottom: 20,
-	},
-	subtitle: {
-		fontSize: 20,
-		fontWeight: "600",
-		marginTop: 15,
-		marginBottom: 5,
-	},
-	paragraph: {
-		fontSize: 16,
-		lineHeight: 22,
-		color: "#333",
-	},
-});
-
-export default PrivacyPolicy;
+}

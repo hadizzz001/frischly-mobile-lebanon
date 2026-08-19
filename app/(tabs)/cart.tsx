@@ -1,6 +1,7 @@
 import Cart from "@/components/Cart";
-import { StyleSheet, View } from "react-native";
+import { View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { styles } from "@/styles/app/(tabs)/cart.styles";
 
 export default function CartScreen() {
   return (
@@ -14,8 +15,3 @@ export default function CartScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FFFFFF" },
-  content: { flex: 1, paddingTop: 20, paddingBottom: 80 },
-});

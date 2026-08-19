@@ -1,6 +1,7 @@
 import { MaterialIcons } from "@expo/vector-icons";
 import type { StyleProp, ViewStyle } from "react-native";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { TouchableOpacity, View } from "react-native";
+import { styles } from "@/styles/components/StarRating.styles";
 
 interface StarRatingProps {
 	rating?: number;
@@ -61,8 +62,3 @@ export default function StarRating({
 		</View>
 	);
 }
-
-const styles = StyleSheet.create({
-	row: { flexDirection: "row", alignItems: "center" },
-	starBtn: { padding: 2 },
-});

@@ -15,10 +15,10 @@ import { Stack, usePathname } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 import {
-    StyleSheet,
-    View,
+	View,
 } from "react-native";
 import "react-native-reanimated";
+import { styles } from "@/styles/app/_layout.styles";
 
 export default function RootLayout() {
 	const pathname = usePathname(); // current route
@@ -144,7 +144,3 @@ export default function RootLayout() {
 		</TranslationProvider>
 	);
 }
-
-const styles = StyleSheet.create({
-	container: { flex: 1 },
-});

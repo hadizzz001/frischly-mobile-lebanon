@@ -10,16 +10,16 @@ import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
+import { styles } from "@/styles/app/edit-profile.styles";
 import {
-    ActivityIndicator,
-    Alert,
-    DeviceEventEmitter,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+	ActivityIndicator,
+	Alert,
+	DeviceEventEmitter,
+	ScrollView,
+	Text,
+	TextInput,
+	TouchableOpacity,
+	View,
 } from "react-native";
 
 interface ProfileForm {
@@ -387,47 +387,3 @@ export default function EditProfile() {
 		</ScrollView>
 	);
 }
-
-const styles = StyleSheet.create({
-	container: { padding: 20, backgroundColor: "#fff" },
-	fieldGroup: { marginBottom: 12 },
-	bottomSpacer: { height: 220 },
-	label: { marginBottom: 4, color: "#555" },
-	input: { borderWidth: 1, padding: 12, borderRadius: 15, borderColor: "#ccc" },
-	inputDisabled: { backgroundColor: "#f2f2f2", borderColor: "#ddd", color: "#666" },
-	mapPinButton: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 6,
-		alignSelf: "stretch",
-		marginBottom: 16,
-		paddingVertical: 4,
-	},
-	mapPinButtonText: {
-		color: "#555",
-		fontSize: 13,
-		lineHeight: 18,
-		textDecorationLine: "underline",
-		flex: 1,
-		flexWrap: "wrap",
-	},
-	syncingContainer: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 8,
-		marginBottom: 12,
-		paddingVertical: 8,
-		paddingHorizontal: 12,
-		borderRadius: 10,
-		backgroundColor: "#fff8e6",
-	},
-	syncingText: { color: "#7a6a2e", fontSize: 13, fontWeight: "600", lineHeight: 18, flex: 1, flexWrap: "wrap" },
-	saveBtn: {
-		backgroundColor: "#f4bb26",
-		padding: 16,
-		borderRadius: 12,
-		marginTop: 16,
-	},
-	saveText: { textAlign: "center", fontWeight: "600" },
-	backButton: { marginBottom: 20 },
-});

@@ -22,13 +22,13 @@ import {
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import type { StyleProp, ViewStyle } from "react-native";
+import { styles } from "@/styles/components/VoiceSearchButton.styles";
 import {
 	ActivityIndicator,
 	Animated,
 	Easing,
 	Modal,
 	Pressable,
-	StyleSheet,
 	Text,
 	View,
 } from "react-native";
@@ -372,134 +372,3 @@ export default function VoiceSearchButton({
 		</View>
 	);
 }
-
-const styles = StyleSheet.create({
-	wrap: {
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	floatingWrap: {
-		position: "absolute",
-		right: 16,
-		alignItems: "center",
-		justifyContent: "center",
-		zIndex: 20,
-		elevation: 6,
-	},
-	pulseRing: {
-		position: "absolute",
-		width: 44,
-		height: 44,
-		borderRadius: 22,
-		backgroundColor: "#f4bb26",
-	},
-	micButton: {
-		width: 44,
-		height: 44,
-		borderRadius: 22,
-		alignItems: "center",
-		justifyContent: "center",
-		backgroundColor: "#fff7e3",
-	},
-	micButtonActive: {
-		backgroundColor: "#f4bb26",
-	},
-	fabPill: {
-		alignItems: "center",
-		justifyContent: "center",
-		width: 56,
-		height: 56,
-		borderRadius: 28,
-		backgroundColor: "#1f1f1f",
-		borderWidth: 2,
-		borderColor: "#f4bb26",
-		shadowColor: "#000000",
-		shadowOffset: { width: 0, height: 4 },
-		shadowOpacity: 0.25,
-		shadowRadius: 10,
-		elevation: 8,
-	},
-	fabPillActive: {
-		backgroundColor: "#f4bb26",
-		borderColor: "#1f1f1f",
-	},
-	fabRing: {
-		position: "absolute",
-		width: 56,
-		height: 56,
-		borderRadius: 28,
-		backgroundColor: "#f4bb26",
-	},
-	caption: {
-		position: "absolute",
-		top: 50,
-		right: 0,
-		minWidth: 150,
-		backgroundColor: "rgba(34,34,34,0.92)",
-		borderRadius: 10,
-		paddingVertical: 6,
-		paddingHorizontal: 10,
-		alignItems: "center",
-		zIndex: 1000,
-		elevation: 6,
-	},
-	captionText: {
-		color: "#fff",
-		fontSize: 13,
-		fontWeight: "700",
-	},
-	captionHint: {
-		color: "#f4bb26",
-		fontSize: 11,
-		marginTop: 1,
-	},
-	captionFloating: {
-		position: "absolute",
-		bottom: 72,
-		right: 0,
-		minWidth: 150,
-		backgroundColor: "rgba(34,34,34,0.92)",
-		borderRadius: 10,
-		paddingVertical: 6,
-		paddingHorizontal: 10,
-		alignItems: "center",
-		zIndex: 1000,
-		elevation: 6,
-	},
-	overlay: {
-		flex: 1,
-		backgroundColor: "rgba(0,0,0,0.45)",
-		alignItems: "center",
-		justifyContent: "center",
-		paddingHorizontal: 32,
-	},
-	card: {
-		width: "100%",
-		maxWidth: 320,
-		backgroundColor: "#fff",
-		borderRadius: 20,
-		paddingVertical: 28,
-		paddingHorizontal: 24,
-		alignItems: "center",
-	},
-	title: {
-		fontSize: 18,
-		fontWeight: "700",
-		color: "#222",
-		marginTop: 6,
-		textAlign: "center",
-	},
-	subtitle: {
-		fontSize: 13,
-		color: "#777",
-		marginTop: 6,
-		textAlign: "center",
-	},
-	transcript: {
-		fontSize: 15,
-		color: "#444",
-		fontStyle: "italic",
-		marginTop: 12,
-		textAlign: "center",
-	},
-});

@@ -13,40 +13,22 @@ import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 
+import { styles } from "@/styles/app/checkout.styles";
+import { collectMarketTokens } from "@/utils/market";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+	ActivityIndicator,
+	Alert,
+	Image,
+	Modal,
+	Platform,
+	ScrollView,
+	Text,
+	TextInput,
+	TouchableOpacity,
+	View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import OrderComponent from "../components/CreateOrderButton";
-
-// Collect every identifier a market might be referenced by (id / username /
-// name), lower-cased, so a promo's market can be matched against the cart's
-// market no matter how the API returns it (populated object, id string, ...).
-const collectMarketTokens = (market: unknown): Set<string> => {
-	const tokens = new Set<string>();
-	if (!market) return tokens;
-	if (typeof market === "string") {
-		tokens.add(market.toLowerCase());
-		return tokens;
-	}
-	if (typeof market === "object") {
-		const m = market as Record<string, unknown>;
-		["_id", "id", "username", "name"].forEach((key) => {
-			if (m[key]) tokens.add(String(m[key]).toLowerCase());
-		});
-	}
-	return tokens;
-};
 
 interface AppliedPromo {
 	promoCode: { id?: string; code?: string };
@@ -72,7 +54,7 @@ interface CheckoutState {
 	country: string;
 }
 
-const CheckoutScreen = () => {
+export default function CheckoutScreen() {
 	const { t, isRTL } = useTranslation();
 	const [showModal, setShowModal] = useState<boolean>(false);
 	const [modalResponse, setModalResponse] = useState<string | null>(null);
@@ -803,195 +785,4 @@ const CheckoutScreen = () => {
 			</Modal>
 		</SafeAreaView>
 	);
-};
-
-const styles = StyleSheet.create({
-	scrollContent: { paddingBottom: 150 },
-	countryWrapper: { marginBottom: 12 },
-	cityPicker: { borderColor: "#000000", borderRadius: 6, marginVertical: 6 },
-	flex1: { flex: 1 },
-	flex1MarginRight10: { flex: 1, marginRight: 10 },
-	textGreen: { color: "#1a6e2e" },
-	textOrange: { color: "#7c4700" },
-	boldText: { fontWeight: "bold" },
-	loadingContainer: {
-		flex: 1,
-		justifyContent: "center",
-		alignItems: "center",
-	},
-	modalTitle: {
-		marginBottom: 20,
-		textAlign: "center",
-		fontWeight: "bold",
-	},
-	modalSubtitle: {
-		marginBottom: 30,
-		textAlign: "center",
-	},
-	modalButtons: {
-		width: "100%",
-	},
-	modalYesButton: {
-		backgroundColor: "#f4bb26",
-		paddingVertical: 16,
-		borderRadius: 8,
-		marginBottom: 15,
-		width: "100%",
-	},
-	modalYesText: {
-		color: "black",
-		textAlign: "center",
-		fontWeight: "bold",
-		fontSize: 18,
-	},
-	modalNoButton: {
-		paddingVertical: 16,
-		borderRadius: 8,
-		width: "100%",
-	},
-	modalNoText: {
-		color: "#f4bb26",
-		textAlign: "center",
-		fontWeight: "bold",
-		fontSize: 18,
-	},
-	container: {
-		flex: 1,
-		padding: 16,
-		backgroundColor: "#FFFFFF",
-		paddingTop: 50,
-	},
-	heading: { fontSize: 20, fontWeight: "bold", marginVertical: 12 },
-	backButton: { marginBottom: 8, alignSelf: "flex-start" },
-	price: { fontSize: 15, fontWeight: "bold", color: "#000000" },
-	input: {
-		borderWidth: 1,
-		borderColor: "#000000",
-		borderRadius: 6,
-		padding: 10,
-		marginVertical: 6,
-	},
-	inputDisabled: {
-		backgroundColor: "#f2f2f2",
-		borderColor: "#ddd",
-		color: "#666",
-	},
-	row: { flexDirection: "row", alignItems: "center" },
-	cartItem: {
-		flexDirection: "row",
-		alignItems: "center",
-		marginVertical: 8,
-		borderBottomWidth: 1,
-		borderColor: "#000000",
-		paddingBottom: 8,
-	},
-	cartImage: { width: 60, height: 60, marginRight: 12, borderRadius: 6 },
-	summaryRow: {
-		flexDirection: "row",
-		justifyContent: "space-between",
-		marginVertical: 4,
-	},
-	button: {
-		backgroundColor: "#f4bb26",
-		padding: 12,
-		borderRadius: 6,
-		alignItems: "center",
-	},
-	buttonText: { color: "#FFFFFF", fontWeight: "bold" },
-	emptyContainer: {
-		backgroundColor: "#fff",
-		flex: 1,
-		justifyContent: "center",
-		alignItems: "center",
-		marginTop: 60,
-	},
-	emptyText: { fontSize: 18, marginBottom: 20 },
-	paymentOptions: {
-		flexDirection: "row",
-		justifyContent: "space-between",
-		marginBottom: 16,
-	},
-	paymentOption: {
-		flex: 1,
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "center",
-		padding: 16,
-		borderWidth: 1,
-		borderColor: "#ccc",
-		borderRadius: 8,
-		marginHorizontal: 4,
-	},
-	paymentOptionSelected: {
-		borderColor: "#f4bb26",
-		backgroundColor: "#f4bb2620",
-	},
-	paymentOptionText: {
-		marginLeft: 8,
-		fontSize: 14,
-		color: "#666",
-	},
-	paymentOptionTextSelected: {
-		color: "#000",
-		fontWeight: "bold",
-	},
-	promoCodeContainer: {
-		flexDirection: "row",
-		alignItems: "center",
-		marginBottom: 12,
-	},
-	applyButton: {
-		backgroundColor: "#f4bb26",
-		paddingHorizontal: 20,
-		paddingVertical: 12,
-		borderRadius: 6,
-		justifyContent: "center",
-		alignItems: "center",
-	},
-	applyButtonDisabled: {
-		backgroundColor: "#ccc",
-	},
-	applyButtonText: {
-		color: "#000",
-		fontWeight: "bold",
-		fontSize: 14,
-	},
-	safeArea: { flex: 1, backgroundColor: "#FFFFFF" },
-	sourceBadge: {
-		flexDirection: "row",
-		alignItems: "center",
-		alignSelf: "flex-start",
-		borderRadius: 20,
-		paddingHorizontal: 12,
-		paddingVertical: 6,
-		marginBottom: 12,
-		borderWidth: 1,
-	},
-	sourceBadgeMain: {
-		backgroundColor: "#eaf6ec",
-		borderColor: "#a8d5b0",
-	},
-	sourceBadgeMarket: {
-		backgroundColor: "#fff4e5",
-		borderColor: "#f5c97a",
-	},
-	sourceBadgeText: {
-		marginLeft: 6,
-		fontSize: 13,
-		fontWeight: "600",
-	},
-	modalBackground: {
-		flex: 1,
-		backgroundColor: "rgba(0,0,0,0.5)",
-		justifyContent: "center",
-		alignItems: "center",
-	},
-	modalContainer: {
-		backgroundColor: "#fff",
-		padding: 20,
-		borderRadius: 10,
-		width: "80%",
-	},
-});
-
-export default CheckoutScreen;
+}

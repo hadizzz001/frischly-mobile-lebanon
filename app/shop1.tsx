@@ -3,6 +3,7 @@ import { useBooleanValue } from "@/contexts/CartBoolContext";
 import { useCart } from "@/contexts/CartContext";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { AuthService, ProductService } from "@/services/api";
+import { styles } from "@/styles/app/shop1.styles";
 import type { Product, User } from "@/types";
 import { isServedByAdmin } from "@/utils/cityVisibility";
 import { rtlRow } from "@/utils/rtl";
@@ -17,7 +18,6 @@ import {
     Dimensions,
     Image,
     SectionList,
-    StyleSheet,
     Text,
     TouchableOpacity,
     View,
@@ -26,17 +26,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get("window");
 const ITEM_WIDTH = width / 3 - 13; // three items per row with spacing
-
-function formatWeight(weight: unknown): string {
-	if (weight === null || weight === undefined) return "";
-	if (typeof weight === "string" || typeof weight === "number") return String(weight);
-	if (typeof weight === "object") {
-		const w = weight as { value?: string | number; unit?: string };
-		if (w.value !== undefined) return `${w.value}${w.unit ? ` ${w.unit}` : ""}`;
-		if (w.unit !== undefined) return String(w.unit);
-	}
-	return "";
-}
 
 type ProductSection = {
 	title: string;
@@ -356,138 +345,3 @@ export default function ShopPage() {
 		</SafeAreaView>
 	);
 }
-
-const styles = StyleSheet.create({
-	container: { flex: 1, backgroundColor: "#FFFFFF" },
-	listContentPadding: { paddingBottom: 120, paddingHorizontal: 10 },
-	loader: {
-		flex: 1,
-		justifyContent: "center",
-		alignItems: "center",
-		backgroundColor: "#FFFFFF",
-	},
-	header: {
-		flexDirection: "row",
-		alignItems: "center",
-		padding: 10,
-		borderBottomWidth: 1,
-		borderBottomColor: "#eee",
-	},
-	backButton: { marginRight: 10 },
-	headerTitle: { fontSize: 18, fontWeight: "bold", color: "#000" },
-	emptyText: {
-		textAlign: "center",
-		color: "#888",
-		fontSize: 15,
-		marginTop: 40,
-	},
-	subcategoryTitle: {
-		fontSize: 22,
-		fontWeight: "700",
-		color: "#000",
-		marginHorizontal: 10,
-		marginTop: 10,
-		marginBottom: 10,
-	},
-	row: {
-		flexDirection: "row",
-		justifyContent: "space-between",
-		marginBottom: 10,
-	},
-	grid: {
-		flexDirection: "row",
-		flexWrap: "wrap",
-		justifyContent: "space-between",
-		paddingHorizontal: 10,
-	},
-	card: {
-		width: ITEM_WIDTH,
-		padding: 4,
-		backgroundColor: "transparent",
-		elevation: 0,
-		shadowColor: "transparent",
-	},
-	imageWrapper: {
-		position: "relative",
-		width: "100%",
-		height: 150,
-		marginBottom: 6,
-	},
-	image: { width: "100%", height: "100%", borderRadius: 0 },
-	overlay: {
-		position: "absolute",
-		top: 0,
-		left: 0,
-		right: 0,
-		bottom: 0,
-		backgroundColor: "rgba(0,0,0,0.4)",
-		justifyContent: "center",
-		alignItems: "center",
-	},
-	outOfStockText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
-	discountBadge: {
-		position: "absolute",
-		top: 8,
-		right: 8,
-		backgroundColor: "#f4bb26",
-		paddingHorizontal: 6,
-		paddingVertical: 2,
-		borderRadius: 4,
-	},
-	discountText: { color: "#000", fontSize: 12, fontWeight: "700" },
-	name: {
-		fontSize: 13,
-		fontWeight: "500",
-		marginBottom: 4,
-		color: "#000000",
-		textAlign: "center",
-	},
-	weight: {
-		fontSize: 11,
-		color: "#888",
-		marginBottom: 4,
-		textAlign: "center",
-	},
-	finalPrice: {
-		fontSize: 15,
-		fontWeight: "700",
-		color: "#000",
-		textAlign: "center",
-	},
-	qtyRow: {
-		flexDirection: "row",
-		alignItems: "center",
-		marginTop: 6,
-		justifyContent: "center",
-	},
-	qtyBtn: {
-		backgroundColor: "#f4bb26",
-		borderRadius: 4,
-		paddingHorizontal: 10,
-		paddingVertical: 8,
-		marginHorizontal: 4,
-	},
-	qtyText: { fontSize: 14, fontWeight: "700", color: "#fff" },
-	qtyValue: {
-		marginHorizontal: 6,
-		fontSize: 14,
-		fontWeight: "500",
-		color: "#000",
-	},
-	safeArea: {
-		flex: 1,
-		backgroundColor: "#fff",
-	},
-	floatingHeader: {
-		backgroundColor: "#fff",
-		paddingVertical: 8,
-		paddingHorizontal: 10,
-		borderBottomWidth: 1,
-		borderBottomColor: "#eee",
-	},
-	floatingHeaderText: {
-		fontSize: 18,
-		fontWeight: "700",
-		color: "#000",
-	},
-});

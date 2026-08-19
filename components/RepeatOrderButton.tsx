@@ -1,31 +1,19 @@
-import { OrderService, ProductService } from "@/services/api";
 import { useCart } from "@/contexts/CartContext";
 import { useTranslation } from "@/contexts/TranslationContext";
+import { OrderService, ProductService } from "@/services/api";
+import { styles } from "@/styles/components/RepeatOrderButton.styles";
+import type { Order, Product } from "@/types";
+import { getLatestOrder, getProductId } from "@/utils/order";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
-    StyleSheet,
     Text,
     TouchableOpacity,
     View,
 } from "react-native";
-import type { Order, OrderItem, Product } from "@/types";
-
-const getProductId = (orderItem: OrderItem): string | undefined => {
-	const product = orderItem?.product;
-	return typeof product === "string" ? product : product?._id;
-};
-
-const getLatestOrder = (orders: Order[]): Order | undefined => {
-	return [...orders].sort((a, b) => {
-		const firstDate = new Date(a.createdAt || a.updatedAt || 0).getTime();
-		const secondDate = new Date(b.createdAt || b.updatedAt || 0).getTime();
-		return secondDate - firstDate;
-	})[0];
-};
 
 export default function RepeatOrderButton() {
 	const { t } = useTranslation();
@@ -178,37 +166,3 @@ export default function RepeatOrderButton() {
 		</View>
 	);
 }
-
-const styles = StyleSheet.create({
-	wrapper: {
-		position: "absolute",
-		left: 16,
-		bottom: "5%",
-		zIndex: 10,
-		alignItems: "flex-start",
-	},
-	button: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 8,
-		backgroundColor: "#ffffff",
-		borderRadius: 30,
-		paddingVertical: 12,
-		paddingHorizontal: 18,
-		borderWidth: 1,
-		borderColor: "#eeeeee",
-		shadowColor: "#000000",
-		shadowOffset: { width: 0, height: 4 },
-		shadowOpacity: 0.18,
-		shadowRadius: 8,
-		elevation: 6,
-	},
-	disabledButton: {
-		opacity: 0.75,
-	},
-	buttonText: {
-		color: "#222222",
-		fontSize: 15,
-		fontWeight: "700",
-	},
-});

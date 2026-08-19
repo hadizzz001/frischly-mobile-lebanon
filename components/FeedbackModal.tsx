@@ -3,16 +3,16 @@ import { useTranslation } from "@/contexts/TranslationContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Modal,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+	ActivityIndicator,
+	Alert,
+	Modal,
+	Text,
+	TextInput,
+	TouchableOpacity,
+	View,
 } from "react-native";
 import StarRating from "./StarRating";
+import { styles } from "@/styles/components/FeedbackModal.styles";
 
 interface FeedbackModalProps {
 	visible: boolean;
@@ -183,103 +183,3 @@ export default function FeedbackModal({
 		</Modal>
 	);
 }
-
-const styles = StyleSheet.create({
-	modalBackground: {
-		flex: 1,
-		backgroundColor: "rgba(0,0,0,0.5)",
-		justifyContent: "center",
-		alignItems: "center",
-	},
-	modalContainer: {
-		backgroundColor: "#fff",
-		padding: 22,
-		borderRadius: 18,
-		width: "90%",
-		maxHeight: "85%",
-		shadowColor: "#000",
-		shadowOffset: { width: 0, height: 6 },
-		shadowOpacity: 0.15,
-		shadowRadius: 16,
-		elevation: 8,
-	},
-	headerBadge: {
-		alignSelf: "center",
-		width: 52,
-		height: 52,
-		borderRadius: 26,
-		backgroundColor: "#FFF6DC",
-		alignItems: "center",
-		justifyContent: "center",
-		marginBottom: 10,
-	},
-	headerBadgeText: {
-		fontSize: 24,
-	},
-	title: {
-		fontSize: 19,
-		fontWeight: "700",
-		textAlign: "center",
-		color: "#000",
-	},
-	subtitle: {
-		fontSize: 13,
-		textAlign: "center",
-		color: "#666",
-		marginTop: 4,
-		marginBottom: 18,
-	},
-	section: {
-		marginBottom: 16,
-		paddingBottom: 14,
-		borderBottomWidth: 1,
-		borderBottomColor: "#f1f1f1",
-	},
-	sectionTitle: {
-		fontSize: 15,
-		fontWeight: "700",
-		color: "#000",
-		marginBottom: 8,
-	},
-	textArea: {
-		marginTop: 10,
-		borderWidth: 1,
-		borderColor: "#e2e2e2",
-		borderRadius: 10,
-		padding: 10,
-		minHeight: 64,
-		textAlignVertical: "top",
-		color: "#000",
-		fontSize: 14,
-		backgroundColor: "#fafafa",
-	},
-	submitBtn: {
-		backgroundColor: "#f4bb26",
-		paddingVertical: 14,
-		borderRadius: 10,
-		alignItems: "center",
-		marginTop: 6,
-		shadowColor: "#f4bb26",
-		shadowOffset: { width: 0, height: 3 },
-		shadowOpacity: 0.35,
-		shadowRadius: 6,
-		elevation: 3,
-	},
-	submitBtnDisabled: {
-		opacity: 0.7,
-	},
-	submitBtnText: {
-		color: "#000",
-		fontWeight: "700",
-		fontSize: 16,
-	},
-	skipBtn: {
-		paddingVertical: 14,
-		alignItems: "center",
-	},
-	skipBtnText: {
-		color: "#777",
-		fontWeight: "600",
-		fontSize: 14,
-	},
-});

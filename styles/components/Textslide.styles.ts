@@ -1,0 +1,101 @@
+import { StyleSheet } from "react-native";
+
+export const styles = StyleSheet.create({
+	outerContainer: {
+		paddingHorizontal: 16,
+		marginVertical: 12,
+	},
+	container: {
+		width: "100%",
+		height: 48,
+		backgroundColor: "#1a1a1a",
+		borderRadius: 24,
+		flexDirection: "row",
+		alignItems: "center",
+		overflow: "hidden",
+		shadowColor: "#000",
+		shadowOffset: { width: 0, height: 2 },
+		shadowOpacity: 0.15,
+		shadowRadius: 4,
+		elevation: 3,
+	},
+	iconContainer: {
+		width: 44,
+		height: 48,
+		justifyContent: "center",
+		alignItems: "center",
+		backgroundColor: "#262626",
+		borderTopLeftRadius: 24,
+		borderBottomLeftRadius: 24,
+	},
+	tickerContainer: {
+		flex: 1,
+		justifyContent: "center",
+		paddingRight: 16,
+	},
+	tickerText: {
+		fontSize: 14,
+		color: "#FFFFFF",
+		fontWeight: "600",
+		letterSpacing: 0.3,
+	},
+	modalBackground: {
+		flex: 1,
+		backgroundColor: "rgba(0,0,0,0.5)",
+		justifyContent: "center",
+		alignItems: "center",
+	},
+	modalContainer: {
+		backgroundColor: "#fff",
+		padding: 20,
+		borderRadius: 10,
+		width: "90%",
+		maxHeight: "80%",
+	},
+	modalTitle: {
+		fontSize: 24,
+		fontWeight: "bold",
+		textAlign: "center",
+		marginBottom: 20,
+		color: "#333",
+	},
+	scrollView: {
+		maxHeight: 400,
+	},
+	promoCard: {
+		backgroundColor: "#f9f9f9",
+		padding: 15,
+		borderRadius: 8,
+		marginBottom: 10,
+		borderLeftWidth: 4,
+		borderLeftColor: "#f4bb26",
+	},
+	companyName: {
+		fontSize: 18,
+		fontWeight: "bold",
+		color: "#333",
+		marginBottom: 5,
+	},
+	description: {
+		fontSize: 14,
+		color: "#666",
+		marginBottom: 5,
+	},
+	code: {
+		fontSize: 16,
+		fontWeight: "600",
+		color: "#f4bb26",
+	},
+	closeButton: {
+		backgroundColor: "#f4bb26",
+		paddingVertical: 12,
+		borderRadius: 8,
+		marginTop: 20,
+		alignItems: "center",
+	},
+	closeButtonText: {
+		color: "#000",
+		fontSize: 16,
+		fontWeight: "bold",
+	},
+});

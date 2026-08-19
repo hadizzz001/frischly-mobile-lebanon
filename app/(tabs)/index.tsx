@@ -9,7 +9,8 @@ import NewsTicker from "@/components/Textslide";
 import { globalStyles } from "@/constants/GlobalStyles";
 import { refreshAdminCities } from "@/utils/cityVisibility";
 import { useEffect, useState } from "react";
-import { DeviceEventEmitter, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { DeviceEventEmitter, RefreshControl, ScrollView, View } from "react-native";
+import { styles } from "@/styles/app/(tabs)/index.styles";
 
 export default function HomeScreen() {
 	const [refreshing, setRefreshing] = useState(false);
@@ -56,8 +57,3 @@ export default function HomeScreen() {
 		</View>
 	);
 }
-
-const styles = StyleSheet.create({
-	container: { flex: 1, backgroundColor: "#FFFFFF" },
-	scrollContent: { paddingBottom: 150 },
-});

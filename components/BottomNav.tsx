@@ -2,8 +2,9 @@ import { useCart } from "@/contexts/CartContext";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { usePathname, useRouter } from "expo-router";
-import { Platform, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Platform, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { styles } from "@/styles/components/BottomNav.styles";
 
 const ACTIVE_COLOR = "#000000";
 const INACTIVE_COLOR = "#f4bb26";
@@ -59,27 +60,3 @@ export default function BottomNav() {
 		</View>
 	);
 }
-
-const styles = StyleSheet.create({
-	container: {
-		flexDirection: "row",
-		backgroundColor: "#FFFFFF",
-		paddingTop: 10,
-		borderTopWidth: StyleSheet.hairlineWidth,
-		borderTopColor: "#E5E5E5",
-	},
-	tab: {
-		flex: 1,
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	cartBadge: {
-		position: "absolute",
-		right: -6,
-		top: -3,
-		backgroundColor: "#f4bb26",
-		borderRadius: 8,
-		width: 12,
-		height: 12,
-	},
-});

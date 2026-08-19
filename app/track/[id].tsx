@@ -1,166 +1,25 @@
 import { useTranslation } from "@/contexts/TranslationContext";
 import { ApiError, OrderService } from "@/services/api";
 import type { RiderLocationInfo } from "@/services/api/orderService";
+import { styles } from "@/styles/app/track/[id].styles";
+import type { LatLng, ResolvedLocation } from "@/utils/geocode";
+import { resolveRiderLocation } from "@/utils/geocode";
+import { buildMapHtml } from "@/utils/maps/riderMapHtml";
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Linking,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+	ActivityIndicator,
+	Linking,
+	Text,
+	TouchableOpacity,
+	View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 
 const POLL_MS = 12000; // refresh the rider's position every 12s
-
-// Default map center (Beirut) used until we have a real rider position.
-const DEFAULT_CENTER = { lat: 33.8938, lng: 35.5018 };
-
-// A self-contained Leaflet/OpenStreetMap page. It exposes a global
-// `updateRider(lat, lng)` that the React Native side calls (via
-// injectJavaScript) every time a fresh location arrives — so the marker moves
-// live without ever reloading the page.
-type LatLng = { lat: number; lng: number };
-type ResolvedLocation = LatLng & { source: string };
-type GeoCache = Record<string, LatLng>;
-
-const buildMapHtml = (lat: number, lng: number) => `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<style>
-  html, body, #map { height: 100%; margin: 0; padding: 0; }
-  .rider-pin {
-    background: #22a45d; width: 22px; height: 22px; border-radius: 50%;
-    border: 3px solid #fff; box-shadow: 0 0 0 2px #22a45d;
-  }
-</style>
-</head>
-<body>
-<div id="map"></div>
-<script>
-  var startLat = ${Number.isFinite(lat) ? lat : DEFAULT_CENTER.lat};
-  var startLng = ${Number.isFinite(lng) ? lng : DEFAULT_CENTER.lng};
-  var map = L.map('map', { zoomControl: true, attributionControl: false })
-              .setView([startLat, startLng], 15);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-  }).addTo(map);
-
-  var riderIcon = L.divIcon({ className: '', html: '<div class="rider-pin"></div>', iconSize: [22, 22], iconAnchor: [11, 11] });
-  var marker = null;
-
-  window.updateRider = function (la, ln) {
-    if (la == null || ln == null) return true;
-    var ll = [la, ln];
-    if (!marker) {
-      marker = L.marker(ll, { icon: riderIcon }).addTo(map);
-    } else {
-      marker.setLatLng(ll);
-    }
-    map.setView(ll, map.getZoom() < 13 ? 15 : map.getZoom());
-    return true;
-  };
-
-  ${
-		Number.isFinite(lat) && Number.isFinite(lng)
-			? "window.updateRider(startLat, startLng);"
-			: ""
-	}
-</script>
-</body>
-</html>`;
-
-// ---- Geocoding fallback (mirrors public/riderslocation.html) ----
-// Riders frequently have no live GPS (currentLocation), so — exactly like the
-// admin dashboard — we resolve an approximate position from the rider's address,
-// city, or service zone via Nominatim (OpenStreetMap), with an on-device cache.
-const GEO_CACHE_KEY = "frischly_geo_cache_v1";
-
-const getGeoCache = async (): Promise<GeoCache> => {
-	try {
-		const raw = await AsyncStorage.getItem(GEO_CACHE_KEY);
-		return raw ? JSON.parse(raw) : {};
-	} catch {
-		return {};
-	}
-};
-
-const setGeoCache = async (cache: GeoCache) => {
-	try {
-		await AsyncStorage.setItem(GEO_CACHE_KEY, JSON.stringify(cache));
-	} catch {}
-};
-
-const geocodeAddress = async (q?: string): Promise<LatLng | null> => {
-	if (!q) return null;
-	const key = q.toLowerCase().trim();
-	const cache = await getGeoCache();
-	if (cache[key]) return cache[key];
-	try {
-		const r = await fetch(
-			`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(
-				q,
-			)}`,
-			{ headers: { Accept: "application/json", "User-Agent": "FrischlyApp/1.0" } },
-		);
-		const arr = await r.json();
-		if (Array.isArray(arr) && arr.length) {
-			const hit = { lat: parseFloat(arr[0].lat), lng: parseFloat(arr[0].lon) };
-			if (Number.isFinite(hit.lat) && Number.isFinite(hit.lng)) {
-				cache[key] = hit;
-				await setGeoCache(cache);
-				return hit;
-			}
-		}
-	} catch (e) {
-		console.warn("Geocode failed:", e);
-	}
-	return null;
-};
-
-// Resolution order matches the dashboard: live GPS -> full address -> city -> zone.
-const resolveRiderLocation = async (
-	data: RiderLocationInfo,
-): Promise<ResolvedLocation | null> => {
-	if (
-		data?.hasLocation &&
-		Number.isFinite(data.latitude) &&
-		Number.isFinite(data.longitude)
-	) {
-		return {
-			lat: data.latitude as number,
-			lng: data.longitude as number,
-			source: "live",
-		};
-	}
-
-	const addr = data?.address || {};
-	const full = [addr.street, addr.city, addr.region, addr.country || "Lebanon"]
-		.filter(Boolean)
-		.join(", ");
-	if (full) {
-		const hit = await geocodeAddress(full);
-		if (hit) return { ...hit, source: "address" };
-	}
-	if (addr.city) {
-		const hit = await geocodeAddress(`${addr.city}, Lebanon`);
-		if (hit) return { ...hit, source: "city" };
-	}
-	if (Array.isArray(data?.zones) && data.zones.length) {
-		const hit = await geocodeAddress(`${data.zones[0]}, Lebanon`);
-		if (hit) return { ...hit, source: "zone" };
-	}
-	return null;
-};
 
 export default function TrackOrderScreen() {
 	const { t } = useTranslation();
@@ -418,117 +277,3 @@ export default function TrackOrderScreen() {
 		</SafeAreaView>
 	);
 }
-
-const styles = StyleSheet.create({
-	safe: { flex: 1, backgroundColor: "#fff" },
-	flex: { flex: 1 },
-	header: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "space-between",
-		paddingHorizontal: 12,
-		paddingVertical: 10,
-		borderBottomWidth: 1,
-		borderBottomColor: "#eee",
-	},
-	backBtn: { width: 36, height: 36, justifyContent: "center", alignItems: "center" },
-	headerTitle: {
-		flex: 1,
-		textAlign: "center",
-		fontSize: 16,
-		fontWeight: "700",
-		color: "#111",
-	},
-	centerBox: {
-		flex: 1,
-		justifyContent: "center",
-		alignItems: "center",
-		padding: 24,
-		gap: 12,
-	},
-	muted: { color: "#777", fontSize: 14, textAlign: "center" },
-	errorText: { color: "#c0392b", fontSize: 15, textAlign: "center" },
-	retryBtn: {
-		marginTop: 8,
-		backgroundColor: "#22a45d",
-		paddingHorizontal: 20,
-		paddingVertical: 10,
-		borderRadius: 8,
-	},
-	retryText: { color: "#fff", fontWeight: "700" },
-	mapWrap: { flex: 1, position: "relative" },
-	map: { flex: 1 },
-	noLocOverlay: {
-		position: "absolute",
-		top: 12,
-		left: 12,
-		right: 12,
-		backgroundColor: "rgba(17,17,17,0.8)",
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "center",
-		gap: 8,
-		paddingVertical: 10,
-		borderRadius: 10,
-	},
-	noLocText: { color: "#fff", fontWeight: "600" },
-	sourceBadge: {
-		position: "absolute",
-		top: 12,
-		left: 12,
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 7,
-		backgroundColor: "rgba(17,17,17,0.82)",
-		paddingVertical: 7,
-		paddingHorizontal: 12,
-		borderRadius: 20,
-	},
-	sourceDot: {
-		width: 9,
-		height: 9,
-		borderRadius: 5,
-		backgroundColor: "#f1c40f",
-	},
-	sourceDotLive: { backgroundColor: "#22a45d" },
-	sourceBadgeText: { color: "#fff", fontWeight: "600", fontSize: 12 },
-	card: {
-		backgroundColor: "#fff",
-		paddingHorizontal: 16,
-		paddingTop: 14,
-		paddingBottom: 16,
-		borderTopWidth: 1,
-		borderTopColor: "#eee",
-		gap: 12,
-	},
-	riderRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-	avatar: {
-		width: 42,
-		height: 42,
-		borderRadius: 21,
-		backgroundColor: "#22a45d",
-		justifyContent: "center",
-		alignItems: "center",
-	},
-	riderName: { fontSize: 16, fontWeight: "700", color: "#111" },
-	callBtn: {
-		width: 42,
-		height: 42,
-		borderRadius: 21,
-		backgroundColor: "#2d8cff",
-		justifyContent: "center",
-		alignItems: "center",
-	},
-	updatedText: { color: "#999", fontSize: 12 },
-	mapsBtn: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "center",
-		gap: 8,
-		backgroundColor: "#22a45d",
-		paddingVertical: 13,
-		borderRadius: 10,
-	},
-	mapsBtnDisabled: { backgroundColor: "#cccccc" },
-	mapsBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
-});

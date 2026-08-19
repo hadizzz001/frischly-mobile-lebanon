@@ -1,21 +1,21 @@
 "use client";
-import { AuthService, OrderService } from "@/services/api";
 import { useTranslation } from "@/contexts/TranslationContext";
+import { AuthService, OrderService } from "@/services/api";
 import { normalizeLebanesePhone } from "@/utils/phone";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 
-import {
-    ActivityIndicator,
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-} from "react-native";
 import type { CartItem, User } from "@/types";
+import { styles } from "@/styles/components/CreateOrderButton.styles";
+import {
+	ActivityIndicator,
+	Alert,
+	ScrollView,
+	Text,
+	TouchableOpacity,
+	View,
+} from "react-native";
 
 interface AppliedPromo {
 	promoCode: { id?: string; code?: string };
@@ -40,7 +40,7 @@ interface CheckoutPageProps {
 }
 
 // -------------------- CheckoutPage Component --------------------
-const CheckoutPage = ({
+export default function CheckoutPage({
 	items,
 	customer,
 	phone,
@@ -51,7 +51,7 @@ const CheckoutPage = ({
 	deliveryTime,
 	appliedPromo,
 	discountAmount,
-}: CheckoutPageProps) => {
+}: CheckoutPageProps) {
 	const router = useRouter();
 	const [loading, setLoading] = useState<boolean>(false);
 	const { t } = useTranslation();
@@ -190,20 +190,6 @@ const CheckoutPage = ({
 			</View>
 		</ScrollView>
 	);
-};
+}
 
 // -------------------- Styles --------------------
-const styles = StyleSheet.create({
-	container: { padding: 20, backgroundColor: "#fff" },
-	buttonWrap: { marginTop: 20, marginBottom: 40 },
-	title: { fontSize: 20, marginBottom: 15, fontWeight: "bold" },
-	button: {
-		backgroundColor: "#f4bb26",
-		padding: 15,
-		borderRadius: 8,
-		alignItems: "center",
-	},
-	buttonText: { color: "#000", fontWeight: "bold", fontSize: 16 },
-});
-
-export default CheckoutPage;
