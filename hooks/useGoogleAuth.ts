@@ -2,6 +2,7 @@ import {
     GOOGLE_IOS_CLIENT_ID,
     GOOGLE_WEB_CLIENT_ID,
 } from "@/constants/api";
+import type { GoogleSigninModule } from "@/types/hooks/useGoogleAuth.types";
 import Constants from "expo-constants";
 import { useEffect, useState } from "react";
 
@@ -10,17 +11,6 @@ import { useEffect, useState } from "react";
 // "RNGoogleSignin could not be found". So we detect Expo Go and lazy-require the
 // module only when it's actually usable.
 const isExpoGo = Constants.appOwnership === "expo";
-
-type GoogleSigninModule = {
-	GoogleSignin: {
-		configure: (opts: Record<string, unknown>) => void;
-		hasPlayServices: (opts?: Record<string, unknown>) => Promise<boolean>;
-		signIn: () => Promise<unknown>;
-		signOut: () => Promise<unknown>;
-	};
-	isErrorWithCode: (e: unknown) => e is { code: string };
-	statusCodes: { SIGN_IN_CANCELLED: string; IN_PROGRESS: string };
-};
 
 let googleModule: GoogleSigninModule | null = null;
 if (!isExpoGo) {

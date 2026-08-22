@@ -22,14 +22,7 @@ import {
 	View,
 } from "react-native";
 
-interface ProfileForm {
-	name: string;
-	phoneNumber: string;
-	street: string;
-	city: string;
-	state: string;
-	country: string;
-}
+import type { ProfileForm } from "@/types/app/edit-profile.types";
 
 export default function EditProfile() {
 	const [user, setUser] = useState<User | null>(null);

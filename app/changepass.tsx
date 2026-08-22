@@ -18,11 +18,7 @@ import {
 	View,
 } from "react-native";
 
-interface VisiblePasswordInputProps {
-	value: string;
-	onChangeText: (text: string) => void;
-	placeholder: string;
-}
+import type { VisiblePasswordInputProps } from "@/types/app/changepass.types";
 
 // Simple visible password input
 function VisiblePasswordInput({ value, onChangeText, placeholder }: VisiblePasswordInputProps) {

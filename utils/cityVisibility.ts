@@ -13,19 +13,10 @@
 import { SettingsService } from "@/services/api";
 import { pointInAnyRegion, type DeliveryRegion } from "@/utils/geo";
 
-// A serving-cities value can arrive in many shapes over the wire.
-type CityValue =
-	| string
-	| null
-	| undefined
-	| { city?: unknown; name?: unknown }
-	| CityValue[];
-
-// A generic entity (market, kitchen market, settings, product) that may carry
-// serving-cities info under a variety of keys.
-type CityEntity = Record<string, unknown> & {
-	location?: { city?: CityValue; cities?: CityValue } | unknown;
-};
+import type {
+    CityEntity,
+    CityValue,
+} from "@/types/utils/cityVisibility.types";
 
 // Field names (besides location.city / location.cities) that may hold the
 // serving-cities list on a market / settings / product object.
@@ -112,6 +103,79 @@ export const entityServesCity = (
 	entity: unknown,
 	userCity: string | null | undefined,
 ): boolean => cityMatches(getEntityCities(entity), userCity);
+
+// ---------------------------------------------------------------------------
+// City OR map-pin range rule (the single gate used everywhere)
+// ---------------------------------------------------------------------------
+
+type Coords = { latitude: number; longitude: number };
+
+/** Reads an entity's configured delivery-range circles (`deliveryRegions`). */
+export const getEntityDeliveryRegions = (entity: unknown): DeliveryRegion[] => {
+	const regions = (entity as { deliveryRegions?: unknown } | null | undefined)
+		?.deliveryRegions;
+	return Array.isArray(regions) ? (regions as DeliveryRegion[]) : [];
+};
+
+/** Is the shopper's exact pin inside ANY of the configured circles? */
+export const pinInsideRegions = (
+	pin: Coords | null | undefined,
+	regions: DeliveryRegion[] | null | undefined,
+): boolean => {
+	if (!pin || !Array.isArray(regions) || !regions.length) return false;
+	return pointInAnyRegion(pin.latitude, pin.longitude, regions);
+};
+
+/**
+ * THE visibility rule for a market / the main store, given the shopper's city
+ * and their exact map pin:
+ *
+ *   1. Pin INSIDE a configured delivery circle  -> VISIBLE, always.
+ *      The pin is the most precise signal we have, so it wins over the city on
+ *      the account (which is often just "Beirut" from a fallback, or stale).
+ *   2. No circles configured, or the shopper has no pin
+ *                                               -> fall back to the city rule.
+ *   3. Circles configured and the pin is OUTSIDE all of them
+ *                                               -> hidden (out of range).
+ *
+ * Guests (no city) and entities with no city restriction stay visible, exactly
+ * as before.
+ */
+export const isVisibleForCityOrPin = (
+	cities: string[] | unknown,
+	regions: DeliveryRegion[] | null | undefined,
+	userCity: string | null | undefined,
+	pin: Coords | null | undefined,
+): boolean => {
+	// 1. Pin inside the range -> show it, whatever the city says.
+	if (pinInsideRegions(pin, regions)) return true;
+
+	const cityOk = cityMatches(cities, userCity);
+	const hasRegions = Array.isArray(regions) && regions.length > 0;
+
+	// 2. Nothing to check against a pin -> city-based rule only.
+	if (!hasRegions || !pin) return cityOk;
+
+	// 3. A range IS configured and the pin falls outside it -> out of range.
+	return false;
+};
+
+/**
+ * Convenience wrapper of {@link isVisibleForCityOrPin} that reads both the
+ * serving cities and the delivery circles off the entity itself (a market, a
+ * kitchen's market, a product's market, ...).
+ */
+export const entityVisibleForCityOrPin = (
+	entity: unknown,
+	userCity: string | null | undefined,
+	pin: Coords | null | undefined,
+): boolean =>
+	isVisibleForCityOrPin(
+		getEntityCities(entity),
+		getEntityDeliveryRegions(entity),
+		userCity,
+		pin,
+	);
 
 // ---------------------------------------------------------------------------
 // Admin / main-store serving cities
@@ -236,23 +300,22 @@ export const isAdminInDeliveryRange = async (
 };
 
 /**
- * Combined main-store visibility gate: city AND delivery-range pin must both
- * pass (each individually no-ops when unconfigured / unavailable). Use this
- * instead of {@link isCityServedByAdmin} alone wherever main-store items,
- * categories, or search results are gated, so a shopper outside the admin's
- * configured pin range is treated exactly like being outside a market's
- * range — hidden everywhere, including search.
+ * Combined main-store visibility gate. The shopper sees the main store when
+ * EITHER their exact map pin falls inside one of the admin's configured
+ * delivery circles, OR (no circles / no pin) their city is one the admin
+ * serves. A shopper whose pin is inside the range is never hidden because of
+ * a city mismatch — see {@link isVisibleForCityOrPin}.
  */
 export const isServedByAdmin = async (
 	userCity: string | null | undefined,
 	pin: { latitude: number; longitude: number } | null | undefined,
 	opts?: { force?: boolean },
 ): Promise<boolean> => {
-	const [cityOk, rangeOk] = await Promise.all([
-		isCityServedByAdmin(userCity, opts),
-		isAdminInDeliveryRange(pin, opts),
+	const [cities, regions] = await Promise.all([
+		getAdminCities(opts),
+		getAdminDeliveryRegions(opts),
 	]);
-	return cityOk && rangeOk;
+	return isVisibleForCityOrPin(cities, regions, userCity, pin);
 };
 
 export default entityServesCity;

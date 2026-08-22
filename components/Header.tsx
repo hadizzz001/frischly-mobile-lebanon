@@ -1,20 +1,22 @@
 import { LEBANESE_CITIES } from "@/constants/lebaneseCities";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { AuthService } from "@/services/api";
+import { styles } from "@/styles/components/Header.styles";
 import { getCityCoordinates, getStateForCity } from "@/utils/cityDetection";
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { styles } from "@/styles/components/Header.styles";
 import {
-	DeviceEventEmitter,
-	Image,
-	ScrollView,
-	Text,
-	TextInput,
-	TouchableOpacity,
-	View,
+    DeviceEventEmitter,
+    FlatList,
+    Image,
+    Modal,
+    Pressable,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 
@@ -31,6 +33,18 @@ export default function Header() {
   const [userCity, setUserCity] = useState("");
   const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
   const [savingCity, setSavingCity] = useState(false);
+  // Type-to-filter box inside the city modal — the list now covers every
+  // regular Lebanese town, so scrolling alone isn't the fastest way to find one.
+  const [citySearch, setCitySearch] = useState("");
+
+  const visibleCities = LEBANESE_CITIES.filter((city) =>
+    city.toLowerCase().includes(citySearch.trim().toLowerCase())
+  );
+
+  const openCityDropdown = () => {
+    setCitySearch("");
+    setCityDropdownOpen(true);
+  };
 
   useEffect(() => {
     const loadCity = async () => {
@@ -191,7 +205,7 @@ export default function Header() {
         <View style={styles.locationContainer}>
           <TouchableOpacity
             style={[styles.locationButton, isRTL && styles.rowReverse]}
-            onPress={() => setCityDropdownOpen(!cityDropdownOpen)}
+            onPress={() => (cityDropdownOpen ? setCityDropdownOpen(false) : openCityDropdown())}
             disabled={savingCity}
           >
             <Feather name="map-pin" size={16} color="#f4bb26" />
@@ -207,26 +221,59 @@ export default function Header() {
             <Text style={styles.arrow}>{cityDropdownOpen ? "▲" : "▼"}</Text>
           </TouchableOpacity>
 
-          {cityDropdownOpen && (
-            <ScrollView style={styles.cityDropdownList} nestedScrollEnabled>
-              {LEBANESE_CITIES.map((city) => (
-                <TouchableOpacity
-                  key={city}
-                  style={[styles.dropdownItem, isRTL && styles.rowReverse]}
-                  onPress={() => handleSelectCity(city)}
-                >
-                  <Text
-                    style={[
-                      styles.dropdownText,
-                      city === userCity && styles.dropdownTextActive,
-                    ]}
-                  >
-                    {city}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          )}
+          {/* The list is rendered in a Modal rather than as an absolutely
+              positioned child of the header. `topNav` has a fixed height, so
+              an overflowing dropdown was being clipped — which on Android also
+              made it impossible to touch or scroll. A Modal floats above every
+              screen, so the full city list scrolls normally. */}
+          <Modal
+            visible={cityDropdownOpen}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setCityDropdownOpen(false)}
+          >
+            <Pressable
+              style={styles.cityModalBackdrop}
+              onPress={() => setCityDropdownOpen(false)}
+            >
+              {/* Swallow taps inside the sheet so they don't close it. */}
+              <Pressable style={styles.cityModalSheet} onPress={() => {}}>
+                <Text style={styles.cityModalTitle}>{t("selectCity")}</Text>
+
+                <TextInput
+                  style={styles.citySearchInput}
+                  placeholder={t("searchPlaceholder")}
+                  placeholderTextColor="#888"
+                  value={citySearch}
+                  onChangeText={setCitySearch}
+                  autoCorrect={false}
+                />
+
+                <FlatList
+                  data={visibleCities}
+                  keyExtractor={(city) => city}
+                  style={styles.cityModalList}
+                  keyboardShouldPersistTaps="handled"
+                  initialNumToRender={20}
+                  renderItem={({ item: city }) => (
+                    <TouchableOpacity
+                      style={[styles.dropdownItem, isRTL && styles.rowReverse]}
+                      onPress={() => handleSelectCity(city)}
+                    >
+                      <Text
+                        style={[
+                          styles.dropdownText,
+                          city === userCity && styles.dropdownTextActive,
+                        ]}
+                      >
+                        {city}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                />
+              </Pressable>
+            </Pressable>
+          </Modal>
         </View>
       )}
 

@@ -18,20 +18,13 @@ import { useTranslation } from "@/contexts/TranslationContext";
 import { AuthService, ProductService } from "@/services/api";
 import { styles } from "@/styles/components/ProductList.styles";
 import type { CartItem, Product, User } from "@/types";
+import type { ShopPageProps } from "@/types/components/ProductList.types";
 import { isServedByAdmin } from "@/utils/cityVisibility";
 import { getUserCityAndPin } from "@/utils/userCity";
 
 const { width } = Dimensions.get("window");
 const ITEM_WIDTH = width / 3 - 15;
 const LIMIT = 12; // items per fetch
-
-interface ShopPageProps {
-	refreshTrigger?: number;
-	setRefreshing: (refreshing: boolean) => void;
-	// When set, list THIS market's products (skipping the admin city gate)
-	// instead of the main store's.
-	marketId?: string;
-}
 
 export default function ShopPage({ refreshTrigger, setRefreshing, marketId }: ShopPageProps) {
 	const { t, td } = useTranslation();

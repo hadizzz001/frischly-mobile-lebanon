@@ -10,7 +10,12 @@
 
 import { useTranslation } from "@/contexts/TranslationContext";
 import { MarketService } from "@/services/api";
+import { styles } from "@/styles/components/VoiceSearchButton.styles";
 import type { Market } from "@/types";
+import type {
+	VoiceResult,
+	VoiceSearchButtonProps,
+} from "@/types/components/VoiceSearchButton.types";
 import { processVoiceQuery } from "@/utils/voiceSearch";
 import { Feather } from "@expo/vector-icons";
 import {
@@ -21,8 +26,6 @@ import {
 } from "expo-audio";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import type { StyleProp, ViewStyle } from "react-native";
-import { styles } from "@/styles/components/VoiceSearchButton.styles";
 import {
 	ActivityIndicator,
 	Animated,
@@ -38,36 +41,64 @@ const MIN_RECORD_MS = 500;
 // Hard cap on how long a single recording can run (ms) — auto-stops at 1 minute.
 const MAX_RECORD_MS = 60000;
 
-interface VoiceResult {
-	transcript?: string;
-	terms?: string[];
-	intent?: string;
-	market?: string;
-}
-
-interface VoiceSearchButtonProps {
-	onResults?: (result: VoiceResult) => void;
-	language?: string;
-	floating?: boolean;
-	size?: number;
-	color?: string;
-	style?: StyleProp<ViewStyle>;
-}
-
 export default function VoiceSearchButton({
 	onResults,
-	language: languageProp,
 	floating = false,
 	size = 22,
 	color = "#f4bb26",
 	style,
 }: VoiceSearchButtonProps) {
-	const { t, language } = useTranslation();
+	const { t } = useTranslation();
 	const router = useRouter();
 	const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
 
-	// Voice hint sent to Whisper: explicit prop wins, else the app language.
-	const speechLanguage = languageProp || language;
+	// NOTE: the spoken language is auto-detected by the AI, so nothing is passed
+	// here. A shopper using the app in English may still speak Lebanese Arabic.
+
+	// Turn a raw thrown error (network failure, OpenAI HTTP status, missing key,
+	// ...) into one short friendly sentence. The technical detail still goes to
+	// the console for debugging — the shopper only ever sees plain language.
+	const friendlyVoiceError = (err: unknown): string => {
+		const raw = String((err as Error)?.message || "").toLowerCase();
+
+		// No connection / request never reached the server.
+		if (
+			raw.includes("network request failed") ||
+			raw.includes("failed to fetch") ||
+			raw.includes("timeout") ||
+			raw.includes("timed out")
+		) {
+			return t("voiceOffline");
+		}
+		// Rate limited or the service is temporarily overloaded.
+		if (
+			raw.includes("429") ||
+			raw.includes("rate limit") ||
+			raw.includes("503") ||
+			raw.includes("overloaded")
+		) {
+			return t("voiceServiceBusy");
+		}
+		// Misconfiguration (missing/invalid key) or a server-side failure. The
+		// shopper can't act on these, so keep it generic rather than alarming.
+		if (
+			raw.includes("api key") ||
+			raw.includes("401") ||
+			raw.includes("403") ||
+			raw.includes("500") ||
+			raw.includes("502")
+		) {
+			return t("voiceUnavailable");
+		}
+		// Clip rejected for being too large/long for the transcription service.
+		if (raw.includes("413") || raw.includes("too large") || raw.includes("maximum")) {
+			return t("voiceTooLong");
+		}
+		// Nothing usable was captured.
+		if (raw.includes("no recording")) return t("voiceNoSpeech");
+
+		return t("voiceError");
+	};
 
 	// Hand the recognised items to the parent, or (floating/global button) open
 	// the shop with them as a multi-item search.
@@ -156,6 +187,27 @@ export default function VoiceSearchButton({
 	const startedAtRef = useRef<number>(0);
 	const maxDurationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+	// `status` is also mirrored in a ref because the max-duration timer and the
+	// press-out handler are created in an earlier render — reading the state
+	// variable there would give them a stale value (which previously made the
+	// auto-stop silently do nothing). The ref always holds the live value.
+	const statusRef = useRef<"idle" | "recording" | "processing">("idle");
+	// Guards against the clip being processed twice when the 60s auto-stop fires
+	// and the user then lifts their finger (or vice-versa).
+	const stoppingRef = useRef<boolean>(false);
+	// Set when the recording was ended by the 1-minute cap rather than by the
+	// user, so we can tell them why it stopped.
+	const hitMaxRef = useRef<boolean>(false);
+	// True while the finger is physically down. Starting a recording is async
+	// (permissions + prepare), so the shopper can let go before it actually
+	// begins — this lets us stop immediately instead of leaving the mic open.
+	const pressActiveRef = useRef<boolean>(false);
+
+	const setPhase = (next: "idle" | "recording" | "processing") => {
+		statusRef.current = next;
+		setStatus(next);
+	};
+
 	// Pulsing ring animation while recording.
 	const pulse = useRef(new Animated.Value(0)).current;
 	useEffect(() => {
@@ -187,58 +239,112 @@ export default function VoiceSearchButton({
 	useEffect(() => {
 		return () => {
 			if (maxDurationTimerRef.current) clearTimeout(maxDurationTimerRef.current);
+			// Make sure we never leave the mic open if the screen goes away
+			// mid-recording.
+			if (statusRef.current === "recording") {
+				try {
+					recorder.stop();
+				} catch {}
+			}
 		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
+	// Seconds elapsed in the current recording, so the caption can count down
+	// against the 1-minute cap.
+	const [elapsedSec, setElapsedSec] = useState<number>(0);
+	useEffect(() => {
+		if (status !== "recording") {
+			setElapsedSec(0);
+			return;
+		}
+		setElapsedSec(0);
+		const id = setInterval(() => {
+			setElapsedSec(Math.floor((Date.now() - startedAtRef.current) / 1000));
+		}, 250);
+		return () => clearInterval(id);
+	}, [status]);
+
+	const secondsLeft = Math.max(0, Math.ceil(MAX_RECORD_MS / 1000) - elapsedSec);
+
 	const startRecording = async () => {
-		if (status !== "idle") return;
+		if (statusRef.current !== "idle") return;
+		pressActiveRef.current = true;
 		setErrorMsg("");
 		setTranscript("");
+		stoppingRef.current = false;
+		hitMaxRef.current = false;
 		try {
 			const perm = await requestRecordingPermissionsAsync();
 			if (!perm.granted) {
 				setErrorMsg(t("voiceMicDenied"));
-				setStatus("processing"); // show the message briefly in the overlay
-				setTimeout(() => setStatus("idle"), 1800);
+				setPhase("processing"); // show the message briefly in the overlay
+				setTimeout(() => closeOverlay(), 2200);
 				return;
 			}
 			await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
 			await recorder.prepareToRecordAsync();
 			recorder.record();
 			startedAtRef.current = Date.now();
-			setStatus("recording");
+			setPhase("recording");
+
+			// The shopper let go while we were still starting up — treat it as a
+			// tap that was too short instead of recording with no finger down.
+			if (!pressActiveRef.current) {
+				stopAndProcess();
+				return;
+			}
 
 			// Safety net: force-stop once the max duration is hit even if the
 			// user keeps holding the button.
 			if (maxDurationTimerRef.current) clearTimeout(maxDurationTimerRef.current);
 			maxDurationTimerRef.current = setTimeout(() => {
+				hitMaxRef.current = true;
 				stopAndProcess();
 			}, MAX_RECORD_MS);
 		} catch (err) {
 			console.warn("VoiceSearch start error:", (err as Error)?.message);
-			setStatus("idle");
+			setErrorMsg(t("voiceUnavailable"));
+			setPhase("processing");
+			setTimeout(() => closeOverlay(), 2400);
 		}
 	};
 
+	// Fired when the finger lifts. Records that the press ended, then stops (if
+	// the recording already began — otherwise `startRecording` handles it).
+	const handlePressOut = () => {
+		pressActiveRef.current = false;
+		stopAndProcess();
+	};
+
 	const stopAndProcess = async () => {
-		if (status !== "recording") return;
+		// Read from the ref (not state) so this works when called by the
+		// max-duration timer, and bail out if a stop is already under way.
+		if (statusRef.current !== "recording" || stoppingRef.current) return;
+		stoppingRef.current = true;
+
 		if (maxDurationTimerRef.current) {
 			clearTimeout(maxDurationTimerRef.current);
 			maxDurationTimerRef.current = null;
 		}
 		const elapsed = Date.now() - startedAtRef.current;
-		setStatus("processing");
+		const wasCappedAtMax = hitMaxRef.current;
+		setPhase("processing");
 		try {
 			await recorder.stop();
 			const uri = recorder.uri;
 
 			if (elapsed < MIN_RECORD_MS || !uri) {
 				setErrorMsg(t("voiceHoldHint"));
-				setTimeout(() => closeOverlay(), 1500);
+				setTimeout(() => closeOverlay(), 1800);
 				return;
 			}
 
-			const result = await processVoiceQuery(uri, speechLanguage);
+			// Let the shopper know the 1-minute cap ended the recording; we still
+			// go ahead and search whatever was captured.
+			if (wasCappedAtMax) setErrorMsg(t("voiceMaxLength"));
+
+			const result = await processVoiceQuery(uri);
 			setTranscript(result.transcript || "");
 
 			// "Go to <market>" — navigate straight to that store. If the name doesn't
@@ -265,16 +371,21 @@ export default function VoiceSearchButton({
 			closeOverlay();
 			emitResults(result);
 		} catch (err) {
+			// Never surface raw API/network text to the shopper — map it to a
+			// short, friendly sentence instead.
 			console.warn("VoiceSearch process error:", (err as Error)?.message);
-			setErrorMsg((err as Error)?.message || t("voiceError"));
+			setErrorMsg(friendlyVoiceError(err));
 			setTimeout(() => closeOverlay(), 2600);
 		}
 	};
 
 	const closeOverlay = () => {
-		setStatus("idle");
+		setPhase("idle");
 		setTranscript("");
 		setErrorMsg("");
+		stoppingRef.current = false;
+		hitMaxRef.current = false;
+		pressActiveRef.current = false;
 	};
 
 	const isRecording = status === "recording";
@@ -315,7 +426,7 @@ export default function VoiceSearchButton({
 				accessibilityRole="button"
 				accessibilityLabel={t("voiceSearchHint")}
 				onPressIn={startRecording}
-				onPressOut={stopAndProcess}
+				onPressOut={handlePressOut}
 				hitSlop={14}
 				style={({ pressed }) => [
 					buttonBase,
@@ -343,7 +454,11 @@ export default function VoiceSearchButton({
 			{isRecording && !floating && (
 				<View style={captionBase} pointerEvents="none">
 					<Text style={styles.captionText}>{t("voiceListening")}</Text>
-					<Text style={styles.captionHint}>{t("voiceReleaseHint")}</Text>
+					<Text style={styles.captionHint}>
+						{secondsLeft <= 10
+							? `${t("voiceReleaseHint")} · ${secondsLeft}s`
+							: t("voiceReleaseHint")}
+					</Text>
 				</View>
 			)}
 

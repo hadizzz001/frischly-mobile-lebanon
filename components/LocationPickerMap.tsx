@@ -15,20 +15,12 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 
-export interface PickedLocation {
-	latitude: number;
-	longitude: number;
-}
+import type {
+	LocationPickerMapProps,
+	PickedLocation,
+} from "@/types/components/LocationPickerMap.types";
 
-interface LocationPickerMapProps {
-	visible: boolean;
-	initialLocation?: PickedLocation | null;
-	onClose: () => void;
-	onConfirm: (location: PickedLocation) => void;
-	title?: string;
-	confirmLabel?: string;
-	useMyLocationLabel?: string;
-}
+export type { PickedLocation };
 
 /**
  * LocationPickerMap

@@ -2,9 +2,7 @@ import { useTranslation } from "@/contexts/TranslationContext";
 import { Linking, Text, View } from "react-native";
 import { styles } from "@/styles/components/OutOfStockComponent.styles";
 
-interface OutOfStockComponentProps {
-	itemName: string;
-}
+import type { OutOfStockComponentProps } from "@/types/components/OutOfStockComponent.types";
 
 export default function OutOfStockComponent({
 	itemName,

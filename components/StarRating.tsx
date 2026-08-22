@@ -1,16 +1,8 @@
-import { MaterialIcons } from "@expo/vector-icons";
-import type { StyleProp, ViewStyle } from "react-native";
-import { TouchableOpacity, View } from "react-native";
 import { styles } from "@/styles/components/StarRating.styles";
+import { MaterialIcons } from "@expo/vector-icons";
+import { TouchableOpacity, View } from "react-native";
 
-interface StarRatingProps {
-	rating?: number;
-	onChange?: (value: number) => void;
-	size?: number;
-	color?: string;
-	emptyColor?: string;
-	style?: StyleProp<ViewStyle>;
-}
+import type { StarRatingProps } from "@/types/components/StarRating.types";
 
 // Simple 1-5 star rating control.
 // - Pass `rating` (0-5, 0 = nothing selected yet) and `onChange` to make it

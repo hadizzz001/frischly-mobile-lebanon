@@ -1,10 +1,8 @@
 import { httpClient } from "./httpClient";
 
-export interface ValidatePromoPayload {
-	code: string;
-	orderTotal: number;
-	market?: string | null;
-}
+import type { ValidatePromoPayload } from "@/types/services/promoCodeService.types";
+
+export type { ValidatePromoPayload };
 
 export const PromoCodeService = {
 	// Validate a promo code against the current order total / market. Auth is

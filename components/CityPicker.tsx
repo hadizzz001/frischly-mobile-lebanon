@@ -1,18 +1,10 @@
 import { LEBANESE_CITIES } from "@/constants/lebaneseCities";
 import { useTranslation } from "@/contexts/TranslationContext";
-import { Picker } from "@react-native-picker/picker";
-import type { StyleProp, ViewStyle } from "react-native";
-import { Platform, View } from "react-native";
 import { styles } from "@/styles/components/CityPicker.styles";
+import { Picker } from "@react-native-picker/picker";
+import { View } from "react-native";
 
-interface CityPickerProps {
-	value?: string;
-	onValueChange: (city: string) => void;
-	placeholder?: string;
-	textColor?: string;
-	style?: StyleProp<ViewStyle>;
-	disabled?: boolean;
-}
+import type { CityPickerProps } from "@/types/components/CityPicker.types";
 
 /**
  * Reusable dropdown for selecting a Lebanese city.

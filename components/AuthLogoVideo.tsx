@@ -1,11 +1,8 @@
 import { useEventListener } from "expo";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { useEffect, useRef } from "react";
-import type { StyleProp, ViewStyle } from "react-native";
 
-interface AuthLogoVideoProps {
-	style?: StyleProp<ViewStyle>;
-}
+import type { AuthLogoVideoProps } from "@/types/components/AuthLogoVideo.types";
 
 // Branded animated logo shown on the login/register screens, replacing the
 // old static PNG image.

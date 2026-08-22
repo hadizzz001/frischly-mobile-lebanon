@@ -1,11 +1,12 @@
+import { FeedbackService, OrderService } from "@/services/api";
+import type { Order } from "@/types";
+import type { DeliveredOrderFeedback } from "@/types/hooks/useDeliveredOrderFeedback.types";
 import {
     getFeedbackSnoozeTimestamp,
     hasHandledFeedback,
     markFeedbackHandled,
     setFeedbackSnoozeTimestamp,
 } from "@/utils/feedbackTracking";
-import { FeedbackService, OrderService } from "@/services/api";
-import type { Order } from "@/types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useRef, useState } from "react";
 import { AppState, type AppStateStatus } from "react-native";
@@ -25,14 +26,7 @@ const POLL_MS = 10000;
  * modal can pop up automatically from anywhere — home, cart, product page,
  * etc. — the moment a delivery is completed.
  */
-export interface DeliveredOrderFeedback {
-	feedbackOrderId: string | null;
-	/** Shopper tapped "Maybe Later" — snoozes ALL feedback prompts until a
-	 *  genuinely new order is delivered. */
-	skipFeedbackModal: () => void;
-	/** Shopper successfully submitted feedback for the current order. */
-	submitFeedbackModal: () => void;
-}
+export type { DeliveredOrderFeedback };
 
 // Best-effort timestamp for when an order was delivered — falls back to
 // whichever date field is available so older order payloads still work.

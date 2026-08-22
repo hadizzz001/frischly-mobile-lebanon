@@ -1,21 +1,10 @@
 import { useState } from "react";
 import {
     ActivityIndicator,
-    StyleProp,
     TouchableOpacity,
-    TouchableOpacityProps,
-    ViewStyle,
 } from "react-native";
 
-interface LoadingButtonProps extends Omit<TouchableOpacityProps, "onPress"> {
-	// Can be sync or async. The button shows a spinner while this is pending
-	// and restores itself once it resolves or rejects (success or error).
-	onPress: () => void | Promise<any>;
-	loadingColor?: string;
-	indicatorSize?: "small" | "large";
-	// Extra style applied only while the spinner is shown (defaults to style).
-	loadingStyle?: StyleProp<ViewStyle>;
-}
+import type { LoadingButtonProps } from "@/types/components/LoadingButton.types";
 
 /**
  * Drop-in replacement for TouchableOpacity that swaps its content for an

@@ -1,9 +1,6 @@
-import { createContext, useContext, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
+import { createContext, useContext, useState, type ReactNode } from 'react';
 
-interface CartBoolContextValue {
-  isBooleanValue: boolean;
-  setBooleanValue: Dispatch<SetStateAction<boolean>>;
-}
+import type { CartBoolContextValue } from '@/types/contexts/CartBoolContext.types';
 
 // Create Context
 const CartBoolContext = createContext<CartBoolContextValue | undefined>(undefined);

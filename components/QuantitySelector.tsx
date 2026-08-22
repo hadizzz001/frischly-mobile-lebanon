@@ -8,11 +8,7 @@ import {
 	View,
 } from "react-native";
 
-interface QuantitySelectorProps {
-	initialQty?: number;
-	productId: string;
-	onChange: (qty: number) => void;
-}
+import type { QuantitySelectorProps } from "@/types/components/QuantitySelector.types";
 
 export default function QuantitySelector({
 	initialQty = 1,

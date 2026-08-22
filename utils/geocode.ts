@@ -7,9 +7,13 @@
 import type { RiderLocationInfo } from "@/services/api/orderService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export type LatLng = { lat: number; lng: number };
-export type ResolvedLocation = LatLng & { source: string };
-export type GeoCache = Record<string, LatLng>;
+import type {
+	GeoCache,
+	LatLng,
+	ResolvedLocation,
+} from "@/types/utils/geocode.types";
+
+export type { GeoCache, LatLng, ResolvedLocation };
 
 const GEO_CACHE_KEY = "frischly_geo_cache_v1";
 

@@ -10,6 +10,7 @@ import { useTranslation } from "@/contexts/TranslationContext";
 import { useAppleAuth } from "@/hooks/useAppleAuth";
 import { useGoogleAuth } from "@/hooks/useGoogleAuth";
 import { ApiError, AuthService } from "@/services/api";
+import { styles } from "@/styles/app/register.styles";
 import type { AuthPayload } from "@/types";
 import { detectCityFromLocation, getStateForCity, reverseGeocodePoint } from "@/utils/cityDetection";
 import { formatLocalDate, toCalendarISOString } from "@/utils/date";
@@ -20,35 +21,22 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { styles } from "@/styles/app/register.styles";
 
 import {
-	ActivityIndicator,
-	Alert,
-	Dimensions,
-	Image,
-	KeyboardAvoidingView,
-	type KeyboardTypeOptions,
-	Platform,
-	ScrollView,
-	Text,
-	TextInput,
-	TouchableOpacity,
-	View,
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
-interface InputBoxProps {
-	placeholder?: string;
-	value?: string;
-	onChangeText?: (text: string) => void;
-	secureTextEntry?: boolean;
-	keyboardType?: KeyboardTypeOptions;
-	inputBg?: string;
-	inputText?: string;
-	placeholderColor?: string;
-	editable?: boolean;
-	[key: string]: unknown;
-}
+import type { InputBoxProps } from "@/types/app/register.types";
 
 // ✅ Beirut fallback address used whenever the shopper denies the location
 // permission (or GPS/reverse-geocoding fails). We never leave city/state/

@@ -1,13 +1,9 @@
+import type { Market } from "@/types/models";
 import { httpClient } from "./httpClient";
-import type { Market, Subcategory } from "@/types/models";
 
-// A market's own category (MarketCategory collection) with its subcategories.
-export interface MarketCategory {
-	_id: string;
-	name: string;
-	subcategories?: Subcategory[];
-	[key: string]: unknown;
-}
+import type { MarketCategory } from "@/types/services/marketService.types";
+
+export type { MarketCategory };
 
 export const MarketService = {
 	// Optional `pin` (the shopper's exact map location) lets the server also

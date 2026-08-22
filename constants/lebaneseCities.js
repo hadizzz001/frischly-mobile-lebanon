@@ -1,7 +1,17 @@
-// Major Lebanese cities/towns for address selection.
+// Lebanese cities/towns for address selection.
 // Keep these values aligned with the market "location.city" values used by the
 // backend so city-based market filtering works correctly.
-export const LEBANESE_CITIES = [
+//
+// The list is built from two parts:
+//   1. MAJOR_LEBANESE_CITIES — the main governorate/district centres, kept at
+//      the TOP of the dropdown (and in their original order) so the cities
+//      shoppers pick most often stay one tap away.
+//   2. OTHER_LEBANESE_TOWNS — the rest of the regularly used towns/villages
+//      across all 8 governorates, sorted alphabetically.
+// The two are merged through a Set, so a name only ever appears once.
+
+// Main cities / district centres (unchanged order — most-used first).
+export const MAJOR_LEBANESE_CITIES = [
 	"Beirut",
 	"Tripoli",
 	"Sidon",
@@ -35,6 +45,126 @@ export const LEBANESE_CITIES = [
 	"Damour",
 	"Anjar",
 	"Rayak",
+];
+
+// Additional regularly used towns/villages, alphabetically sorted.
+export const OTHER_LEBANESE_TOWNS = [
+	"Aabey",
+	"Aaqoura",
+	"Abdeh",
+	"Adma",
+	"Ain Ebel",
+	"Ain Saadeh",
+	"Ain Zhalta",
+	"Ain el Remmaneh",
+	"Aitaroun",
+	"Ajaltoun",
+	"Akkar el Atika",
+	"Alma el Chaab",
+	"Amchit",
+	"Ansar",
+	"Antoura",
+	"Aramoun",
+	"Arsal",
+	"Baakline",
+	"Ballouneh",
+	"Barja",
+	"Barouk",
+	"Bazourieh",
+	"Bchamoun",
+	"Beit Chabab",
+	"Beit Mery",
+	"Bhannes",
+	"Bikfaya",
+	"Blat",
+	"Bouar",
+	"Bourj Hammoud",
+	"Bourj el Barajneh",
+	"Chekka",
+	"Chhim",
+	"Chnaniir",
+	"Choueifat",
+	"Daraya",
+	"Deir el Ahmar",
+	"Deir el Qamar",
+	"Dekwaneh",
+	"Dhour el Choueir",
+	"Doha Aramoun",
+	"Douma",
+	"Ehden",
+	"Ehmej",
+	"El Mina",
+	"Fanar",
+	"Faraya",
+	"Feytroun",
+	"Fneidek",
+	"Ghazir",
+	"Ghobeiri",
+	"Hadath",
+	"Hadchit",
+	"Halat",
+	"Hammana",
+	"Haret Hreik",
+	"Haret Saida",
+	"Hasroun",
+	"Hazmieh",
+	"Hrajel",
+	"Jal el Dib",
+	"Jiyeh",
+	"Joub Jannine",
+	"Kaa",
+	"Kab Elias",
+	"Kaslik",
+	"Kfardebian",
+	"Kfarhbab",
+	"Kfarshima",
+	"Khalde",
+	"Khiam",
+	"Kousba",
+	"Laqlouq",
+	"Machghara",
+	"Maghdouche",
+	"Mansourieh",
+	"Mayrouba",
+	"Mazraat Yachouh",
+	"Mechmech",
+	"Menjez",
+	"Miziara",
+	"Mtein",
+	"Naameh",
+	"Nahr Ibrahim",
+	"Naqoura",
+	"Niha",
+	"Qana",
+	"Qartaba",
+	"Qlaiaat",
+	"Ras Baalbek",
+	"Rayfoun",
+	"Rmeileh",
+	"Rmeish",
+	"Roumieh",
+	"Saadiyat",
+	"Safra",
+	"Sarafand",
+	"Sarba",
+	"Sawfar",
+	"Sin el Fil",
+	"Srifa",
+	"Taanayel",
+	"Tabarja",
+	"Tannourine",
+	"Tebnine",
+	"Terbol",
+	"Wadi Khaled",
+	"Yaroun",
+	"Zouk Mikael",
+	"Zouk Mosbeh",
+	"Zrariyeh",
+];
+
+// Full dropdown list: major cities first, then every other town, de-duplicated.
+export const LEBANESE_CITIES = [
+	...new Set([...MAJOR_LEBANESE_CITIES, ...OTHER_LEBANESE_TOWNS]),
 ];
 
 export default LEBANESE_CITIES;

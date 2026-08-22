@@ -30,29 +30,11 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import OrderComponent from "../components/CreateOrderButton";
 
-interface AppliedPromo {
-	promoCode: { id?: string; code?: string };
-	discountAmount: number;
-	[key: string]: unknown;
-}
-
-interface CheckoutInputs {
-	name: string;
-	email: string;
-	phone: string;
-	country: string;
-	state: string;
-	city: string;
-	street: string;
-}
-
-interface CheckoutState {
-	loading: boolean;
-	user: User | null;
-	token: string | null;
-	inputs: CheckoutInputs;
-	country: string;
-}
+import type {
+	AppliedPromo,
+	CheckoutInputs,
+	CheckoutState,
+} from "@/types/app/checkout.types";
 
 export default function CheckoutScreen() {
 	const { t, isRTL } = useTranslation();

@@ -1,26 +1,27 @@
 import { useTranslation } from "@/contexts/TranslationContext";
 import { KitchenService } from "@/services/api";
+import { styles } from "@/styles/components/KitchenSlider.styles";
 import type { Kitchen, KitchenCategory, Product } from "@/types";
+import type { KitchenSliderProps } from "@/types/components/KitchenSlider.types";
 import {
-    cityMatches,
-    entityServesCity,
+    entityVisibleForCityOrPin,
     getAdminCities,
     getAdminDeliveryRegions,
+    isVisibleForCityOrPin,
 } from "@/utils/cityVisibility";
-import { pointInAnyRegion, type DeliveryRegion } from "@/utils/geo";
+import { type DeliveryRegion } from "@/utils/geo";
 import { rtlRow } from "@/utils/rtl";
 import { getUserCityAndPin } from "@/utils/userCity";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { styles } from "@/styles/components/KitchenSlider.styles";
 import {
-	ActivityIndicator,
-	Dimensions,
-	Image,
-	ScrollView,
-	Text,
-	TouchableOpacity,
-	View,
+    ActivityIndicator,
+    Dimensions,
+    Image,
+    ScrollView,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 const { width } = Dimensions.get("window");
@@ -38,19 +39,19 @@ export const getKitchenCartItems = (
 		)
 		.map((p) => ({ ...p, quantity: 1 }));
 
-// Apply the app-wide city visibility rule to a list of kitchens or kitchen
-// categories. Both markets and the admin/main store can now serve MULTIPLE
-// cities (an array), so:
-//   - a market entry is shown only if its cities include the user's city,
-//   - a main-store entry (no market) is shown only if the admin's serving
-//     cities include the user's city.
+// Apply the app-wide visibility rule to a list of kitchens or kitchen
+// categories. Both markets and the admin/main store can serve MULTIPLE cities
+// (an array) and/or declare map-pin delivery circles, so an entry is shown when:
+//   - the shopper's exact map pin falls inside its delivery circle(s), OR
+//   - (no circles configured / no pin) its serving cities include the user's
+//     city — for a market entry its own cities, for a main-store entry the
+//     admin's cities.
+// A pin inside the range always wins over a city mismatch.
 // Guests (no city) and entries/admin with no city restriction see everything.
 // Pass `adminCities` (from getAdminCities()) so main-store entries respect the
 // admin's cities; omit it to keep main-store entries always visible.
-// `pin` + `adminRegions` additionally enforce the admin's configured map-pin
-// delivery-range circle(s) on main-store entries, mirroring the rule already
-// applied to markets — when the admin has a range configured, a main-store
-// entry is hidden if the shopper's pin falls outside every circle.
+// `pin` + `adminRegions` supply the admin's configured map-pin delivery-range
+// circle(s) for main-store entries.
 // Exported so the kitchen-category screen reuses the same rule.
 export const filterByCity = (
 	list: KitchenCategory[],
@@ -58,20 +59,12 @@ export const filterByCity = (
 	adminCities: string[] = [],
 	pin?: { latitude: number; longitude: number } | null,
 	adminRegions: DeliveryRegion[] = [],
-): KitchenCategory[] => {
-	const inAdminRange = (): boolean => {
-		if (!adminRegions.length) return true;
-		if (!pin) return true;
-		return pointInAnyRegion(pin.latitude, pin.longitude, adminRegions);
-	};
-	return (list || []).filter((entry) =>
+): KitchenCategory[] =>
+	(list || []).filter((entry) =>
 		entry?.market
-			? city
-				? entityServesCity(entry.market, city)
-				: true
-			: (city ? cityMatches(adminCities, city) : true) && inAdminRange(),
+			? entityVisibleForCityOrPin(entry.market, city, pin)
+			: isVisibleForCityOrPin(adminCities, adminRegions, city, pin),
 	);
-};
 
 // The home screen shows kitchen CATEGORIES (e.g. Pizza, Pasta). Tapping a
 // category opens /kitchen-category/[id], which lists the kitchens inside it;
@@ -82,11 +75,6 @@ export const filterByCity = (
 // OWN kitchens directly (skipping the category grouping, since there's only
 // one market to consider), and tapping a card opens /kitchen/[id] right away.
 // If the market has no kitchens, nothing is rendered.
-interface KitchenSliderProps {
-	refreshTrigger?: number;
-	marketId?: string;
-}
-
 export default function KitchenSlider({
 	refreshTrigger,
 	marketId,

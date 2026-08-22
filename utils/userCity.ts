@@ -1,5 +1,6 @@
 import { AuthService } from "@/services/api";
 import type { AuthPayload, User } from "@/types";
+import type { StoredUserData } from "@/types/utils/userCity.types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { DeviceEventEmitter } from "react-native";
 import { detectCityFromLocation } from "./cityDetection";
@@ -34,13 +35,6 @@ const isMissing = (value: unknown): boolean => {
 		str === "null" ||
 		str === "undefined"
 	);
-};
-
-type StoredUserData = {
-	token?: string;
-	user?: User;
-	address?: { city?: string };
-	data?: { user?: User };
 };
 
 /**

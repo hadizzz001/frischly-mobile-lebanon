@@ -13,12 +13,11 @@
 // Results are cached in-memory + persisted to AsyncStorage so we only ever
 // hit the network once per unique string, across app restarts.
 
+import type { CacheShape } from "@/types/services/translationApi.types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const CACHE_KEY = "dynamicTranslationCache_v1";
 const FETCH_TIMEOUT_MS = 6000;
-
-type CacheShape = Record<string, Record<string, string>>; // { [lang]: { [text]: translation } }
 
 let cache: CacheShape = {};
 let cacheLoaded = false;

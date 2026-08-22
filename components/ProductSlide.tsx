@@ -6,30 +6,24 @@ import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 
 import { useTranslation } from "@/contexts/TranslationContext";
+import { styles } from "@/styles/components/ProductSlide.styles";
 import type { CartItem, Product } from "@/types";
+import type { DiscountCarouselProps } from "@/types/components/ProductSlide.types";
 import { rtlRow } from "@/utils/rtl";
 import {
-	ActivityIndicator,
-	Dimensions,
-	FlatList,
-	Image,
-	Text,
-	TouchableOpacity,
-	View,
+    ActivityIndicator,
+    Dimensions,
+    FlatList,
+    Image,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import Feather from "react-native-vector-icons/Feather";
-import { styles } from "@/styles/components/ProductSlide.styles";
 
 const { width } = Dimensions.get("window");
 const ITEM_WIDTH = width / 3 - 12; // Show exactly 3 per row
 const ITEM_HEIGHT = 180;
-
-interface DiscountCarouselProps {
-	refreshTrigger?: number;
-	// When set, the carousel shows THIS market's discounted products (and skips
-	// the admin city gate) instead of the main store's.
-	marketId?: string;
-}
 
 export default function DiscountCarousel({
 	refreshTrigger,

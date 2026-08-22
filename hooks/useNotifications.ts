@@ -1,4 +1,5 @@
 import { NotificationService } from "@/services/api";
+import type { NotificationData } from "@/types/hooks/useNotifications.types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import * as Device from "expo-device";
@@ -124,13 +125,6 @@ export async function removePushTokenFromServer(
 }
 
 // Decide where to navigate when a notification is tapped, based on its data.
-type NotificationData = {
-	orderId?: string;
-	order_id?: string;
-	route?: string;
-	[key: string]: unknown;
-};
-
 function handleNotificationNavigation(
 	data: NotificationData | undefined,
 	router: Router,

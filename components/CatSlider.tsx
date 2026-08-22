@@ -1,33 +1,26 @@
 import { useTranslation } from "@/contexts/TranslationContext";
 import { CategoryService, MarketService } from "@/services/api";
+import { styles } from "@/styles/components/CatSlider.styles";
 import type { Category } from "@/types";
+import type { CategoriesGridProps } from "@/types/components/CatSlider.types";
 import { isServedByAdmin } from "@/utils/cityVisibility";
 import { rtlRow } from "@/utils/rtl";
 import { getUserCityAndPin } from "@/utils/userCity";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
-	ActivityIndicator,
-	Dimensions,
-	Image,
-	Text,
-	TouchableOpacity,
-	View,
+    ActivityIndicator,
+    Dimensions,
+    Image,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import Feather from "react-native-vector-icons/Feather";
-import { styles } from "@/styles/components/CatSlider.styles";
 
 const { width } = Dimensions.get("window");
 const ITEM_WIDTH = width / 4 - 15; // 4 items per row
 const ITEM_HEIGHT = 130;
-
-interface CategoriesGridProps {
-	refreshTrigger?: number;
-	// When set, show THIS market's own categories (from the MarketCategory
-	// collection) and link into the market's shop instead of the main store.
-	marketId?: string;
-	marketName?: string;
-}
 
 export default function CategoriesGrid({
 	refreshTrigger,

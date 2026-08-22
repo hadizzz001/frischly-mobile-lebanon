@@ -27,11 +27,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const { width } = Dimensions.get("window");
 const ITEM_WIDTH = width / 3 - 13; // three items per row with spacing
 
-type ProductSection = {
-	title: string;
-	data: Product[][];
-	key: string;
-};
+import type { ProductSection } from "@/types/app/shop1.types";
 
 export default function ShopPage() {
 	const router = useRouter();

@@ -35,14 +35,12 @@ import { useBooleanValue } from "@/contexts/CartBoolContext";
 import { useCart } from "@/contexts/CartContext";
 import { styles } from "@/styles/app/shop.styles";
 import {
-    cityMatches,
-    entityServesCity,
+    entityVisibleForCityOrPin,
     getAdminCities,
     getAdminDeliveryRegions,
     isServedByAdmin,
+    isVisibleForCityOrPin,
 } from "@/utils/cityVisibility";
-import { pointInAnyRegion } from "@/utils/geo";
-import { marketInDeliveryRange } from "@/utils/market";
 import { getUserCityAndPin } from "@/utils/userCity";
 
 const { width } = Dimensions.get("window");
@@ -429,24 +427,18 @@ export default function ShopPage() {
 			// Main-store products are checked against the admin's cities AND the
 			// admin's own configured delivery-range circle(s), when set.
 			// Guests (no city) keep everything.
-			const adminInRange = (): boolean => {
-				if (!adminRegions.length) return true;
-				if (!pin) return true;
-				return pointInAnyRegion(pin.latitude, pin.longitude, adminRegions);
-			};
-			if (globalSearch && city) {
+			// CITY OR RANGE RULE for a global search: an item is kept when the
+			// shopper's exact map pin falls inside its market's delivery circle,
+			// OR — when there is no circle / no pin — when the market serves the
+			// shopper's city. Main-store products (market === null) are checked the
+			// same way against the admin's cities and the admin's own circles, so a
+			// shopper pinned inside the range always sees them. Guests (no city and
+			// no pin) keep everything.
+			if (globalSearch) {
 				newData = newData.filter((p) =>
 					p?.market
-						? entityServesCity(p.market, city) &&
-						  marketInDeliveryRange(p.market, pin)
-						: cityMatches(adminCities, city) && adminInRange()
-				);
-			} else if (globalSearch) {
-				// Guest global search: still enforce delivery-range circles when a
-				// market/admin has one configured (defensive; guests normally have
-				// no pin).
-				newData = newData.filter((p) =>
-					p?.market ? marketInDeliveryRange(p.market, pin) : adminInRange()
+						? entityVisibleForCityOrPin(p.market, city, pin)
+						: isVisibleForCityOrPin(adminCities, adminRegions, city, pin)
 				);
 			}
 
@@ -670,21 +662,11 @@ export default function ShopPage() {
 			// against the admin's serving cities AND the admin's own configured
 			// delivery-range circle(s), when set. Guests (no city) keep everything
 			// (aside from the defensive range check below).
-			const adminInRangeMulti = (): boolean => {
-				if (!adminRegions.length) return true;
-				if (!pin) return true;
-				return pointInAnyRegion(pin.latitude, pin.longitude, adminRegions);
-			};
-			const cityFiltered = city
-				? finalProducts.filter((p) =>
-						p?.market
-							? entityServesCity(p.market, city) &&
-							  marketInDeliveryRange(p.market, pin)
-							: cityMatches(adminCities, city) && adminInRangeMulti()
-				  )
-				: finalProducts.filter((p) =>
-						p?.market ? marketInDeliveryRange(p.market, pin) : adminInRangeMulti()
-				  );
+			const cityFiltered = finalProducts.filter((p) =>
+				p?.market
+					? entityVisibleForCityOrPin(p.market, city, pin)
+					: isVisibleForCityOrPin(adminCities, adminRegions, city, pin)
+			);
 
 			// Default sort: highest price first (voice/multi-search merges several
 			// independent fetches, so it can't rely on the API's own sort param).

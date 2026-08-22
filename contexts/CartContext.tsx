@@ -1,46 +1,20 @@
 import { useTranslation } from "@/contexts/TranslationContext";
-import type { CartItem, Product } from "@/types";
+import type { CartItem } from "@/types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { usePathname, useRouter } from "expo-router";
 import { createContext, useContext, useEffect, useReducer, useRef, useState, type ReactNode } from "react";
 import { Alert } from "react-native";
 
-// A `market` field can arrive as null, an id string, or a populated object.
-type MarketRef = string | { _id?: string | number; name?: string; username?: string } | null | undefined;
+import type {
+    AddResult,
+    CartAction,
+    CartContextValue,
+    MarketRef,
+    PriceDetails,
+    ProductLike,
+} from "@/types/contexts/CartContext.types";
 
-type ProductLike = Product & { quantity?: number };
-
-interface PriceDetails {
-  basePrice: number;
-  discountPercent: number;
-  discountAmount: number;
-  afterDiscount: number;
-  taxPercent: number;
-  taxAmount: number;
-  bottleRefund: number;
-  quantity: number;
-  finalPrice: number;
-}
-
-interface AddResult {
-  added: boolean;
-  guest?: boolean;
-  conflict?: boolean;
-}
-
-export interface CartContextValue {
-  cart: CartItem[];
-  addToCart: (item: ProductLike, quantity?: number) => AddResult;
-  addItemsToCart: (items: CartItem[]) => AddResult;
-  removeFromCart: (itemId: string) => void;
-  clearCart: () => Promise<void>;
-  subtotal: number;
-  calculatePriceDetails: (item: Partial<CartItem>, quantity?: number) => PriceDetails;
-  kitchenCheckoutIds: Record<string, boolean>;
-  markKitchenAdded: (kitchenId: string | number | null | undefined) => void;
-  cartSource: string | null;
-  cartMarket: MarketRef;
-}
+export type { CartContextValue };
 
 const CartContext = createContext<CartContextValue | undefined>(undefined);
 
@@ -61,13 +35,6 @@ const getMarketSource = (market: MarketRef): string => {
 
 const getProductSource = (product: { market?: MarketRef } | null | undefined): string =>
   getMarketSource(product?.market);
-
-type CartAction =
-  | { type: "ADD_TO_CART"; payload: CartItem[] }
-  | { type: "UPDATE_CART"; payload: CartItem[] }
-  | { type: "ADD_ITEMS_TO_CART"; payload: CartItem[] }
-  | { type: "REMOVE_FROM_CART"; payload: string }
-  | { type: "CLEAR_CART" };
 
 const cartReducer = (state: CartItem[], action: CartAction): CartItem[] => {
   switch (action.type) {

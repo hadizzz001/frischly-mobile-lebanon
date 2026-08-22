@@ -1,22 +1,22 @@
 import { useTranslation } from "@/contexts/TranslationContext";
 import { MarketService, ProductService } from "@/services/api";
+import { styles } from "@/styles/components/MarketsSlider.styles";
 import type { Market } from "@/types";
-import { entityServesCity } from "@/utils/cityVisibility";
-import { pointInAnyRegion } from "@/utils/geo";
+import type { MarketsSliderProps } from "@/types/components/MarketsSlider.types";
+import { entityVisibleForCityOrPin } from "@/utils/cityVisibility";
 import { rtlRow } from "@/utils/rtl";
 import { getUserCityAndPin } from "@/utils/userCity";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
-import { styles } from "@/styles/components/MarketsSlider.styles";
 import {
-	ActivityIndicator,
-	Dimensions,
-	Image,
-	ScrollView,
-	Text,
-	TouchableOpacity,
-	View,
+    ActivityIndicator,
+    Dimensions,
+    Image,
+    ScrollView,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 const { width } = Dimensions.get("window");
@@ -27,10 +27,6 @@ const SNAP_INTERVAL = ITEM_WIDTH + ITEM_SPACING;
 // Auto-slide timing (one market per step).
 const STEP_DURATION = 900; // ms to move one card
 const STEP_PAUSE = 3200; // ms to wait between steps
-
-interface MarketsSliderProps {
-	refreshTrigger?: number;
-}
 
 export default function MarketsSlider({ refreshTrigger }: MarketsSliderProps) {
 	const { t, isRTL } = useTranslation();
@@ -63,36 +59,48 @@ export default function MarketsSlider({ refreshTrigger }: MarketsSliderProps) {
 			// range (map pin(s)/radius, or named Zone documents) server-side —
 			// this is the authoritative check since only the server can see a
 			// market's private Zone documents.
-			const res = await MarketService.listPublic(city || undefined, pin || undefined);
-			const all = Array.isArray(res.data) ? res.data : [];
+			//
+			// When the shopper HAS a pin we additionally ask for the pin-only
+			// list (no city). A market can cover the shopper's exact pin with
+			// its delivery circle while serving a different city name, and the
+			// city-scoped query would never return it. Both lists are merged and
+			// the final "city OR pin-in-range" rule is applied below.
+			const [cityRes, pinRes] = await Promise.all([
+				MarketService.listPublic(city || undefined, pin || undefined),
+				pin ? MarketService.listPublic(undefined, pin) : Promise.resolve(null),
+			]);
 
-			// A market can now serve MULTIPLE cities (an array). Filter client-side
-			// so a user only sees markets that serve their city, regardless of how
-			// the backend handles the city query for the new array field. Guests
-			// (no city) and markets with no city restriction stay visible.
-			const cityFiltered = all.filter((market) => entityServesCity(market, city));
+			const byId = new Map<string, Market>();
+			for (const list of [cityRes?.data, pinRes?.data]) {
+				if (!Array.isArray(list)) continue;
+				for (const market of list) {
+					if (market?._id) byId.set(String(market._id), market);
+				}
+			}
+			const all = Array.from(byId.values());
 
-			// Redundant safety-net range check (the server already applied this):
-			// only keep a market with a configured map range (`deliveryRegions`)
-			// when the shopper's pin actually falls inside one of those circles.
-			const rangeFiltered = cityFiltered.filter((market) => {
-				const regions = market.deliveryRegions;
-				if (!regions || !regions.length) return true; // no green zone -> city-based
-				if (!pin) return true; // no shopper pin -> city-based fallback
-				const inRange = pointInAnyRegion(pin.latitude, pin.longitude, regions);
-				if (!inRange && __DEV__) {
+			// A market can serve MULTIPLE cities (an array) and/or declare map-pin
+			// delivery circles. It is shown when the shopper's exact pin falls
+			// inside one of its circles, OR — when it has no circles / the shopper
+			// has no pin — when it serves the shopper's city. Guests (no city) and
+			// markets with no restriction stay visible.
+			const visible = all.filter((market) => {
+				const ok = entityVisibleForCityOrPin(market, city, pin);
+				if (!ok && __DEV__) {
 					console.log(
-						`[MarketsSlider] Hiding "${market.name}" — shopper pin (${pin.latitude}, ${pin.longitude}) is outside its delivery range`,
-						regions
+						`[MarketsSlider] Hiding "${market.name}" — city "${city}" not served and shopper pin`,
+						pin,
+						"is outside its delivery range",
+						market.deliveryRegions
 					);
 				}
-				return inRange;
+				return ok;
 			});
 
 			// Hide markets that don't have any products yet — no point showing an
 			// empty market on the home page slider.
 			const withItemsFlags = await Promise.all(
-				rangeFiltered.map(async (market) => {
+				visible.map(async (market) => {
 					try {
 						const prodRes = await ProductService.list({
 							market: market._id,
@@ -105,7 +113,7 @@ export default function MarketsSlider({ refreshTrigger }: MarketsSliderProps) {
 					}
 				})
 			);
-			setMarkets(rangeFiltered.filter((_, i) => withItemsFlags[i]));
+			setMarkets(visible.filter((_, i) => withItemsFlags[i]));
 		} catch (err) {
 			console.error("MarketsSlider fetch error:", err);
 		} finally {

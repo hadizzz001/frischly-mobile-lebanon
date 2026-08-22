@@ -5,16 +5,11 @@ import { patchTextComponentsForRTL, setGlobalRTL } from "@/utils/rtl";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
-type Language = keyof typeof translations;
-type TranslationKey = keyof (typeof translations)["en"];
-
-interface TranslationContextValue {
-	t: (key: TranslationKey | string) => string;
-	td: (name: string) => string;
-	language: Language;
-	switchLanguage: (lang: string) => Promise<void>;
-	isRTL: boolean;
-}
+import type {
+	Language,
+	TranslationContextValue,
+	TranslationKey,
+} from "@/types/contexts/TranslationContext.types";
 
 const TranslationContext = createContext<TranslationContextValue | undefined>(
 	undefined,

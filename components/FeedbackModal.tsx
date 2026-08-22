@@ -14,16 +14,7 @@ import {
 import StarRating from "./StarRating";
 import { styles } from "@/styles/components/FeedbackModal.styles";
 
-interface FeedbackModalProps {
-	visible: boolean;
-	orderId?: string | null;
-	/** Shopper dismissed the modal without submitting ("Maybe Later", swipe
-	 *  down, or hardware back). Distinct from onSubmitted so the caller can
-	 *  snooze future prompts only when the shopper actually skips. */
-	onSkip?: () => void;
-	/** Feedback was submitted successfully. */
-	onSubmitted?: () => void;
-}
+import type { FeedbackModalProps } from "@/types/components/FeedbackModal.types";
 
 // Post-delivery feedback modal: asks the shopper to rate BOTH the order and
 // the driver (each a 0-5 star rating, unfilled by default) with an optional

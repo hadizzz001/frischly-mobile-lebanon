@@ -1,110 +1,104 @@
-// utils/voiceSearch.js
+// utils/voiceSearch.ts
 //
-// Voice-search AI helper. Turns a recorded audio clip into a list of product
-// search terms using OpenAI:
-//   1. Whisper  (speech-to-text)      -> transcribes what the user said.
-//   2. GPT      (smart item extractor) -> understands what the shopper MEANS and
-//      returns the products to show. It pulls out named items ("ketchup and cheap
-//      potato" -> ketchup, potato) AND reasons about dishes / meals / occasions,
-//      expanding them into the ingredients to buy ("I want to make a pizza" ->
-//      pizza dough, mozzarella, tomato sauce, pepperoni, basil...). Results are
-//      short English search keywords.
+// AI voice-search brain. Turns a recorded clip into a structured shopping
+// intent in two fast OpenAI calls:
+//   1. Speech-to-text  -> transcribes what the shopper said, in ANY language.
+//   2. Interpreter     -> understands what they MEAN and returns short ENGLISH
+//      search keywords, translating from Arabic / Lebanese automatically.
 //
-// A fallback is used when the GPT step is unavailable so the feature still works:
-// it expands a built-in dish dictionary (pizza, burger, tabbouleh, ...) and splits
-// the rest on "and"/commas while removing common filler words.
+// LANGUAGES: English, Modern Standard Arabic and Lebanese / Levantine spoken
+// dialect are all understood natively, including sentences that code-switch
+// between Arabic, English and French ("بدي chips و merci"). The spoken language
+// is auto-detected — it is never pinned to the app's UI language, because a
+// shopper browsing in English may still speak Lebanese.
+//
+// This module is AI-ONLY on purpose: there is no offline dictionary fallback.
+// If the AI cannot be reached the call throws, and the UI shows a friendly
+// message instead of silently returning lower-quality guesses.
 //
 // SECURITY NOTE: EXPO_PUBLIC_* values are bundled into the published app, so the
 // raw OpenAI key would ship with it. For production, run these requests through
 // your own backend and point EXPO_PUBLIC_OPENAI_BASE_URL at that proxy instead.
+
+import type { VoiceIntent } from "@/types/utils/voiceSearch.types";
 
 const OPENAI_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY || "";
 const OPENAI_BASE_URL = (
 	process.env.EXPO_PUBLIC_OPENAI_BASE_URL || "https://api.openai.com/v1"
 ).replace(/\/+$/, "");
 
-const TRANSCRIBE_MODEL = "whisper-1";
-const EXTRACT_MODEL = "gpt-4o-mini";
+// Speech-to-text. gpt-4o-transcribe is markedly better than whisper-1 at
+// Lebanese dialect and at Arabic/English code-switching, so it is the default.
+const TRANSCRIBE_MODEL =
+	process.env.EXPO_PUBLIC_OPENAI_TRANSCRIBE_MODEL || "gpt-4o-transcribe";
+// Used automatically if the account can't access the model above.
+const TRANSCRIBE_FALLBACK_MODEL = "whisper-1";
+
+// Interpreter. gpt-4o-mini answers this task in a fraction of the time of
+// gpt-4o with the same accuracy (it is translation + expansion, not hard
+// reasoning), which is what makes the whole flow feel instant. Override with
+// EXPO_PUBLIC_OPENAI_EXTRACT_MODEL=gpt-4o if you ever want the larger model.
+const EXTRACT_MODEL =
+	process.env.EXPO_PUBLIC_OPENAI_EXTRACT_MODEL || "gpt-4o-mini";
+
+// Never let a hung request keep the shopper waiting.
+const TRANSCRIBE_TIMEOUT_MS = 20000;
+const EXTRACT_TIMEOUT_MS = 12000;
 
 // Structured result of interpreting what the shopper said.
-export type VoiceIntent = {
-	intent: "search" | "open_market";
-	market: string;
-	items: string[];
-};
+export type { VoiceIntent };
 
-// Words we strip out in the offline fallback parser (price / quantity / filler).
-const FILLER_WORDS = new Set([
-	"i", "want", "need", "would", "like", "get", "buy", "me", "some", "a", "an",
-	"the", "and", "or", "with", "of", "please", "also", "to", "for", "my", "give",
-	"cheap", "cheapest", "expensive", "fresh", "good", "best", "few", "lot", "lots",
-	"more", "little", "bit", "kg", "kilo", "kilos", "gram", "grams", "piece",
-	"pieces", "pack", "packs", "bottle", "bottles", "can", "cans", "box", "boxes",
-	// Cooking-intent words so "I want to make a pizza" reduces to "pizza".
-	"make", "making", "made", "cook", "cooking", "prepare", "preparing", "eat",
-	"eating", "have", "having", "tonight", "today", "tomorrow", "dinner", "lunch",
-	"meal", "recipe", "something", "going", "gonna", "wanna", "do",
-	// Arabic filler / connectors
-	"بدي", "اريد", "أريد", "عايز", "ابغى", "و", "مع", "من", "كمان", "شوي", "رخيص",
-	"رخيصة", "كيلو", "غرام", "اعمل", "اطبخ", "بدنا", "نعمل",
-]);
+/**
+ * fetch + a hard timeout. Aborts the request and throws a message that the UI's
+ * error mapper recognises as a network problem.
+ */
+async function fetchWithTimeout(
+	url: string,
+	options: RequestInit,
+	timeoutMs: number,
+): Promise<Response> {
+	const controller = new AbortController();
+	const timer = setTimeout(() => controller.abort(), timeoutMs);
+	try {
+		return await fetch(url, { ...options, signal: controller.signal });
+	} catch (err) {
+		// An abort surfaces as an AbortError — report it as a timeout so the
+		// caller shows the "check your connection" message.
+		if ((err as Error)?.name === "AbortError") {
+			throw new Error("Request timed out.");
+		}
+		throw err;
+	} finally {
+		clearTimeout(timer);
+	}
+}
 
-// Built-in "recipe brain" for the offline fallback: common dishes / meals mapped
-// to the grocery ingredients a shopper needs. Keys are matched as whole words in
-// the transcript. The GPT path reasons about far more than this; this just keeps
-// the feature smart when GPT is unavailable.
-const RECIPE_INGREDIENTS: Record<string, string[]> = {
-	pizza: ["pizza dough", "mozzarella", "tomato sauce", "pepperoni", "basil", "olive oil"],
-	burger: ["burger buns", "ground beef", "cheddar", "lettuce", "tomato", "ketchup", "onion"],
-	hamburger: ["burger buns", "ground beef", "cheddar", "lettuce", "tomato", "ketchup", "onion"],
-	pasta: ["pasta", "tomato sauce", "parmesan", "garlic", "olive oil", "basil"],
-	spaghetti: ["spaghetti", "tomato sauce", "ground beef", "parmesan", "garlic", "onion"],
-	lasagna: ["lasagna sheets", "ground beef", "tomato sauce", "mozzarella", "parmesan", "onion"],
-	salad: ["lettuce", "tomato", "cucumber", "onion", "olive oil", "lemon"],
-	tabbouleh: ["parsley", "bulgur", "tomato", "onion", "lemon", "olive oil", "mint"],
-	fattoush: ["lettuce", "tomato", "cucumber", "pita bread", "sumac", "olive oil", "lemon"],
-	hummus: ["chickpeas", "tahini", "lemon", "garlic", "olive oil"],
-	falafel: ["chickpeas", "garlic", "onion", "parsley", "cumin", "tahini"],
-	shawarma: ["chicken", "garlic", "pita bread", "pickles", "tahini", "tomato"],
-	manakish: ["flour", "zaatar", "olive oil", "cheese"],
-	sandwich: ["bread", "cheese", "ham", "lettuce", "tomato", "mayonnaise"],
-	omelette: ["eggs", "milk", "cheese", "onion", "butter"],
-	omelet: ["eggs", "milk", "cheese", "onion", "butter"],
-	breakfast: ["eggs", "bread", "milk", "butter", "cheese", "jam"],
-	pancake: ["flour", "eggs", "milk", "sugar", "butter", "baking powder"],
-	pancakes: ["flour", "eggs", "milk", "sugar", "butter", "baking powder"],
-	cake: ["flour", "sugar", "eggs", "butter", "baking powder", "vanilla"],
-	taco: ["tortilla", "ground beef", "cheddar", "lettuce", "tomato", "salsa"],
-	tacos: ["tortilla", "ground beef", "cheddar", "lettuce", "tomato", "salsa"],
-	sushi: ["sushi rice", "nori", "salmon", "soy sauce", "avocado", "cucumber"],
-	guacamole: ["avocado", "lime", "tomato", "onion", "cilantro"],
-	smoothie: ["banana", "strawberry", "yogurt", "milk", "honey"],
-	curry: ["chicken", "curry powder", "onion", "garlic", "coconut milk", "rice"],
-	soup: ["onion", "carrot", "celery", "potato", "chicken stock"],
-	bbq: ["chicken", "beef", "charcoal", "barbecue sauce", "buns", "corn"],
-	barbecue: ["chicken", "beef", "charcoal", "barbecue sauce", "buns", "corn"],
-	"french fries": ["potato", "vegetable oil", "salt", "ketchup"],
-	fries: ["potato", "vegetable oil", "salt", "ketchup"],
-	"hot dog": ["hot dog", "sausage", "hot dog buns", "ketchup", "mustard"],
-	hotdog: ["hot dog", "sausage", "hot dog buns", "ketchup", "mustard"],
-	nachos: ["tortilla chips", "cheddar", "salsa", "jalapeno", "guacamole"],
-	"ice cream": ["ice cream", "cone", "chocolate sauce", "sprinkles"],
-};
-
-// Whisper transcription bias: a short supermarket vocabulary so single words
-// (e.g. "hot dog") aren't misheard ("not bad"), covering every department plus
-// store navigation. The hint should be in the spoken language for best effect.
-const FOOD_PROMPT_EN =
-	"Supermarket voice shopping. The shopper names products, brands, dishes or a " +
-	"store to open, such as: hot dog, sausage, ketchup, mustard, cheese, milk, " +
-	"eggs, bread, chicken, beef, rice, pasta, pizza, water, juice, soda, chips, " +
-	"coffee, tea, dish soap, detergent, floor cleaner, bleach, sponge, paper " +
-	"towel, shampoo, toothpaste, diapers, pen, notebook; or 'go to' a market.";
-const FOOD_PROMPT_AR =
-	"تسوّق سوبرماركت بالصوت. يذكر المتسوّق منتجات أو متجراً يريد فتحه، مثل: هوت دوغ، " +
-	"نقانق، كاتشب، خردل، جبنة، حليب، بيض، خبز، دجاج، لحم، أرز، معكرونة، بيتزا، ماء، عصير، " +
-	"شيبس، قهوة، شاي، صابون جلي، منظفات، منظف أرضيات، كلور، إسفنج، مناديل ورقية، " +
-	"شامبو، معجون أسنان، حفاضات، قلم، دفتر؛ أو 'روح على' متجر.";
+// Speech-to-text vocabulary bias. This is sent with EVERY transcription
+// regardless of the app's UI language, because the UI language does not predict
+// what the shopper actually speaks — someone browsing in English will still say
+// "بدي كيلو بندورة". Priming the model with both Lebanese and English grocery
+// vocabulary in one hint is what makes dialect recognition reliable, and it also
+// stops short words being misheard ("hot dog" -> "not bad").
+//
+// Spoken Lebanese mixes Arabic, French and English ("bonjour", "merci",
+// "chips") and uses dialect verbs that differ from Modern Standard Arabic
+// (بدي / جيبلي instead of أريد), so those forms are listed explicitly.
+const SPEECH_HINT =
+	"Supermarket voice shopping in Lebanon. The shopper speaks English, Arabic or " +
+	"Lebanese/Levantine dialect, often mixing all three in one sentence. " +
+	"Lebanese requests: بدي، بدنا، جيبلي، عطيني، لزمني، ناولني، رح آخد، شو في، شوي، " +
+	"كتير، كيلو، نص كيلو، ربطة، علبة، قنينة، كيس. " +
+	"Lebanese products: لبنة، لبن، جبنة بيضا، شنكليش، زعتر، زيت زيتون، خبز مرقوق، كعك، " +
+	"معمول، برغل، فريكة، عدس، حمص، فول، طحينة، دبس رمان، كزبرة، بقدونس، نعنع، بندورة، " +
+	"خيار، باذنجان، كوسا، بطاطا، بصل، ثوم، ليمون حامض، دجاج، لحمة، كفتة، مقانق، سمك، " +
+	"بيض، حليب، مي، عصير، غازوز، قهوة، شاي، سكر، ملح، رز، مكرونة، شيبس، شوكولا، " +
+	"صابون جلي، كلور، شامبو، حفاضات، مناديل. " +
+	"Lebanese dishes: تبولة، فتوش، حمص، مجدرة، ملوخية، كبة، منقوشة، ورق عنب، مقلوبة، شاورما. " +
+	"English products: hot dog, sausage, ketchup, mustard, cheese, milk, eggs, bread, " +
+	"chicken, beef, rice, pasta, pizza, water, juice, soda, chips, coffee, tea, " +
+	"dish soap, detergent, floor cleaner, bleach, sponge, paper towel, shampoo, " +
+	"toothpaste, diapers, pen, notebook. " +
+	"Or asking to open a store: 'go to', روح على، فوت على، وديني على.";
 
 // Common speech-to-text mishearings of food words -> the intended product.
 const MISHEARD_FIXES: [RegExp, string][] = [
@@ -147,15 +141,18 @@ function buildAudioFile(uri: string): { uri: string; name: string; type: string 
 }
 
 /**
- * Send the recorded clip to OpenAI Whisper and return the transcribed text.
+ * Send the recorded clip to OpenAI and return the transcribed text.
+ *
+ * IMPORTANT: the spoken language is AUTO-DETECTED. We deliberately do NOT pin
+ * the request to the app's UI language, because a shopper browsing the app in
+ * English may still speak Lebanese Arabic — forcing `language: "en"` made the
+ * model try to render Arabic speech as English words, producing gibberish.
+ * Auto-detection handles Arabic, Lebanese dialect, English and code-switching
+ * between them in a single sentence.
+ *
  * @param {string} uri Local file uri of the recording.
- * @param {string} [language] Optional ISO-639-1 hint ("en", "ar"). Whisper auto
- *   detects when omitted.
  */
-export async function transcribeAudio(
-	uri: string,
-	language?: string,
-): Promise<string> {
+export async function transcribeAudio(uri: string): Promise<string> {
 	if (!uri) throw new Error("No recording was captured.");
 	if (!OPENAI_API_KEY) {
 		throw new Error(
@@ -163,26 +160,43 @@ export async function transcribeAudio(
 		);
 	}
 
-	const form = new FormData();
-	form.append("file", buildAudioFile(uri) as unknown as Blob);
-	form.append("model", TRANSCRIBE_MODEL);
-	form.append("response_format", "json");
-	// Bias Whisper toward grocery / food vocabulary so short words like "hot dog"
-	// aren't misheard as "not bad", and keep it deterministic (temperature 0).
-	const isArabic = String(language || "").toLowerCase().startsWith("ar");
-	form.append("prompt", isArabic ? FOOD_PROMPT_AR : FOOD_PROMPT_EN);
-	form.append("temperature", "0");
-	if (language) form.append("language", language);
+	// Try the stronger model first, then fall back to whisper-1 if the account
+	// can't use it (404/403/400 on the model name).
+	const attempt = async (model: string): Promise<Response> => {
+		const form = new FormData();
+		form.append("file", buildAudioFile(uri) as unknown as Blob);
+		form.append("model", model);
+		form.append("response_format", "json");
+		// One bilingual hint for everyone — see SPEECH_HINT.
+		form.append("prompt", SPEECH_HINT);
+		// Keep it deterministic.
+		form.append("temperature", "0");
+		// NOTE: no `language` field on purpose — see the doc comment above.
 
-	const res = await fetch(`${OPENAI_BASE_URL}/audio/transcriptions`, {
-		method: "POST",
-		headers: {
-			Authorization: `Bearer ${OPENAI_API_KEY}`,
-			// NOTE: do NOT set Content-Type manually; fetch adds the multipart
-			// boundary automatically for FormData.
-		},
-		body: form,
-	});
+		return fetchWithTimeout(
+			`${OPENAI_BASE_URL}/audio/transcriptions`,
+			{
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${OPENAI_API_KEY}`,
+					// NOTE: do NOT set Content-Type manually; fetch adds the multipart
+					// boundary automatically for FormData.
+				},
+				body: form,
+			},
+			TRANSCRIBE_TIMEOUT_MS,
+		);
+	};
+
+	let res = await attempt(TRANSCRIBE_MODEL);
+
+	// Model not available on this account/plan -> retry with the classic model.
+	if (!res.ok && [400, 403, 404].includes(res.status)) {
+		console.warn(
+			`transcribeAudio: ${TRANSCRIBE_MODEL} unavailable (${res.status}), retrying with ${TRANSCRIBE_FALLBACK_MODEL}`
+		);
+		res = await attempt(TRANSCRIBE_FALLBACK_MODEL);
+	}
 
 	if (!res.ok) {
 		const detail = await res.text().catch(() => "");
@@ -193,12 +207,76 @@ export async function transcribeAudio(
 	return (json?.text || "").trim();
 }
 
-/**
- * Ask GPT to extract the list of grocery items from a free-form sentence and
- * return them as short English search keywords.
- * @param {string} transcript
- * @returns {Promise<string[]>}
- */
+// The interpreter's instructions. Kept dense and high-signal on purpose: every
+// token here is re-sent on each request, so a tight prompt is a faster prompt.
+const SYSTEM_PROMPT =
+	"You are the voice-shopping brain for a Lebanese grocery delivery app that " +
+	"sells EVERY department: food, drinks, dairy, meat, produce, bakery, frozen, " +
+	"pantry, AND non-food — cleaning, household, paper goods, hygiene, personal " +
+	"care, baby, pet, office/stationery. It also has partner MARKETS openable by name.\n\n" +
+	"LANGUAGES: You natively understand English, Modern Standard Arabic and " +
+	"LEBANESE/LEVANTINE spoken dialect, including sentences that mix Arabic, " +
+	"English and French. Whatever is spoken, you ALWAYS output ENGLISH keywords.\n" +
+	"Lebanese for 'I want / give me': بدي بدنا جيبلي جيب لي عطيني عطينا لزمني ناولني رح آخد إجبلي.\n" +
+	"Lebanese for 'go to a store': روح على، فوت على، وديني على، خدني على، افتح.\n" +
+	"Quantity/filler words to DROP: كيلو، نص كيلو، ربطة، علبة، قنينة، كيس، شوي، كتير، حبة، دزينة.\n" +
+	"Sample translations: لبنة labneh, جبنة بيضا white cheese, خبز مرقوق markouk bread, " +
+	"كزبرة coriander, بقدونس parsley, بندورة tomato, باذنجان eggplant, كوسا zucchini, " +
+	"بطاطا potato, بصل onion, ليمون حامض lemon, لحمة beef, دجاج chicken, مقانق sausage, " +
+	"مي water, غازوز soda, دبس رمان pomegranate molasses, برغل bulgur, طحينة tahini, " +
+	"صابون جلي dish soap, كلور bleach, حفاضات diapers.\n\n" +
+	'Reply with STRICT JSON only: {"intent":"search"|"open_market","market":string,"items":string[]}\n\n' +
+	'"open_market" — they want to GO TO / OPEN / VISIT a named store. Put the name in ' +
+	'"market" (Latin letters, transliterate if spoken in Arabic), leave "items" empty.\n\n' +
+	'"search" — they want products. Leave "market" empty, fill "items" (max 8, most ' +
+	"relevant first):\n" +
+	"- Named products -> return them, translated to English.\n" +
+	"- A dish/recipe/meal -> its 4-8 key ingredients. Know Lebanese dishes: تبولة، فتوش، " +
+	"حمص، فلافل، مجدرة، ملوخية، كبة، منقوشة، ورق عنب، مقلوبة، شاورما، فتة، صيادية، مسخن.\n" +
+	"- An occasion (barbecue, breakfast, cleaning the house, back to school) -> the " +
+	"products people typically buy for it, from ANY department.\n" +
+	"- A single product -> add a few closely related items so the whole section shows " +
+	"(e.g. 'hot dog' -> hot dog, sausage, hot dog buns, ketchup, mustard).\n" +
+	"- Each item: 1-3 words, lowercase, singular, ENGLISH. Keep brand names. Drop " +
+	"quantities, units, price and quality words.\n" +
+	"- Fix obvious speech-to-text mishearings to the most likely real product, including " +
+	"Arabic words mis-transcribed into English.\n" +
+	"- Never refuse a non-food request.\n" +
+	'- Nothing shoppable said -> {"intent":"search","market":"","items":[]}.';
+
+// A few worked examples cover far more ground than extra prose: Lebanese
+// products with quantities, a Lebanese dish, Lebanese store navigation,
+// code-switching, and a non-food request.
+const FEW_SHOTS: { role: "user" | "assistant"; content: string }[] = [
+	{ role: "user", content: "بدي كيلو بندورة وخيار وشوي لبنة" },
+	{
+		role: "assistant",
+		content: '{"intent":"search","market":"","items":["tomato","cucumber","labneh"]}',
+	},
+	{ role: "user", content: "بدي اعمل تبولة" },
+	{
+		role: "assistant",
+		content:
+			'{"intent":"search","market":"","items":["parsley","bulgur","tomato","onion","lemon","olive oil","mint"]}',
+	},
+	{ role: "user", content: "روح على سبينيس" },
+	{
+		role: "assistant",
+		content: '{"intent":"open_market","market":"Spinneys","items":[]}',
+	},
+	{ role: "user", content: "جيبلي chips و شوكولا ومي" },
+	{
+		role: "assistant",
+		content: '{"intent":"search","market":"","items":["chips","chocolate","water"]}',
+	},
+	{ role: "user", content: "I need cleaning stuff for the kitchen" },
+	{
+		role: "assistant",
+		content:
+			'{"intent":"search","market":"","items":["dish soap","floor cleaner","sponge","paper towel","surface cleaner","garbage bags"]}',
+	},
+];
+
 /**
  * Smart interpreter: understands what the shopper wants from a free-form
  * sentence and returns a structured intent:
@@ -207,6 +285,9 @@ export async function transcribeAudio(
  *   navigates there).
  * - "search": they want products from ANY department — food, drinks, cleaning,
  *   household, hygiene, office, baby, pet, etc. `items` holds the keywords.
+ *
+ * AI-only: any failure throws so the UI can show a friendly message, rather than
+ * quietly returning weaker offline guesses.
  */
 export async function interpretTranscript(
 	transcript: string,
@@ -214,107 +295,63 @@ export async function interpretTranscript(
 	const clean = correctMishearings((transcript || "").trim());
 	if (!clean) return { intent: "search", market: "", items: [] };
 
-	// Fallback path when no key is configured.
-	if (!OPENAI_API_KEY) return fallbackInterpret(clean);
+	if (!OPENAI_API_KEY) {
+		throw new Error(
+			"Missing OpenAI API key. Set EXPO_PUBLIC_OPENAI_API_KEY in your .env."
+		);
+	}
 
 	const body = {
 		model: EXTRACT_MODEL,
-		temperature: 0.2,
+		// Deterministic and short: both make the response arrive sooner.
+		temperature: 0,
+		max_tokens: 200,
 		response_format: { type: "json_object" },
 		messages: [
-			{
-				role: "system",
-				content:
-					"You are a smart assistant for a supermarket / grocery delivery app. " +
-					"The app sells EVERY department: food, drinks, snacks, dairy, meat, " +
-					"produce, bakery, frozen and pantry, AND non-food such as cleaning " +
-					"supplies, household, paper goods, hygiene, personal care, baby, pet, " +
-					"and office / stationery. The app also has several partner MARKETS " +
-					"(stores) the shopper can open by name.\n\n" +
-					"Decide the shopper's INTENT and respond with strict JSON shaped as " +
-					'{"intent":"search"|"open_market","market":string,"items":string[]}.\n\n' +
-					"INTENT open_market: the shopper wants to GO TO / OPEN / VISIT a specific " +
-					"store or market (e.g. 'go to Spinneys', 'open Carrefour', 'take me to the " +
-					"bakery shop'). Put the store name in \"market\" and leave \"items\" empty.\n\n" +
-					"INTENT search: the shopper wants products. Leave \"market\" empty and fill " +
-					"\"items\" using these rules:\n" +
-					"- Specific products named -> return them.\n" +
-					"- A dish / recipe / meal -> return its ingredients (4-8, most important first).\n" +
-					"- An occasion (barbecue, breakfast, cleaning the house, back to school) -> " +
-					"return the typical products people buy for it, from ANY department.\n" +
-					"- A single product -> also add a few closely related items so they see the " +
-					"whole section (e.g. 'hot dog' -> hot dog, sausage, hot dog buns, ketchup, " +
-					"mustard; 'floor cleaner' -> floor cleaner, detergent, mop, sponge, gloves).\n" +
-					"- Each item: short keyword 1-3 words, singular, lowercase, English; translate " +
-					"non-English names; drop quantities, units and price/quality words; keep brands.\n" +
-					"- Correct obvious speech-to-text mishearings to the most likely product.\n" +
-					"- Return products from WHATEVER department was asked — food OR cleaning, " +
-					"household, hygiene, office, etc. Never refuse a non-food request.\n" +
-					"- If nothing shoppable is said, use intent \"search\" with an empty items array.",
-			},
-			{ role: "user", content: "go to Spinneys" },
-			{
-				role: "assistant",
-				content: '{"intent":"open_market","market":"Spinneys","items":[]}',
-			},
-			{ role: "user", content: "I want to make a pizza" },
-			{
-				role: "assistant",
-				content:
-					'{"intent":"search","market":"","items":["pizza dough","mozzarella","tomato sauce","pepperoni","basil","olive oil"]}',
-			},
-			{ role: "user", content: "get me ketchup and some cheap potatoes" },
-			{
-				role: "assistant",
-				content: '{"intent":"search","market":"","items":["ketchup","potato"]}',
-			},
-			{ role: "user", content: "I need cleaning stuff for the kitchen" },
-			{
-				role: "assistant",
-				content:
-					'{"intent":"search","market":"","items":["dish soap","floor cleaner","sponge","paper towel","surface cleaner","garbage bags"]}',
-			},
-			{ role: "user", content: "office supplies" },
-			{
-				role: "assistant",
-				content:
-					'{"intent":"search","market":"","items":["pen","notebook","stapler","printer paper","marker","folder"]}',
-			},
+			{ role: "system", content: SYSTEM_PROMPT },
+			...FEW_SHOTS,
 			{ role: "user", content: clean },
 		],
 	};
 
-	try {
-		const res = await fetch(`${OPENAI_BASE_URL}/chat/completions`, {
+	const res = await fetchWithTimeout(
+		`${OPENAI_BASE_URL}/chat/completions`,
+		{
 			method: "POST",
 			headers: {
 				Authorization: `Bearer ${OPENAI_API_KEY}`,
 				"Content-Type": "application/json",
 			},
 			body: JSON.stringify(body),
-		});
+		},
+		EXTRACT_TIMEOUT_MS,
+	);
 
-		if (!res.ok) {
-			console.warn("interpretTranscript: GPT call failed", res.status);
-			return fallbackInterpret(clean);
-		}
-
-		const json = await res.json();
-		const content = json?.choices?.[0]?.message?.content || "{}";
-		const parsed = JSON.parse(content);
-		const market =
-			typeof parsed?.market === "string" ? parsed.market.trim() : "";
-		const items = Array.isArray(parsed?.items)
-			? normaliseTerms(parsed.items)
-			: [];
-		if (parsed?.intent === "open_market" && market) {
-			return { intent: "open_market", market, items: [] };
-		}
-		return { intent: "search", market: "", items };
-	} catch (err) {
-		console.warn("interpretTranscript error, using fallback:", (err as Error)?.message);
-		return fallbackInterpret(clean);
+	if (!res.ok) {
+		const detail = await res.text().catch(() => "");
+		throw new Error(`Interpretation failed (${res.status}). ${detail}`.trim());
 	}
+
+	const json = await res.json();
+	const content = json?.choices?.[0]?.message?.content || "{}";
+
+	let parsed: { intent?: string; market?: unknown; items?: unknown };
+	try {
+		parsed = JSON.parse(content);
+	} catch {
+		// response_format guarantees JSON, so this is vanishingly rare — but never
+		// crash the shopper's search over it.
+		console.warn("interpretTranscript: unparseable model output:", content);
+		return { intent: "search", market: "", items: [] };
+	}
+
+	const market = typeof parsed?.market === "string" ? parsed.market.trim() : "";
+	const items = Array.isArray(parsed?.items) ? normaliseTerms(parsed.items) : [];
+
+	if (parsed?.intent === "open_market" && market) {
+		return { intent: "open_market", market, items: [] };
+	}
+	return { intent: "search", market: "", items };
 }
 
 /** Backward-compatible helper: returns just the product search keywords. */
@@ -325,12 +362,20 @@ export async function extractSearchTerms(transcript: string): Promise<string[]> 
 
 /**
  * Full pipeline: audio uri -> { transcript, intent, market, terms }.
+ *
+ * Two sequential AI calls: speech-to-text, then interpretation. The spoken
+ * language is auto-detected, so Arabic / Lebanese / English all work without the
+ * caller having to say which one to expect.
  */
 export async function processVoiceQuery(
 	uri: string,
-	language?: string,
-): Promise<{ transcript: string; intent: VoiceIntent["intent"]; market: string; terms: string[] }> {
-	const transcript = await transcribeAudio(uri, language);
+): Promise<{
+	transcript: string;
+	intent: VoiceIntent["intent"];
+	market: string;
+	terms: string[];
+}> {
+	const transcript = await transcribeAudio(uri);
 	const { intent, market, items } = await interpretTranscript(transcript);
 	return { transcript, intent, market, terms: items };
 }
@@ -350,81 +395,4 @@ function normaliseTerms(items: unknown[]): string[] {
 		}
 	}
 	return out.slice(0, 10); // keep the request count sane
-}
-
-/**
- * Detect known dishes / meals in the text and return their ingredient lists, plus
- * the set of matched dish words (so the caller can drop them from the raw keyword
- * extraction). Lets the offline fallback mimic the smart GPT path.
- */
-function expandRecipes(text: string): { ingredients: string[]; matched: Set<string> } {
-	const padded = ` ${String(text || "").toLowerCase()} `;
-	const ingredients: string[] = [];
-	const matched = new Set<string>();
-	for (const dish of Object.keys(RECIPE_INGREDIENTS)) {
-		const re = new RegExp(`\\b${dish.replace(/\s+/g, "\\s+")}\\b`, "i");
-		if (re.test(padded)) {
-			ingredients.push(...RECIPE_INGREDIENTS[dish]);
-			dish.split(/\s+/).forEach((w) => matched.add(w));
-		}
-	}
-	return { ingredients, matched };
-}
-
-/**
- * Offline keyword extractor used when GPT is unavailable. First expands any known
- * dish into its ingredients (so "I want to make a pizza" still returns pizza
- * dough, cheese, sauce...), then splits the rest on connectors / punctuation and
- * removes common filler words.
- */
-export function fallbackExtractTerms(transcript: string): string[] {
-	const text = correctMishearings(String(transcript || "")).toLowerCase();
-
-	// Smart expansion: turn mentioned dishes / meals into their ingredients.
-	const { ingredients, matched } = expandRecipes(text);
-
-	const chunks = text.split(/\band\b|\bو\b|,|\.|;|\n|\+|&/g);
-	const terms = chunks
-		.map((chunk) =>
-			chunk
-				.split(/\s+/)
-				.map((w) => w.replace(/[^\p{L}\p{N}-]/gu, ""))
-				.filter((w) => w && !FILLER_WORDS.has(w) && !matched.has(w))
-				.join(" ")
-				.trim()
-		)
-		.filter(Boolean);
-
-	return normaliseTerms([...ingredients, ...terms]);
-}
-
-/**
- * Offline interpreter used when GPT is unavailable. Detects a "go to <store>"
- * style command, otherwise extracts product keywords. Returns the same shape as
- * interpretTranscript: { intent, market, items }.
- */
-export function fallbackInterpret(transcript: string): VoiceIntent {
-	const clean = correctMishearings(String(transcript || "")).trim();
-
-	// English + basic Arabic navigation phrases ("go to / open / take me to ...").
-	const navEn = clean.match(
-		/\b(?:go to|goto|open|take me to|bring me to|navigate to|visit)\s+(?:the\s+)?(.+)$/i
-	);
-	const navAr = clean.match(
-		/(?:روح|رح|ودّيني|وديني|خذني|افتح)\s*(?:على|عند|الى|إلى|ل)?\s*(.+)$/
-	);
-	const navName = (navEn && navEn[1]) || (navAr && navAr[1]) || "";
-	if (navName) {
-		const market = navName
-			.replace(
-				/\b(?:market|supermarket|store|shop|mart|سوبر ماركت|سوبرماركت|محل|متجر|سوق)\b/gi,
-				""
-			)
-			.replace(/[.,!?؟]+$/g, "")
-			.replace(/\s+/g, " ")
-			.trim();
-		if (market) return { intent: "open_market", market, items: [] };
-	}
-
-	return { intent: "search", market: "", items: fallbackExtractTerms(clean) };
 }

@@ -21,18 +21,7 @@ import { styles } from "@/styles/components/IOSDatePickerModal.styles";
  * Android's native picker dialog already has its own OS-level Ok/Cancel UI
  * and should keep using the platform default behavior.
  */
-interface IOSDatePickerModalProps {
-	visible: boolean;
-	value: Date;
-	mode?: "date" | "time" | "datetime";
-	minimumDate?: Date;
-	maximumDate?: Date;
-	onConfirm: (date: Date) => void;
-	onCancel: () => void;
-	doneLabel?: string;
-	cancelLabel?: string;
-	title?: string;
-}
+import type { IOSDatePickerModalProps } from "@/types/components/IOSDatePickerModal.types";
 
 export default function IOSDatePickerModal({
 	visible,

@@ -15,7 +15,12 @@ import { Platform } from "react-native";
  * Android / web), so it is lazily required and `isAvailable` gates the UI.
  */
 
-type AppleAuthModule = typeof import("expo-apple-authentication");
+import type {
+	AppleAuthModule,
+	AppleCredentialPayload,
+} from "@/types/hooks/useAppleAuth.types";
+
+export type { AppleCredentialPayload };
 
 const isExpoGo = Constants.appOwnership === "expo";
 
@@ -28,14 +33,6 @@ if (Platform.OS === "ios") {
 		appleModule = null;
 	}
 }
-
-export type AppleCredentialPayload = {
-	identityToken: string;
-	authorizationCode?: string | null;
-	userId?: string | null;
-	email?: string | null;
-	fullName?: string | null;
-};
 
 export function useAppleAuth(
 	onCredential: (payload: AppleCredentialPayload) => void | Promise<void>,

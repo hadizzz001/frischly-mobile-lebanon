@@ -3,11 +3,9 @@
  * mirroring the server's `src/utils/geo.js`, kept dependency-free.
  */
 
-export interface DeliveryRegion {
-	latitude?: number;
-	longitude?: number;
-	radiusKm?: number;
-}
+import type { DeliveryRegion } from "@/types/utils/geo.types";
+
+export type { DeliveryRegion };
 
 const EARTH_RADIUS_KM = 6371;
 

@@ -1,24 +1,21 @@
 import { useTranslation } from "@/contexts/TranslationContext";
 import { AnnouncementService } from "@/services/api";
+import { styles } from "@/styles/components/Textslide.styles";
 import type { Announcement } from "@/types";
+import type { NewsTickerProps } from "@/types/components/Textslide.types";
 import { Feather } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import {
-	Dimensions,
-	Modal,
-	ScrollView,
-	Text,
-	TouchableOpacity,
-	View,
+    Dimensions,
+    Modal,
+    ScrollView,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import TextTicker from "react-native-text-ticker";
-import { styles } from "@/styles/components/Textslide.styles";
 
 const { width } = Dimensions.get("window");
-
-interface NewsTickerProps {
-	refreshTrigger?: number;
-}
 
 export default function NewsTicker({ refreshTrigger }: NewsTickerProps) {
 	const { t, td, language } = useTranslation();
