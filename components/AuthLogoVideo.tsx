@@ -2,17 +2,9 @@ import { useEventListener } from "expo";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { useEffect, useRef } from "react";
 
+import { AUTH_LOGO_VIDEO_URL as LOGO_VIDEO_URL } from "@/constants/brand";
+import { AUTH_LOGO_HOLD_MS as HOLD_MS } from "@/constants/timing";
 import type { AuthLogoVideoProps } from "@/types/components/AuthLogoVideo.types";
-
-// Branded animated logo shown on the login/register screens, replacing the
-// old static PNG image.
-const LOGO_VIDEO_URL =
-	"https://res.cloudinary.com/dxefurewd/video/upload/q_auto,f_auto,w_1280,h_720,c_limit/v1783356666/kling_20260707_VIDEO_animate_fa_73_0_online-video-cutter.com_1_uxqfdj.mp4";
-
-// How long (ms) to hold before the very first playback starts, and how long
-// to pause again every time the clip finishes before it repeats — so it
-// doesn't loop back-to-back with no breathing room.
-const HOLD_MS = 2000;
 
 /**
  * Animated logo used on the login/register screens. Plays a short branded

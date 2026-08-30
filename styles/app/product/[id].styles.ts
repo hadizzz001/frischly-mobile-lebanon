@@ -1,6 +1,6 @@
-import { Dimensions, StyleSheet } from "react-native";
+import { StyleSheet } from "react-native";
 
-const { width } = Dimensions.get("window");
+import { SCREEN_WIDTH as width } from "@/constants/layout";
 
 export const styles = StyleSheet.create({
 	root: { flex: 1, backgroundColor: "#fff" },

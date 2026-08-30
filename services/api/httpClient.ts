@@ -69,6 +69,31 @@ function buildQuery(
 // throughout the app already do `res.data.user` / `res.data.product` for
 // those endpoints, so unwrapping them here would break far more call sites
 // than it fixes. Screens that need the product/user hoisted do so explicitly.
+//
+// EQUALLY IMPORTANT: a single-OBJECT payload that merely *contains* an array
+// property must NOT be unwrapped either. `/orders/:id/rider-location` returns
+// `{ hasRider, hasLocation, latitude, longitude, rider, zones: [...] }` — the
+// lone `zones` array used to get hoisted over the whole object, so
+// `res.data.hasRider` became `undefined` and the tracking screen always said
+// "no driver assigned". So we only unwrap when every OTHER key is a known
+// pagination/meta field, which is what a real list envelope looks like.
+const LIST_META_KEYS = new Set([
+	"pagination",
+	"page",
+	"pages",
+	"currentPage",
+	"totalPages",
+	"total",
+	"totalCount",
+	"totalItems",
+	"count",
+	"limit",
+	"perPage",
+	"hasMore",
+	"hasNextPage",
+	"hasPrevPage",
+]);
+
 function normalizeListEnvelope(payload: unknown): unknown {
 	if (
 		!payload ||
@@ -93,11 +118,16 @@ function normalizeListEnvelope(payload: unknown): unknown {
 
 	const arrayKeys = entries.filter(([, v]) => Array.isArray(v));
 
-	if (arrayKeys.length === 1) {
-		return { ...envelope, data: arrayKeys[0][1] };
-	}
+	if (arrayKeys.length !== 1) return payload;
 
-	return payload;
+	// Every non-array sibling must be pagination/meta — otherwise this is a
+	// real entity object and hoisting the array would destroy it.
+	const hasNonMetaSibling = entries.some(
+		([k, v]) => !Array.isArray(v) && !LIST_META_KEYS.has(k),
+	);
+	if (hasNonMetaSibling) return payload;
+
+	return { ...envelope, data: arrayKeys[0][1] };
 }
 
 async function request<T>(
@@ -105,7 +135,8 @@ async function request<T>(
 	path: string,
 	options: RequestOptions = {},
 ): Promise<ApiResponse<T>> {
-	const { headers = {}, auth = false, timeoutMs, params, body, signal } = options;
+	const { headers = {}, auth = false, timeoutMs, params, body, signal, raw } =
+		options;
 
 	const url = `${API_BASE_URL}${path}${buildQuery(params)}`;
 
@@ -189,7 +220,7 @@ async function request<T>(
 			throw new ApiError(String(message), res.status, payload);
 		}
 
-		return normalizeListEnvelope(payload) as ApiResponse<T>;
+		return (raw ? payload : normalizeListEnvelope(payload)) as ApiResponse<T>;
 	} finally {
 		clearTimeout(timeout);
 	}

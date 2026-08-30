@@ -1,8 +1,9 @@
-import { Dimensions, StyleSheet } from "react-native";
+import { StyleSheet } from "react-native";
 
-const { width } = Dimensions.get("window");
-const ITEM_WIDTH = width / 4 - 15; // 4 items per row
-const ITEM_HEIGHT = 130;
+import {
+	CAT_SLIDER_ITEM_HEIGHT as ITEM_HEIGHT,
+	CAT_SLIDER_ITEM_WIDTH as ITEM_WIDTH,
+} from "@/constants/layout";
 
 export const styles = StyleSheet.create({
 	loadingContainer: { height: ITEM_HEIGHT, justifyContent: "center", alignItems: "center" },

@@ -5,7 +5,15 @@ import CityPicker from "@/components/CityPicker";
 import IOSDatePickerModal from "@/components/IOSDatePickerModal";
 import LoadingButton from "@/components/LoadingButton";
 import LocationPickerMap, { type PickedLocation } from "@/components/LocationPickerMap";
+import {
+	DEFAULT_CITY,
+	DEFAULT_PIN,
+	DEFAULT_STATE,
+	DEFAULT_STREET,
+} from "@/constants/address";
 import { globalStyles } from "@/constants/GlobalStyles";
+import { LANGUAGE_OPTIONS } from "@/constants/languages";
+import { SCREEN_HEIGHT } from "@/constants/layout";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { useAppleAuth } from "@/hooks/useAppleAuth";
 import { useGoogleAuth } from "@/hooks/useGoogleAuth";
@@ -25,7 +33,6 @@ import { useCallback, useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
-    Dimensions,
     Image,
     KeyboardAvoidingView,
     Platform,
@@ -37,14 +44,6 @@ import {
 } from "react-native";
 
 import type { InputBoxProps } from "@/types/app/register.types";
-
-// ✅ Beirut fallback address used whenever the shopper denies the location
-// permission (or GPS/reverse-geocoding fails). We never leave city/state/
-// street empty, and the pin is dropped on Beirut city center.
-const DEFAULT_CITY = "Beirut";
-const DEFAULT_STATE = "Beirut";
-const DEFAULT_STREET = "Beirut";
-const DEFAULT_PIN = { latitude: 33.8938, longitude: 35.5018 };
 
 const InputBox = ({
 	placeholder,
@@ -76,7 +75,7 @@ const InputBox = ({
 export default function Register() {
 	const { t, language, switchLanguage } = useTranslation();
 	const router = useRouter();
-	const screenHeight = Dimensions.get("window").height;
+	const screenHeight = SCREEN_HEIGHT;
 	const [dropdownOpen, setDropdownOpen] = useState(false);
 
 	// -------------------------
@@ -104,10 +103,7 @@ const [showMapPicker, setShowMapPicker] = useState<boolean>(false);
 const [syncingAddress, setSyncingAddress] = useState<boolean>(false);
 
 
-	const languages = [
-		{ code: "en", name: "English", flag: "https://flagcdn.com/w40/gb.png" },
-		{ code: "ar", name: "العربية", flag: "https://flagcdn.com/w40/lb.png" },
-	];
+	const languages = LANGUAGE_OPTIONS;
 
 	const selectedLang = languages.find((l) => l.code === language) || languages[0];
 	// -------------------------

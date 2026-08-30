@@ -12,7 +12,6 @@ import { useEffect, useState } from "react";
 import {
 	ActivityIndicator,
 	Alert,
-	Dimensions,
 	Image,
 	ScrollView,
 	Text,
@@ -21,10 +20,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { styles } from "@/styles/app/kitchen-category/[id].styles";
-
-const { width } = Dimensions.get("window");
-// Two cards per row: 12px outer padding on each side + 12px gutter between.
-const CARD_WIDTH = (width - 36) / 2;
 
 // Lists every kitchen that belongs to a single kitchen category. Reached from
 // the home screen's category slider. Tapping a kitchen opens /kitchen/[id]

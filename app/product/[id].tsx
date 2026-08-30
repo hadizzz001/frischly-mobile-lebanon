@@ -15,11 +15,9 @@ import { Image, Modal, Text, View } from "react-native";
 
 import { styles } from "@/styles/app/product/[id].styles";
 import { formatWeight } from "@/utils/product";
-import { Dimensions, ScrollView, TouchableOpacity } from "react-native";
+import { ScrollView, TouchableOpacity } from "react-native";
 import Swiper from "react-native-swiper";
 import Feather from "react-native-vector-icons/Feather";
-
-const { width } = Dimensions.get("window");
 
 export default function ProductPage() {
 	const { t, td, isRTL } = useTranslation();

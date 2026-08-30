@@ -1,3 +1,8 @@
+import { MARKETS_SLIDER_SNAP_INTERVAL as SNAP_INTERVAL } from "@/constants/layout";
+import {
+	MARKETS_SLIDER_STEP_DURATION_MS as STEP_DURATION,
+	MARKETS_SLIDER_STEP_PAUSE_MS as STEP_PAUSE,
+} from "@/constants/timing";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { MarketService, ProductService } from "@/services/api";
 import { styles } from "@/styles/components/MarketsSlider.styles";
@@ -11,22 +16,12 @@ import { useEffect, useRef, useState } from "react";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 import {
     ActivityIndicator,
-    Dimensions,
     Image,
     ScrollView,
     Text,
     TouchableOpacity,
     View,
 } from "react-native";
-
-const { width } = Dimensions.get("window");
-// Keep ~3 markets visible while sliding one card at a time.
-const ITEM_SPACING = 10;
-const ITEM_WIDTH = width / 3 - 16;
-const SNAP_INTERVAL = ITEM_WIDTH + ITEM_SPACING;
-// Auto-slide timing (one market per step).
-const STEP_DURATION = 900; // ms to move one card
-const STEP_PAUSE = 3200; // ms to wait between steps
 
 export default function MarketsSlider({ refreshTrigger }: MarketsSliderProps) {
 	const { t, isRTL } = useTranslation();

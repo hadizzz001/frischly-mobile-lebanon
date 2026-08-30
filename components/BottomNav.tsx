@@ -1,3 +1,8 @@
+import {
+	BOTTOM_NAV_ACTIVE_COLOR as ACTIVE_COLOR,
+	BOTTOM_NAV_INACTIVE_COLOR as INACTIVE_COLOR,
+	BOTTOM_NAV_TABS as TABS,
+} from "@/constants/navigation";
 import { useCart } from "@/contexts/CartContext";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -5,17 +10,6 @@ import { usePathname, useRouter } from "expo-router";
 import { Platform, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { styles } from "@/styles/components/BottomNav.styles";
-
-const ACTIVE_COLOR = "#000000";
-const INACTIVE_COLOR = "#f4bb26";
-
-// Mirrors the tabs declared in app/(tabs)/_layout.tsx
-const TABS = [
-	{ key: "home", icon: "home", path: "/" },
-	{ key: "menu", icon: "menu", path: "/menu" },
-	{ key: "cart", icon: "shopping-cart", path: "/cart" },
-	{ key: "acc", icon: "user", path: "/acc" },
-];
 
 export default function BottomNav() {
 	const router = useRouter();

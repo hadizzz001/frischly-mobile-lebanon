@@ -3,6 +3,8 @@
 import AuthLogoVideo from "@/components/AuthLogoVideo";
 import { SERVER_BASE_URL } from "@/constants/api";
 import { globalStyles } from "@/constants/GlobalStyles";
+import { LANGUAGE_OPTIONS } from "@/constants/languages";
+import { SCREEN_HEIGHT } from "@/constants/layout";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { useAppleAuth } from "@/hooks/useAppleAuth";
 import { useGoogleAuth } from "@/hooks/useGoogleAuth";
@@ -19,7 +21,6 @@ import { styles } from "@/styles/app/start.styles";
 import {
 	ActivityIndicator,
 	Alert,
-	Dimensions,
 	Image,
 	KeyboardAvoidingView,
 	Platform,
@@ -41,12 +42,9 @@ export default function Start() {
 	const [loading, setLoading] = useState(false);
 	const [googleLoading, setGoogleLoading] = useState(false);
 	const [appleLoading, setAppleLoading] = useState(false);
-	const languages = [
-		{ code: "en", name: "English", flag: "https://flagcdn.com/w40/gb.png" },
-		{ code: "ar", name: "العربية", flag: "https://flagcdn.com/w40/lb.png" },
-	];
+	const languages = LANGUAGE_OPTIONS;
 
-	const screenHeight = Dimensions.get("window").height;
+	const screenHeight = SCREEN_HEIGHT;
 
 	const selectedLang = languages.find((l) => l.code === language) || languages[0];
 

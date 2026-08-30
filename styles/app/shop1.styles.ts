@@ -1,7 +1,6 @@
-import { Dimensions, StyleSheet } from "react-native";
+import { StyleSheet } from "react-native";
 
-const { width } = Dimensions.get("window");
-const ITEM_WIDTH = width / 3 - 13; // three items per row with spacing
+import { SHOP1_ITEM_WIDTH as ITEM_WIDTH } from "@/constants/layout";
 
 export const styles = StyleSheet.create({
 	container: { flex: 1, backgroundColor: "#FFFFFF" },

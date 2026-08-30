@@ -20,7 +20,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
-    Dimensions,
     FlatList,
     Image,
     ScrollView,
@@ -42,9 +41,8 @@ import {
     isVisibleForCityOrPin,
 } from "@/utils/cityVisibility";
 import { getUserCityAndPin } from "@/utils/userCity";
-
-const { width } = Dimensions.get("window");
-const ITEM_WIDTH = width / 3 - 12; // 3 items per row, adjust margin
+import { SCREEN_WIDTH as width } from "@/constants/layout";
+import { SEARCH_STOPWORDS } from "@/constants/search";
 
 export default function ShopPage() {
 	const { t, td, isRTL } = useTranslation();
@@ -517,13 +515,10 @@ export default function ShopPage() {
 				return String(val).toLowerCase();
 			};
 			// Split a (translatable) name into lowercase words for matching.
-			const STOPWORDS = new Set([
-				"and", "the", "with", "for", "of", "to", "in", "on", "a", "an",
-			]);
 			const wordsOf = (val: unknown): string[] =>
 				toText(val)
 					.split(/[^a-z0-9\u0600-\u06ff]+/i)
-					.filter((w) => w && !STOPWORDS.has(w));
+					.filter((w) => w && !SEARCH_STOPWORDS.has(w));
 
 			// True only when a WHOLE word is shared (with light plural tolerance),
 			// so "ham" no longer matches "shampoo" and drags in cleaning items.

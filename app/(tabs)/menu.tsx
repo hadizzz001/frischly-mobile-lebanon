@@ -2,7 +2,6 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
 	ActivityIndicator,
-	Dimensions,
 	FlatList,
 	Image,
 	Text,
@@ -13,12 +12,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useTranslation } from "@/contexts/TranslationContext";
 import { API_BASE_URL } from "@/constants/api";
+import { MENU_NUM_COLUMNS as NUM_COLUMNS } from "@/constants/layout";
 import { styles } from "@/styles/app/(tabs)/menu.styles";
-
-const { width } = Dimensions.get("window");
-const NUM_COLUMNS = 2;
-const ITEM_WIDTH = width / NUM_COLUMNS - 20;
-const ITEM_HEIGHT = 130;
 
 export default function CategoriesGrid() {
 	const { t, td } = useTranslation();

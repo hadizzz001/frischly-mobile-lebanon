@@ -22,12 +22,8 @@ import {
 	View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { ORDERS_POLL_MS as POLL_MS } from "@/constants/timing";
 import { styles } from "@/styles/app/order.styles";
-
-// Poll the order list on this interval so status changes made from the admin
-// dashboard (e.g. shipped -> delivered) show up automatically, without the
-// shopper needing to pull-to-refresh or leave/reopen the screen.
-const POLL_MS = 10000;
 
 export default function TestOrder() {
 	const { t, td, language, isRTL } = useTranslation();

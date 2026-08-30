@@ -16,16 +16,12 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
     ActivityIndicator,
-    Dimensions,
     Image,
     ScrollView,
     Text,
     TouchableOpacity,
     View,
 } from "react-native";
-
-const { width } = Dimensions.get("window");
-const ITEM_WIDTH = width / 2.4; // a bit wider than markets so the cards breathe
 
 // Keep only items that can actually be ordered (active + in stock) and attach a
 // default quantity of 1 each. Exported because the kitchen + kitchen-category

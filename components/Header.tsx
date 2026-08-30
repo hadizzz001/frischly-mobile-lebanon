@@ -1,3 +1,4 @@
+import { LANGUAGE_OPTIONS } from "@/constants/languages";
 import { LEBANESE_CITIES } from "@/constants/lebaneseCities";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { AuthService } from "@/services/api";
@@ -161,11 +162,7 @@ export default function Header() {
     }
   };
 
-  const languages = [
-    { code: "en", name: "English", flag: "https://flagcdn.com/w40/gb.png" },
-    { code: "ar", name: "العربية", flag: "https://flagcdn.com/w40/lb.png" },
-
-  ];
+  const languages = LANGUAGE_OPTIONS;
 
   const selectedLang = languages.find((l) => l.code === language) || languages[0];
 

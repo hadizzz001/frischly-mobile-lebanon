@@ -1,8 +1,6 @@
-import { Dimensions, StyleSheet } from "react-native";
+import { StyleSheet } from "react-native";
 
-const { width } = Dimensions.get("window");
-// Two cards per row: 12px outer padding on each side + 12px gutter between.
-const CARD_WIDTH = (width - 36) / 2;
+import { KITCHEN_CATEGORY_CARD_WIDTH as CARD_WIDTH } from "@/constants/layout";
 
 export const styles = StyleSheet.create({
 	safeArea: { flex: 1, backgroundColor: "#fff" },

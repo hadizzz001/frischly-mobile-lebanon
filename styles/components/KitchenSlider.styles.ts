@@ -1,7 +1,6 @@
-import { Dimensions, StyleSheet } from "react-native";
+import { StyleSheet } from "react-native";
 
-const { width } = Dimensions.get("window");
-const ITEM_WIDTH = width / 2.4; // a bit wider than markets so the cards breathe
+import { KITCHEN_SLIDER_ITEM_WIDTH as ITEM_WIDTH } from "@/constants/layout";
 
 export const styles = StyleSheet.create({
 	container: {

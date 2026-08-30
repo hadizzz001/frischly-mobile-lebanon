@@ -6,6 +6,9 @@ import type { Address } from "@/types/models";
 export interface RiderLocationInfo {
 	hasRider?: boolean;
 	hasLocation?: boolean;
+	// Current order status (e.g. "ready for pickup") — shown on the tracking
+	// screen when no driver is assigned yet so the user knows why.
+	orderStatus?: string;
 	latitude?: number;
 	longitude?: number;
 	address?: Address;

@@ -5,6 +5,11 @@ import FeedbackModal from "@/components/FeedbackModal";
 import Header from "@/components/Header";
 import VoiceSearchButton from "@/components/VoiceSearchButton";
 import { API_BASE_URL } from "@/constants/api";
+import {
+	HIDE_BOTTOM_NAV_ROUTES,
+	HIDE_HEADER_ROUTES,
+	SUPPRESS_FEEDBACK_ROUTES,
+} from "@/constants/navigation";
 import { BooleanProvider } from "@/contexts/CartBoolContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { TranslationProvider } from "@/contexts/TranslationContext";
@@ -63,19 +68,16 @@ export default function RootLayout() {
 	if (!loaded) return null;
 
 	// Hide header on login/register page
-	const hideHeaderOn = ["/start", "/register", "/checkout"]; // add more paths if needed
-	const showHeader = !hideHeaderOn.includes(pathname);
+	const showHeader = !HIDE_HEADER_ROUTES.includes(pathname);
 
 	// Hide the bottom navigation on the pre-login auth screens
-	const hideBottomNavOn = ["/start", "/register"];
-	const showBottomNav = !hideBottomNavOn.includes(pathname);
+	const showBottomNav = !HIDE_BOTTOM_NAV_ROUTES.includes(pathname);
 
 	// Don't interrupt the login/register/checkout flows with the feedback
 	// prompt — it'll simply show up as soon as the shopper navigates away
 	// from one of these screens (the state persists, nothing is lost).
-	const suppressFeedbackOn = ["/start", "/register", "/checkout"];
 	const showFeedbackModal =
-		!!feedbackOrderId && !suppressFeedbackOn.includes(pathname);
+		!!feedbackOrderId && !SUPPRESS_FEEDBACK_ROUTES.includes(pathname);
 
 	return (
 		<TranslationProvider>

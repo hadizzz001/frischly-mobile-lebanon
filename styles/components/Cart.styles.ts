@@ -67,6 +67,32 @@ export const styles = StyleSheet.create({
 	label: {
 		marginRight: 5,
 	},
+	qtyBtn: {
+		width: 28,
+		height: 28,
+		borderWidth: 1,
+		borderColor: "#000000",
+		borderRadius: 4,
+		backgroundColor: "#FFFFFF",
+		justifyContent: "center",
+		alignItems: "center",
+	},
+	qtyBtnDisabled: {
+		opacity: 0.35,
+	},
+	qtyBtnText: {
+		fontSize: 18,
+		fontWeight: "900",
+		color: "#000000",
+		lineHeight: 20,
+	},
+	qtyValue: {
+		minWidth: 32,
+		textAlign: "center",
+		fontSize: 15,
+		fontWeight: "600",
+		color: "#000000",
+	},
 	qtyInput: {
 		borderWidth: 1,
 		borderColor: "#000000",

@@ -1,3 +1,4 @@
+import { PRODUCT_SLIDE_ITEM_WIDTH as ITEM_WIDTH } from "@/constants/layout";
 import { useCart } from "@/contexts/CartContext";
 import { ProductService } from "@/services/api";
 import { isServedByAdmin } from "@/utils/cityVisibility";
@@ -12,7 +13,6 @@ import type { DiscountCarouselProps } from "@/types/components/ProductSlide.type
 import { rtlRow } from "@/utils/rtl";
 import {
     ActivityIndicator,
-    Dimensions,
     FlatList,
     Image,
     Text,
@@ -20,10 +20,6 @@ import {
     View,
 } from "react-native";
 import Feather from "react-native-vector-icons/Feather";
-
-const { width } = Dimensions.get("window");
-const ITEM_WIDTH = width / 3 - 12; // Show exactly 3 per row
-const ITEM_HEIGHT = 180;
 
 export default function DiscountCarousel({
 	refreshTrigger,

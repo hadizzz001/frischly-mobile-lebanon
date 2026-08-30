@@ -1,3 +1,4 @@
+import { RIDER_TRACKING_POLL_MS as POLL_MS } from "@/constants/timing";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { ApiError, OrderService } from "@/services/api";
 import type { RiderLocationInfo } from "@/services/api/orderService";
@@ -18,8 +19,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
-
-const POLL_MS = 12000; // refresh the rider's position every 12s
 
 export default function TrackOrderScreen() {
 	const { t } = useTranslation();
@@ -172,6 +171,11 @@ export default function TrackOrderScreen() {
 				<View style={styles.centerBox}>
 					<Feather name="user-x" size={40} color="#888" />
 					<Text style={styles.muted}>{t("noRiderAssigned")}</Text>
+					{!!info.orderStatus && (
+						<Text style={styles.muted}>
+							{t("status")}: {info.orderStatus}
+						</Text>
+					)}
 				</View>
 			);
 		}

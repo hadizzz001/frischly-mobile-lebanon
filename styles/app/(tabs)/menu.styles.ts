@@ -1,9 +1,9 @@
-import { Dimensions, StyleSheet } from "react-native";
+import { StyleSheet } from "react-native";
 
-const { width } = Dimensions.get("window");
-const NUM_COLUMNS = 2;
-const ITEM_WIDTH = width / NUM_COLUMNS - 20;
-const ITEM_HEIGHT = 130;
+import {
+	MENU_ITEM_HEIGHT as ITEM_HEIGHT,
+	MENU_ITEM_WIDTH as ITEM_WIDTH,
+} from "@/constants/layout";
 
 export const styles = StyleSheet.create({
 	safeArea: {

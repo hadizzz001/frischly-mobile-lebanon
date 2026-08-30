@@ -15,7 +15,6 @@ import { useEffect, useState } from "react";
 import type { ViewToken } from "react-native";
 import {
     ActivityIndicator,
-    Dimensions,
     Image,
     SectionList,
     Text,
@@ -23,9 +22,6 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-const { width } = Dimensions.get("window");
-const ITEM_WIDTH = width / 3 - 13; // three items per row with spacing
 
 import type { ProductSection } from "@/types/app/shop1.types";
 

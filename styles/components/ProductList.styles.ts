@@ -1,7 +1,6 @@
-import { Dimensions, StyleSheet } from "react-native";
+import { StyleSheet } from "react-native";
 
-const { width } = Dimensions.get("window");
-const ITEM_WIDTH = width / 3 - 15;
+import { PRODUCT_LIST_ITEM_WIDTH as ITEM_WIDTH } from "@/constants/layout";
 
 export const styles = StyleSheet.create({
 	gridItem: { width: ITEM_WIDTH, margin: 5 },

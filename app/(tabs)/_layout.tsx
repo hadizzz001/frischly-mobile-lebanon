@@ -2,6 +2,7 @@ import { HapticTab } from "@/components/HapticTab";
 import TabBarBackground from "@/components/ui/TabBarBackground";
 import { API_BASE_URL } from "@/constants/api";
 import { globalStyles } from "@/constants/GlobalStyles";
+import { VISIBLE_TABS } from "@/constants/navigation";
 import { useCart } from "@/contexts/CartContext";
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -15,7 +16,7 @@ export default function TabLayout() {
 	const [loading, setLoading] = useState(true);
 	const router = useRouter();
 	// Tabs to show
-	const visibleTabs = ["index", "menu", "cart", "acc"];
+	const visibleTabs = VISIBLE_TABS;
 	// Check login
 useEffect(() => {
 	const checkLogin = async () => {

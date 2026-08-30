@@ -28,5 +28,12 @@ export interface RequestOptions {
 	params?: Record<string, string | number | boolean | undefined | null>;
 	/** JSON body (for POST/PUT/PATCH). */
 	body?: unknown;
+	/**
+	 * Skip the automatic list-envelope unwrapping and return `data` exactly as
+	 * the server sent it. Use for endpoints that return a single OBJECT which
+	 * happens to contain an array property (e.g. /orders/:id/rider-location
+	 * returns `{ hasRider, ..., zones: [] }`).
+	 */
+	raw?: boolean;
 	signal?: AbortSignal;
 }

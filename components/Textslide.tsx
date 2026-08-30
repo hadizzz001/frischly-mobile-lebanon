@@ -6,7 +6,6 @@ import type { NewsTickerProps } from "@/types/components/Textslide.types";
 import { Feather } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import {
-    Dimensions,
     Modal,
     ScrollView,
     Text,
@@ -14,8 +13,6 @@ import {
     View,
 } from "react-native";
 import TextTicker from "react-native-text-ticker";
-
-const { width } = Dimensions.get("window");
 
 export default function NewsTicker({ refreshTrigger }: NewsTickerProps) {
 	const { t, td, language } = useTranslation();

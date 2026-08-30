@@ -1,5 +1,6 @@
 import CityPicker from "@/components/CityPicker";
 import IOSDatePickerModal from "@/components/IOSDatePickerModal";
+import { MAIN_STORE_NAME } from "@/constants/brand";
 import { MAIN_SOURCE, useCart } from "@/contexts/CartContext";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { ApiError, AuthService, MarketService, PromoCodeService } from "@/services/api";
@@ -57,7 +58,7 @@ export default function CheckoutScreen() {
 	// use the public list to look up by ID.
 	useEffect(() => {
 		if (!cartSource || cartSource === MAIN_SOURCE) {
-			setMarketDisplayName("Frischly LB");
+			setMarketDisplayName(MAIN_STORE_NAME);
 			return;
 		}
 		// Already a populated object with a name — use it directly.
@@ -641,7 +642,7 @@ export default function CheckoutScreen() {
 				{/* Market / source badge */}
 				{(() => {
 					const isMain = !cartSource || cartSource === MAIN_SOURCE;
-					const label = marketDisplayName ?? (isMain ? "Frischly LB" : "Market");
+					const label = marketDisplayName ?? (isMain ? MAIN_STORE_NAME : "Market");
 					return (
 						<View style={[styles.sourceBadge, isMain ? styles.sourceBadgeMain : styles.sourceBadgeMarket]}>
 							<Ionicons

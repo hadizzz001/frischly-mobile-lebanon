@@ -1,7 +1,6 @@
-import { Dimensions, StyleSheet } from "react-native";
+import { StyleSheet } from "react-native";
 
-const { width } = Dimensions.get("window");
-const ITEM_WIDTH = width / 3 - 12; // 3 items per row, adjust margin
+import { SHOP_ITEM_WIDTH as ITEM_WIDTH } from "@/constants/layout";
 
 export const styles = StyleSheet.create({
 	container: { flex: 1, backgroundColor: "#FFFFFF" },

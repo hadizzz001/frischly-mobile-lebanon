@@ -18,8 +18,11 @@ export const OrderService = {
 		httpClient.patch<Order>(`/orders/${id}/cancel`, { reason }, { auth: true }),
 
 	// Live rider location for tracking an in-progress order.
+	// `raw: true` — the payload is a single object that contains a `zones`
+	// array; the generic list-envelope unwrapper must not touch it.
 	riderLocation: (id: string) =>
 		httpClient.get<RiderLocationInfo>(`/orders/${id}/rider-location`, {
 			auth: true,
+			raw: true,
 		}),
 };

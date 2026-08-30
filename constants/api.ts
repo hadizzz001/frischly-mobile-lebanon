@@ -28,3 +28,6 @@ export const GOOGLE_IOS_CLIENT_ID: string =
 	process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || "";
 export const GOOGLE_ANDROID_CLIENT_ID: string =
 	process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || "";
+
+// How many products a paginated product list requests per fetch.
+export const PRODUCT_PAGE_SIZE = 12;

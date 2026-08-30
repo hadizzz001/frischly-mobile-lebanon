@@ -4,7 +4,6 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
     ActivityIndicator,
-    Dimensions,
     Image,
     Text,
     TouchableOpacity,
@@ -12,6 +11,7 @@ import {
 } from "react-native";
 import Feather from "react-native-vector-icons/Feather";
 
+import { PRODUCT_PAGE_SIZE as LIMIT } from "@/constants/api";
 import { useBooleanValue } from "@/contexts/CartBoolContext";
 import { useCart } from "@/contexts/CartContext";
 import { useTranslation } from "@/contexts/TranslationContext";
@@ -21,10 +21,6 @@ import type { CartItem, Product, User } from "@/types";
 import type { ShopPageProps } from "@/types/components/ProductList.types";
 import { isServedByAdmin } from "@/utils/cityVisibility";
 import { getUserCityAndPin } from "@/utils/userCity";
-
-const { width } = Dimensions.get("window");
-const ITEM_WIDTH = width / 3 - 15;
-const LIMIT = 12; // items per fetch
 
 export default function ShopPage({ refreshTrigger, setRefreshing, marketId }: ShopPageProps) {
 	const { t, td } = useTranslation();

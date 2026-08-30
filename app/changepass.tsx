@@ -1,5 +1,6 @@
 "use client";
 
+import { SCREEN_HEIGHT } from "@/constants/layout";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { AuthService } from "@/services/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -9,7 +10,6 @@ import { styles } from "@/styles/app/changepass.styles";
 import {
 	ActivityIndicator,
 	Alert,
-	Dimensions,
 	KeyboardAvoidingView,
 	ScrollView,
 	Text,
@@ -45,7 +45,7 @@ export default function ChangePassword() {
 	const [confirmPassword, setConfirmPassword] = useState<string>("");
 	const [loading, setLoading] = useState<boolean>(false);
 
-	const screenHeight = Dimensions.get("window").height;
+	const screenHeight = SCREEN_HEIGHT;
 
 	useEffect(() => {
 		const checkLogin = async (): Promise<void> => {

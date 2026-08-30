@@ -8,6 +8,10 @@
 // parent can run the multi-item search; the floating/global button handles it
 // itself — opening the shop with the items, or navigating to the named market.
 
+import {
+	VOICE_MAX_RECORD_MS as MAX_RECORD_MS,
+	VOICE_MIN_RECORD_MS as MIN_RECORD_MS,
+} from "@/constants/timing";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { MarketService } from "@/services/api";
 import { styles } from "@/styles/components/VoiceSearchButton.styles";
@@ -35,11 +39,6 @@ import {
 	Text,
 	View,
 } from "react-native";
-
-// Ignore taps shorter than this (ms) so an accidental tap doesn't fire a request.
-const MIN_RECORD_MS = 500;
-// Hard cap on how long a single recording can run (ms) — auto-stops at 1 minute.
-const MAX_RECORD_MS = 60000;
 
 export default function VoiceSearchButton({
 	onResults,
