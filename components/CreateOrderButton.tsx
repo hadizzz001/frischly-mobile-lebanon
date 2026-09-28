@@ -8,14 +8,9 @@ import { useEffect, useState } from "react";
 
 import { styles } from "@/styles/components/CreateOrderButton.styles";
 import type { CheckoutPageProps } from "@/types/components/CreateOrderButton.types";
-import {
-    ActivityIndicator,
-    Alert,
-    ScrollView,
-    Text,
-    TouchableOpacity,
-    View,
-} from "react-native";
+import { Alert, View } from "react-native";
+
+import PrimaryButton from "@/components/ui/PrimaryButton";
 
 // -------------------- CheckoutPage Component --------------------
 export default function CheckoutPage({
@@ -29,6 +24,8 @@ export default function CheckoutPage({
 	deliveryTime,
 	appliedPromo,
 	discountAmount,
+	notes,
+	disabledReason,
 }: CheckoutPageProps) {
 	const router = useRouter();
 	const [loading, setLoading] = useState<boolean>(false);
@@ -122,7 +119,7 @@ export default function CheckoutPage({
 				customer: { id: customer?._id },
 				items: orderItems,
 				paymentMethod: paymentMethod,
-				notes: "Order placed from mobile app",
+				notes: (notes || "").trim() || "Order placed from mobile app",
 				deliveryTime,
 				...(appliedPromo && {
 					promoCode: appliedPromo.promoCode.id,
@@ -138,7 +135,9 @@ export default function CheckoutPage({
 			// is available at the top-level there.
 			const envelopePayload = (data as any)?.data ?? data;
 
-			router.push({
+			// `replace`, not `push`: the order is placed, so checkout must not be
+			// left on the stack behind the success screen.
+			router.replace({
 				pathname: "/done",
 				params: { yourData: JSON.stringify(envelopePayload) },
 			});
@@ -151,23 +150,13 @@ export default function CheckoutPage({
 
 	// -------------------- Render --------------------
 	return (
-		<ScrollView style={styles.container}>
-			{/* Place Order Button */}
-			<View style={styles.buttonWrap}>
-				<TouchableOpacity
-					style={styles.button}
-					onPress={handlePlaceOrder}
-					disabled={loading}
-				>
-					{loading ? (
-						<ActivityIndicator color="#000" />
-					) : (
-						<Text style={styles.buttonText}>{t("placeOrder")}</Text>
-					)}
-				</TouchableOpacity>
-			</View>
-		</ScrollView>
+		<View style={styles.container}>
+			<PrimaryButton
+				label={disabledReason || t("placeOrder")}
+				onPress={handlePlaceOrder}
+				loading={loading}
+				disabled={!!disabledReason}
+			/>
+		</View>
 	);
 }
-
-// -------------------- Styles --------------------

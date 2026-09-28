@@ -2,10 +2,8 @@ import { FeedbackService, OrderService } from "@/services/api";
 import type { Order } from "@/types";
 import type { DeliveredOrderFeedback } from "@/types/hooks/useDeliveredOrderFeedback.types";
 import {
-    getFeedbackSnoozeTimestamp,
-    hasHandledFeedback,
+    getHandledFeedbackIds,
     markFeedbackHandled,
-    setFeedbackSnoozeTimestamp,
 } from "@/utils/feedbackTracking";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useRef, useState } from "react";
@@ -20,11 +18,21 @@ const POLL_MS = 10000;
 
 /**
  * App-wide watcher: polls the logged-in user's orders in the background (on
- * an interval + whenever the app returns to the foreground) and surfaces the
- * id of the first "delivered" order that hasn't been rated yet. Meant to be
- * used ONCE near the root of the app (see app/_layout.tsx) so the feedback
- * modal can pop up automatically from anywhere — home, cart, product page,
- * etc. — the moment a delivery is completed.
+ * an interval + whenever the app returns to the foreground) and surfaces ONE
+ * "delivered" order that hasn't been rated yet. Meant to be used ONCE near
+ * the root of the app (see app/_layout.tsx) so the feedback modal can pop up
+ * automatically from anywhere — home, cart, product page, etc. — the moment
+ * a delivery is completed.
+ *
+ * Rules:
+ *  - Only one prompt is ever on screen, and each order's prompt is shown at
+ *    most once.
+ *  - When several unrated deliveries are waiting, the shopper is asked about
+ *    the most recent one and the rest are skipped for good — they are
+ *    persisted as handled immediately so they never queue up behind it.
+ *  - Once the shopper submits or cancels, that order is persisted as handled
+ *    too, so the prompt never returns — even after the app is closed and
+ *    reopened.
  */
 export type { DeliveredOrderFeedback };
 
@@ -51,6 +59,9 @@ function isFullyAuthenticated(parsedUser: any, token: unknown): boolean {
 
 export default function useDeliveredOrderFeedback(): DeliveredOrderFeedback {
 	const [feedbackOrderId, setFeedbackOrderId] = useState<string | null>(null);
+	// Mirror of `feedbackOrderId` that the poll and the resolve handlers can
+	// read synchronously, without reaching into a React state updater.
+	const currentOrderIdRef = useRef<string | null>(null);
 	// Orders already confirmed (this session) as not needing a prompt —
 	// avoids re-checking AsyncStorage for the same order on every poll.
 	const handledRef = useRef<Set<string>>(new Set());
@@ -61,10 +72,6 @@ export default function useDeliveredOrderFeedback(): DeliveredOrderFeedback {
 	// Prevents overlapping checks if a poll fires while a previous one is
 	// still in flight (e.g. a slow network response).
 	const checkingRef = useRef(false);
-	// While set, only orders delivered AFTER this moment may trigger a
-	// prompt — set whenever the shopper taps "Maybe Later" so old,
-	// previously-unrated orders don't immediately re-surface the modal.
-	const snoozedAtRef = useRef<number | null>(null);
 
 	// Returns whether the authoritative "already submitted" list was
 	// successfully refreshed. Callers MUST treat a `false` result as
@@ -90,6 +97,11 @@ export default function useDeliveredOrderFeedback(): DeliveredOrderFeedback {
 		checkingRef.current = true;
 
 		try {
+			// A prompt is already on screen — leave it exactly as-is. Anything
+			// delivered in the meantime is picked up on the first poll after
+			// the shopper resolves the current one.
+			if (currentOrderIdRef.current) return;
+
 			const userData = await AsyncStorage.getItem("userData");
 			const guest = await AsyncStorage.getItem("guest");
 			if (!userData || guest === "true") return;
@@ -109,44 +121,52 @@ export default function useDeliveredOrderFeedback(): DeliveredOrderFeedback {
 			const refreshed = await refreshSubmittedFeedback();
 			if (!refreshed) return;
 
-			if (snoozedAtRef.current === null) {
-				snoozedAtRef.current = await getFeedbackSnoozeTimestamp();
-			}
-			const snoozedAt = snoozedAtRef.current;
-
 			const res = await OrderService.list();
 			const orders: Order[] = Array.isArray(res?.data) ? res.data : [];
 			const deliveredOrders = orders
 				.filter((o) => o.status === "delivered")
-				// While snoozed, only a genuinely NEW delivery (after the
-				// snooze moment) may re-trigger the prompt.
-				.filter((o) => snoozedAt === null || orderTimestampMs(o) > snoozedAt)
-				// Oldest-eligible-first so we always ask about the order the
-				// shopper is most likely to still remember.
-				.sort((a, b) => orderTimestampMs(a) - orderTimestampMs(b));
+				// Newest-first: when several deliveries are waiting, the one
+				// the shopper just received is the one worth asking about.
+				.sort((a, b) => orderTimestampMs(b) - orderTimestampMs(a));
+
+			const persistedHandled = await getHandledFeedbackIds();
+
+			// Everything delivered that still needs a decision this round.
+			const pending: string[] = [];
+			// Ids to persist as handled without ever prompting for them.
+			const silentlyHandled: string[] = [];
 
 			for (const order of deliveredOrders) {
-				if (handledRef.current.has(order._id)) continue;
+				const id = String(order._id);
+				if (handledRef.current.has(id)) continue;
 
 				// Backend says feedback already exists for this order — never
-				// show the prompt again, regardless of local storage state.
-				if (submittedOrderIdsRef.current.has(String(order._id))) {
-					handledRef.current.add(order._id);
-					markFeedbackHandled(order._id);
+				// show the prompt, regardless of local storage state.
+				if (submittedOrderIdsRef.current.has(id)) {
+					silentlyHandled.push(id);
 					continue;
 				}
 
-				// eslint-disable-next-line no-await-in-loop
-				const alreadyHandled = await hasHandledFeedback(order._id);
-				if (alreadyHandled) {
-					handledRef.current.add(order._id);
+				if (persistedHandled.has(id)) {
+					handledRef.current.add(id);
 					continue;
 				}
 
-				// Only ever surface one prompt at a time — if one is already
-				// showing, leave it as-is instead of swapping it out.
-				setFeedbackOrderId((current) => current ?? order._id);
-				break;
+				pending.push(id);
+			}
+
+			// Ask about ONE order; every other pending delivery is skipped for
+			// good rather than queued up behind it.
+			const [promptId, ...skippedIds] = pending;
+			const toMark = [...silentlyHandled, ...skippedIds];
+			for (const id of toMark) handledRef.current.add(id);
+			// Persist the skips BEFORE the prompt appears so they hold even if
+			// the app is killed the moment the modal shows.
+			if (toMark.length > 0) await markFeedbackHandled(toMark);
+
+			if (promptId) {
+				currentOrderIdRef.current = promptId;
+				setFeedbackOrderId(promptId);
 			}
 		} catch (e) {
 			console.warn("Delivered-order feedback check failed:", e);
@@ -170,34 +190,21 @@ export default function useDeliveredOrderFeedback(): DeliveredOrderFeedback {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
-	// Shopper tapped "Maybe Later": mark this order handled AND snooze every
-	// other prompt until a new order is actually delivered — prevents older
-	// un-rated orders from immediately popping up right after dismissing
-	// this one.
-	const skipFeedbackModal = () => {
-		setFeedbackOrderId((current) => {
-			if (current) {
-				handledRef.current.add(current);
-				markFeedbackHandled(current);
-			}
-			const now = Date.now();
-			snoozedAtRef.current = now;
-			setFeedbackSnoozeTimestamp(now);
-			return null;
-		});
+	// Whether the shopper submitted or cancelled, the outcome is the same:
+	// this order's prompt has been shown once and must never come back, so
+	// persist it as handled and close the modal.
+	const resolveCurrentPrompt = () => {
+		const current = currentOrderIdRef.current;
+		currentOrderIdRef.current = null;
+		setFeedbackOrderId(null);
+		if (current) {
+			handledRef.current.add(current);
+			void markFeedbackHandled(current);
+		}
 	};
 
-	// Shopper successfully submitted feedback: just mark this order handled
-	// and hide the modal — no need to snooze anything else.
-	const submitFeedbackModal = () => {
-		setFeedbackOrderId((current) => {
-			if (current) {
-				handledRef.current.add(current);
-				markFeedbackHandled(current);
-			}
-			return null;
-		});
-	};
+	const skipFeedbackModal = resolveCurrentPrompt;
+	const submitFeedbackModal = resolveCurrentPrompt;
 
 	return { feedbackOrderId, skipFeedbackModal, submitFeedbackModal };
 }

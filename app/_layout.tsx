@@ -1,10 +1,21 @@
 "use client";
 
+import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import { useFonts } from "expo-font";
+import { Stack, usePathname } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { useEffect, useState } from "react";
+import { DeviceEventEmitter, View } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import "react-native-reanimated";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+
 import BottomNav from "@/components/BottomNav";
 import FeedbackModal from "@/components/FeedbackModal";
+import LanguageSwitchOverlay from "@/components/LanguageSwitchOverlay";
 import Header from "@/components/Header";
-import VoiceSearchButton from "@/components/VoiceSearchButton";
-import { API_BASE_URL } from "@/constants/api";
+import VoiceSearchSheet from "@/components/VoiceSearchSheet";
+import { OPEN_VOICE_SEARCH } from "@/constants/events";
 import {
 	HIDE_BOTTOM_NAV_ROUTES,
 	HIDE_HEADER_ROUTES,
@@ -15,14 +26,6 @@ import { CartProvider } from "@/contexts/CartContext";
 import { TranslationProvider } from "@/contexts/TranslationContext";
 import useDeliveredOrderFeedback from "@/hooks/useDeliveredOrderFeedback";
 import useNotifications from "@/hooks/useNotifications";
-import { useFonts } from "expo-font";
-import { Stack, usePathname } from "expo-router";
-import { StatusBar } from "expo-status-bar";
-import { useEffect, useState } from "react";
-import {
-	View,
-} from "react-native";
-import "react-native-reanimated";
 import { styles } from "@/styles/app/_layout.styles";
 
 export default function RootLayout() {
@@ -37,32 +40,18 @@ export default function RootLayout() {
 	// foreground handler in useNotifications, still show while the app is open.
 	useNotifications();
 
-	// ✅ App-wide auto-sync: silently watches the shopper's orders (on an
-	// interval + whenever the app returns to the foreground) and pops the
-	// feedback modal the moment one becomes "delivered" — from ANY screen,
-	// no need to open the Orders page or refresh anything.
+	// App-wide auto-sync: silently watches the shopper's orders (on an interval
+	// + whenever the app returns to the foreground) and pops the feedback modal
+	// the moment one becomes "delivered" — from ANY screen.
 	const { feedbackOrderId, skipFeedbackModal, submitFeedbackModal } =
 		useDeliveredOrderFeedback();
 
-
-
-	// For Lower.js overlays
-	const [menuOpen, setMenuOpen] = useState(false);
-	const [categories, setCategories] = useState([]);
-	// Fetch categories
+	// Global voice-search sheet, opened from the header mic (or anywhere via
+	// the OPEN_VOICE_SEARCH event).
+	const [voiceOpen, setVoiceOpen] = useState(false);
 	useEffect(() => {
-		const fetchCategories = async () => {
-			try {
-				const res = await fetch(
-					`${API_BASE_URL}/categories`
-				);
-				const data = await res.json();
-				setCategories(data);
-			} catch (err) {
-				console.error(err);
-			}
-		};
-		fetchCategories();
+		const sub = DeviceEventEmitter.addListener(OPEN_VOICE_SEARCH, () => setVoiceOpen(true));
+		return () => sub.remove();
 	}, []);
 
 	if (!loaded) return null;
@@ -80,69 +69,56 @@ export default function RootLayout() {
 		!!feedbackOrderId && !SUPPRESS_FEEDBACK_ROUTES.includes(pathname);
 
 	return (
-		<TranslationProvider>
-		<CartProvider>
-			<BooleanProvider>
-				<View style={styles.container}>
-					{/* Show header conditionally */}
-					{showHeader && <Header />}
-					{/* Main navigation stack */}
-					<Stack
-						screenOptions={{
-							headerTitle: "",
-						}}
-					>
-						<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-
-						{/* Force hide header for auth screens */}
-						<Stack.Screen name="start" options={{ headerShown: false }} />
-						<Stack.Screen name="register" options={{ headerShown: false }} />
-						<Stack.Screen name="shop" options={{ headerShown: false }} />
-						<Stack.Screen name="shop1" options={{ headerShown: false }} />
-						<Stack.Screen name="checkout" options={{ headerShown: false }} />
-						<Stack.Screen name="order" options={{ headerShown: false }} />
-						<Stack.Screen
-							name="edit-profile"
-							options={{ headerShown: false }}
-						/>
-						<Stack.Screen name="done" options={{ headerShown: false }} />
-						<Stack.Screen
-							name="product/[id]"
-							options={{ headerShown: false }}
-						/>
-						<Stack.Screen
-							name="kitchen/[id]"
-							options={{ headerShown: false }}
-						/>
-						<Stack.Screen
-							name="market/[id]"
-							options={{ headerShown: false }}
-						/>						<Stack.Screen
-							name="kitchen-category/[id]"
-							options={{ headerShown: false }}
-						/>
-						<Stack.Screen
-							name="track/[id]"
-							options={{ headerShown: false }}
-						/>
-
-						<Stack.Screen name="+not-found" />
-					</Stack>
-					{showBottomNav && <BottomNav />}
-					{/* Floating hold-to-talk AI voice search (bottom-right) */}
-					{showHeader && <VoiceSearchButton floating />}
-					{/* ✅ App-wide "rate your order" prompt — auto-shown as soon as an
-					    order's status flips to delivered, from any screen. */}
-					<FeedbackModal
-						visible={showFeedbackModal}
-						orderId={feedbackOrderId}
-						onSkip={skipFeedbackModal}
-						onSubmitted={submitFeedbackModal}
-					/>
-					<StatusBar style="auto" />
-				</View>
-			</BooleanProvider>
-		</CartProvider>
-		</TranslationProvider>
+		<GestureHandlerRootView style={styles.container}>
+			<SafeAreaProvider>
+				<TranslationProvider>
+					<CartProvider>
+						<BooleanProvider>
+							<BottomSheetModalProvider>
+								<View style={styles.container}>
+									{showHeader && <Header />}
+									<Stack screenOptions={{ headerTitle: "", headerShown: false }}>
+										<Stack.Screen name="(tabs)" />
+										<Stack.Screen name="start" />
+										<Stack.Screen name="register" />
+										<Stack.Screen name="forgot-password" />
+										<Stack.Screen name="verify-reset-code" />
+										<Stack.Screen name="reset-password" />
+										<Stack.Screen name="shop" />
+										<Stack.Screen name="shop1" />
+										<Stack.Screen name="checkout" />
+										<Stack.Screen name="order" />
+										<Stack.Screen name="edit-profile" />
+										<Stack.Screen name="done" />
+										<Stack.Screen name="notifications" />
+										<Stack.Screen name="product/[id]" />
+										<Stack.Screen name="kitchen/[id]" />
+										<Stack.Screen name="market/[id]" />
+										<Stack.Screen name="kitchen-category/[id]" />
+										<Stack.Screen name="track/[id]" />
+										<Stack.Screen name="+not-found" options={{ headerShown: true }} />
+									</Stack>
+									{showBottomNav && <BottomNav />}
+									{/* Voice search lives in a bottom sheet now — no floating
+									    button obstructing categories, nav or checkout. */}
+									<VoiceSearchSheet visible={voiceOpen} onClose={() => setVoiceOpen(false)} />
+									{/* App-wide "rate your order" prompt — auto-shown as soon
+									    as an order's status flips to delivered. */}
+									<FeedbackModal
+										visible={showFeedbackModal}
+										orderId={feedbackOrderId}
+										onSkip={skipFeedbackModal}
+										onSubmitted={submitFeedbackModal}
+									/>
+									<StatusBar style="dark" />
+									{/* Full-screen loader while the app re-renders in a new language. */}
+									<LanguageSwitchOverlay />
+								</View>
+							</BottomSheetModalProvider>
+						</BooleanProvider>
+					</CartProvider>
+				</TranslationProvider>
+			</SafeAreaProvider>
+		</GestureHandlerRootView>
 	);
 }

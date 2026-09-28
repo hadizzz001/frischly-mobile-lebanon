@@ -1,4 +1,5 @@
 import { NotificationService } from "@/services/api";
+import { addToInbox } from "@/utils/notificationInbox";
 import type { NotificationData } from "@/types/hooks/useNotifications.types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
@@ -43,7 +44,7 @@ export async function registerForPushNotificationsAsync(): Promise<
 			name: "Default",
 			importance: Notifications.AndroidImportance.MAX,
 			vibrationPattern: [0, 250, 250, 250],
-			lightColor: "#f4bb26",
+			lightColor: "#F59E0B",
 		});
 	}
 
@@ -86,6 +87,12 @@ export async function registerForPushNotificationsAsync(): Promise<
 /**
  * Get the Expo push token and send it to the backend (only when logged in).
  * The server stores it in the user's `fcmToken` field and delivers via Expo.
+ *
+ * Always re-sends, even if this device registered before: the server keeps
+ * one token per account, so signing in on another phone, logging out there,
+ * or restoring a database backup silently replaces or wipes it, and this
+ * device has no way to notice. One small request per launch/login is cheap
+ * insurance against pushes quietly stopping.
  */
 export async function syncPushTokenToServer() {
 	const authToken = await getAuthToken();
@@ -94,13 +101,8 @@ export async function syncPushTokenToServer() {
 	const pushToken = await registerForPushNotificationsAsync();
 	if (!pushToken) return;
 
-	// Skip the network call if we already sent this exact token.
-	const alreadySent = await AsyncStorage.getItem("pushTokenSent");
-	if (alreadySent === pushToken) return;
-
 	try {
 		await NotificationService.registerToken(pushToken, authToken);
-		await AsyncStorage.setItem("pushTokenSent", pushToken);
 		console.log("✅ Push token registered with server");
 	} catch (err) {
 		console.error("❌ Error sending push token to server:", err);
@@ -119,8 +121,6 @@ export async function removePushTokenFromServer(
 		}
 	} catch (err) {
 		console.error("❌ Error removing push token from server:", err);
-	} finally {
-		await AsyncStorage.removeItem("pushTokenSent");
 	}
 }
 
@@ -157,17 +157,32 @@ export default function useNotifications() {
 		// Fired when a notification arrives while the app is foregrounded.
 		receivedListener.current = Notifications.addNotificationReceivedListener(
 			(notification) => {
-				console.log(
-					"🔔 Notification received:",
-					notification?.request?.content?.title
-				);
+				const content = notification?.request?.content;
+				console.log("🔔 Notification received:", content?.title);
+				// Keep a copy in the local inbox so it shows in the
+				// Notifications screen and counts toward the bell badge.
+				addToInbox({
+					id: notification?.request?.identifier,
+					title: content?.title,
+					body: content?.body,
+					data: content?.data as Record<string, unknown> | undefined,
+				});
 			}
 		);
 
 		// Fired when the user taps a notification.
 		responseListener.current =
 			Notifications.addNotificationResponseReceivedListener((response) => {
-				const data = response?.notification?.request?.content?.data;
+				const content = response?.notification?.request?.content;
+				const data = content?.data;
+				// A tapped notification (delivered while backgrounded) never hit
+				// the received listener, so record it here too.
+				addToInbox({
+					id: response?.notification?.request?.identifier,
+					title: content?.title,
+					body: content?.body,
+					data: data as Record<string, unknown> | undefined,
+				});
 				handleNotificationNavigation(data, router);
 			});
 

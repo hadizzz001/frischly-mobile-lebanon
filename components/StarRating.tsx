@@ -13,7 +13,7 @@ export default function StarRating({
 	rating = 0,
 	onChange,
 	size = 32,
-	color = "#f4bb26",
+	color = "#F59E0B",
 	emptyColor = "#d9d9d9",
 	style,
 }: StarRatingProps) {

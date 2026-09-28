@@ -25,7 +25,7 @@ export const styles = StyleSheet.create({
 		textAlign: "center",
 	},
 	button: {
-		backgroundColor: "#f4bb26",
+		backgroundColor: "#F59E0B",
 		borderRadius: 5,
 		height: 50,
 		alignItems: "center",
@@ -38,7 +38,7 @@ export const styles = StyleSheet.create({
 		elevation: 5,
 	},
 	buttonText: {
-		color: "#000",
+		color: "#111827",
 		fontWeight: "700",
 		fontSize: 16,
 		textTransform: "uppercase",

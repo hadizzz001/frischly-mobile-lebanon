@@ -1,195 +1,144 @@
 import { StyleSheet } from "react-native";
 
+import { colors, radius, shadow, spacing } from "@/constants/theme";
+
 export const styles = StyleSheet.create({
-	container: {
-		flex: 1,
-		padding: 16,
-		backgroundColor: "#FFFFFF",
-	},
+	container: { flex: 1, backgroundColor: colors.background },
 	heading: {
 		fontSize: 20,
-		fontWeight: "bold",
-		marginBottom: 12,
-		textAlign: "center", // center the heading
+		fontWeight: "700",
+		color: colors.text,
+		paddingHorizontal: spacing.md,
+		paddingTop: spacing.sm,
+		paddingBottom: spacing.xs,
 	},
-	cartList: {
-		flex: 1,
-		marginBottom: 10,
+	hint: {
+		fontSize: 12,
+		color: colors.textMuted,
+		paddingHorizontal: spacing.md,
+		marginBottom: spacing.sm,
 	},
+	listContent: { paddingHorizontal: spacing.md, paddingBottom: spacing.md, flexGrow: 1 },
+
+	// --- rows ---------------------------------------------------------------------
 	cartItem: {
 		flexDirection: "row",
 		alignItems: "center",
-		marginBottom: 12,
+		gap: spacing.md,
+		padding: spacing.sm,
+		marginBottom: spacing.sm,
+		borderRadius: radius.card,
+		backgroundColor: colors.background,
 		borderWidth: 1,
-		borderColor: "#000000",
-		borderRadius: 8,
-		padding: 10,
-		position: "relative",
-		overflow: "visible", // <-- make sure remove button is visible
+		borderColor: colors.border,
+		...shadow.card,
 	},
-
-	removeBtn: {
-		position: "absolute",
-		top: 50, // slightly above the item container
-		right: 50, // slightly outside the right edge
-		width: 40,
-		height: 40,
-		backgroundColor: "transparent",
-		borderRadius: 14,
-		justifyContent: "center",
-		alignItems: "center",
-		zIndex: 99999999, // <-- very high to be on top
+	cartItemUnavailable: { borderColor: colors.warning, borderWidth: 1.5 },
+	itemImageWrap: {
+		width: 72,
+		height: 72,
+		borderRadius: radius.card,
+		backgroundColor: colors.surfaceAlt,
+		padding: spacing.xs,
 	},
-
-	itemImage: {
-		width: 80,
-		height: 80,
-		marginRight: 10,
-		borderRadius: 6,
-	},
-	details: {
-		flex: 1,
-	},
-	itemTitle: {
-		marginBottom: 4,
-		fontSize: 16,
-	},
-	itemCategory: {
-		fontSize: 12,
-		color: "#000000",
-		marginBottom: 4,
-	},
-	quantityRow: {
+	itemImage: { width: "100%", height: "100%" },
+	itemImageUnavailable: { opacity: 0.5 },
+	details: { flex: 1, gap: 2 },
+	itemTitle: { fontSize: 14, fontWeight: "600", color: colors.text },
+	unitPrice: { fontSize: 12, color: colors.textMuted },
+	rowBottom: {
 		flexDirection: "row",
 		alignItems: "center",
-		marginTop: 4,
+		justifyContent: "space-between",
+		marginTop: spacing.xs,
 	},
-	label: {
-		marginRight: 5,
-	},
-	qtyBtn: {
-		width: 28,
-		height: 28,
-		borderWidth: 1,
-		borderColor: "#000000",
-		borderRadius: 4,
-		backgroundColor: "#FFFFFF",
-		justifyContent: "center",
+	price: { fontSize: 16, fontWeight: "700", color: colors.text },
+	// Inline [- 1 +] stepper
+	stepper: {
+		flexDirection: "row",
 		alignItems: "center",
+		backgroundColor: colors.surfaceAlt,
+		borderRadius: radius.badge,
+		padding: 2,
 	},
-	qtyBtnDisabled: {
-		opacity: 0.35,
+	stepBtn: {
+		width: 32,
+		height: 32,
+		borderRadius: radius.badge - 2,
+		backgroundColor: colors.background,
+		alignItems: "center",
+		justifyContent: "center",
+		...shadow.card,
 	},
-	qtyBtnText: {
-		fontSize: 18,
-		fontWeight: "900",
-		color: "#000000",
-		lineHeight: 20,
+	stepBtnDisabled: { opacity: 0.35 },
+	qtyValue: { minWidth: 32, textAlign: "center", fontSize: 14, fontWeight: "700", color: colors.text },
+	// Inline out-of-stock banner under a row
+	unavailableBanner: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: spacing.sm,
+		backgroundColor: colors.warningSoft,
+		borderRadius: radius.badge,
+		paddingHorizontal: spacing.sm,
+		paddingVertical: 6,
+		marginTop: -spacing.xs,
+		marginBottom: spacing.sm,
 	},
-	qtyValue: {
-		minWidth: 32,
-		textAlign: "center",
-		fontSize: 15,
-		fontWeight: "600",
-		color: "#000000",
+	unavailableText: { flex: 1, fontSize: 12, fontWeight: "600", color: colors.text },
+	// Swipe action revealed behind a row
+	deleteAction: {
+		width: 88,
+		marginBottom: spacing.sm,
+		borderRadius: radius.card,
+		backgroundColor: colors.danger,
+		alignItems: "center",
+		justifyContent: "center",
+		gap: spacing.xs,
 	},
-	qtyInput: {
-		borderWidth: 1,
-		borderColor: "#000000",
-		width: 50,
-		height: 50,
-		textAlign: "center",
-		borderRadius: 6,
-	},
-	price: {
-		marginTop: 6,
-		fontWeight: "bold",
-		color: "#000000",
-	},
+	deleteActionText: { color: colors.textOnDark, fontSize: 12, fontWeight: "700" },
 
-	emptyText: {
-		textAlign: "center",
-		marginTop: 40,
-		color: "#000000",
-	},
+	// --- sticky checkout bar -------------------------------------------------------
 	footer: {
-		paddingVertical: 12,
+		backgroundColor: colors.background,
 		borderTopWidth: 1,
-		borderColor: "#000000",
-		marginBottom: 20,
+		borderTopColor: colors.border,
+		paddingHorizontal: spacing.md,
+		paddingTop: spacing.md,
+		...shadow.sheet,
 	},
-	total: {
-		fontSize: 18,
-		fontWeight: "bold",
-		marginBottom: 12,
+	progressWrap: { marginBottom: spacing.md },
+	progressText: { fontSize: 12, fontWeight: "600", color: colors.textSecondary, marginBottom: 6 },
+	progressTrack: {
+		height: 6,
+		borderRadius: radius.full,
+		backgroundColor: colors.surfaceAlt,
+		overflow: "hidden",
 	},
-	checkoutBtn: {
-		backgroundColor: "#f4bb26",
-		padding: 12,
-		borderRadius: 8,
+	progressFill: { height: "100%", borderRadius: radius.full, backgroundColor: colors.primary },
+	progressFillDone: { backgroundColor: colors.success },
+	summaryRow: {
+		flexDirection: "row",
+		justifyContent: "space-between",
 		alignItems: "center",
+		paddingVertical: 3,
 	},
-	checkoutText: {
-		color: "#000000",
-		fontWeight: "bold",
+	summaryLabel: { fontSize: 13, color: colors.textMuted },
+	summaryValue: { fontSize: 13, color: colors.text, fontWeight: "500" },
+	summaryDiscount: { color: colors.success },
+	totalRow: {
+		marginTop: spacing.xs,
+		paddingTop: spacing.sm,
+		borderTopWidth: 1,
+		borderTopColor: colors.border,
 	},
-	clearCartLink: {
-		alignItems: "center",
-		paddingVertical: 12,
-		marginTop: 4,
-	},
-	clearCartText: {
-		color: "red",
-		fontWeight: "600",
-		textDecorationLine: "underline",
-	},
-	modalBackground: {
-		flex: 1,
-		backgroundColor: "rgba(0,0,0,0.5)",
-		justifyContent: "center",
-		alignItems: "center",
-	},
-	modalContainer: {
-		backgroundColor: "#fff",
-		padding: 20,
-		borderRadius: 10,
-		width: "80%",
-	},
-	modalTitle: {
-		marginBottom: 20,
-		textAlign: "center",
-		fontWeight: "bold",
-	},
-	modalMessage: {
-		marginBottom: 30,
-		textAlign: "center",
-	},
-	modalButtons: {
-		width: "100%",
-	},
-	yesButton: {
-		backgroundColor: "#f4bb26",
-		paddingVertical: 16,
-		borderRadius: 8,
-		marginBottom: 15,
-		width: "100%",
-	},
-	yesButtonText: {
-		color: "black",
-		textAlign: "center",
-		fontWeight: "bold",
-		fontSize: 18,
-	},
-	noButton: {
-		paddingVertical: 16,
-		borderRadius: 8,
-		width: "100%",
-	},
-	noButtonText: {
-		color: "#f4bb26",
-		textAlign: "center",
-		fontWeight: "bold",
-		fontSize: 18,
-	},
-
+	totalLabel: { fontSize: 15, fontWeight: "700", color: colors.text },
+	totalValue: { fontSize: 18, fontWeight: "700", color: colors.text },
+	totalLbp: { fontSize: 12, color: colors.textMuted, textAlign: "right" },
+	checkoutBtn: { marginTop: spacing.md },
+	clearCartLink: { alignItems: "center", paddingVertical: spacing.sm },
+	clearCartText: { color: colors.link, fontSize: 13, fontWeight: "600", textDecorationLine: "underline" },
+	// Age check sheet
+	sheetTitle: { fontSize: 18, fontWeight: "700", color: colors.text, marginBottom: spacing.sm },
+	sheetBody: { fontSize: 14, lineHeight: 20, color: colors.textMuted, marginBottom: spacing.md },
+	sheetActions: { gap: spacing.sm },
 });

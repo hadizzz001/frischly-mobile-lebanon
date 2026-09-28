@@ -34,11 +34,11 @@ export const styles = StyleSheet.create({
 	secondaryBtnText: { color: "#000", fontWeight: "600" },
 	confirmBtn: {
 		flex: 1,
-		backgroundColor: "#f4bb26",
+		backgroundColor: "#F59E0B",
 		borderRadius: 12,
 		alignItems: "center",
 		justifyContent: "center",
 		paddingVertical: 13,
 	},
-	confirmBtnText: { color: "#000", fontWeight: "700" },
+	confirmBtnText: { color: "#111827", fontWeight: "700" },
 });

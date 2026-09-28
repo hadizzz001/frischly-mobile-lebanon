@@ -1,3 +1,4 @@
+import BackButton from "@/components/ui/BackButton";
 import CityPicker from "@/components/CityPicker";
 import LoadingButton from "@/components/LoadingButton";
 import LocationPickerMap, { type PickedLocation } from "@/components/LocationPickerMap";
@@ -6,6 +7,7 @@ import { AuthService } from "@/services/api";
 import type { User } from "@/types";
 import { getCityCoordinates, getStateForCity, reverseGeocodePoint } from "@/utils/cityDetection";
 import { rtlText } from "@/utils/rtl";
+import { formatStreetLine } from "@/utils/userAddress";
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
@@ -69,7 +71,8 @@ export default function EditProfile() {
 						setForm({
 							name: fetchedUser.name || "",
 							phoneNumber: fetchedUser.phoneNumber || "+961",
-							street: fetchedUser.address?.street || "",
+							// Strip the city-name placeholder so it is never re-saved as a street.
+							street: formatStreetLine(fetchedUser.address),
 							city: fetchedUser.address?.city || "",
 							state: fetchedUser.address?.state || "",
 							country: "LB",
@@ -140,7 +143,9 @@ export default function EditProfile() {
 				name: form.name,
 				phoneNumber: form.phoneNumber,
 				address: {
-					street: form.street,
+					// Omit an empty street: the profile validator rejects "" and the
+					// backend replaces the whole address, so leaving it out clears it.
+					...(form.street.trim() ? { street: form.street.trim() } : {}),
 					city: form.city,
 					state: form.state,
 					country: form.country,
@@ -225,9 +230,7 @@ export default function EditProfile() {
 
 	return (
 		<ScrollView style={styles.container}>
-			<TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-				<Feather name="chevron-left" size={24} color="#000000" />
-			</TouchableOpacity>
+			<BackButton onPress={() => router.back()} style={styles.backButton} />
 
 			{(["name", "phoneNumber"] as (keyof ProfileForm)[]).map((key) => (
 				<View key={key} style={styles.fieldGroup}>
@@ -294,7 +297,7 @@ export default function EditProfile() {
 				onPress={() => setShowMapPicker(true)}
 				style={styles.mapPinButton}
 			>
-				<Feather name="map" size={16} color={pin ? "#22a45d" : "#f4bb26"} />
+				<Feather name="map" size={16} color={pin ? "#22a45d" : "#F59E0B"} />
 				<Text
 					style={styles.mapPinButtonText}
 				>
@@ -348,7 +351,7 @@ export default function EditProfile() {
 				<View
 					style={styles.syncingContainer}
 				>
-					<ActivityIndicator size="small" color="#f4bb26" />
+					<ActivityIndicator size="small" color="#F59E0B" />
 					<Text
 						style={styles.syncingText}
 					>

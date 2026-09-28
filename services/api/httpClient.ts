@@ -127,7 +127,12 @@ function normalizeListEnvelope(payload: unknown): unknown {
 	);
 	if (hasNonMetaSibling) return payload;
 
-	return { ...envelope, data: arrayKeys[0][1] };
+	// Keep the pagination/meta siblings reachable on the envelope itself
+	// (`res.pagination.hasNextPage`, `res.pagination.totalProducts`) — they
+	// used to be dropped along with the inner object, which silently broke
+	// every "has next page" check.
+	const meta = Object.fromEntries(entries.filter(([, v]) => !Array.isArray(v)));
+	return { ...envelope, ...meta, data: arrayKeys[0][1] };
 }
 
 async function request<T>(

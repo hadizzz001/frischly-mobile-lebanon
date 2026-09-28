@@ -1,397 +1,413 @@
-import LoadingButton from "@/components/LoadingButton";
-import { API_BASE_URL } from "@/constants/api";
-import { useTranslation } from "@/contexts/TranslationContext";
-import { removePushTokenFromServer } from "@/hooks/useNotifications";
-import { rtlRow, rtlText } from "@/utils/rtl";
-import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Notifications from "expo-notifications";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useState } from "react";
-import { styles } from "@/styles/app/(tabs)/acc.styles";
 import {
-	Alert,
-	Modal,
+	Bell,
+	ChevronLeft,
+	ChevronRight,
+	ClockArrowLeft,
+	Languages,
+	Lock,
+	LogOut,
+	Mail,
+	MapPin,
+	Phone,
+	Trash2,
+	UserRound,
+} from "lucide-react-native";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import {
+	ActivityIndicator,
+	DeviceEventEmitter,
+	Linking,
+	Pressable,
 	ScrollView,
+	Switch,
 	Text,
-	TextInput,
-	TouchableOpacity,
 	View,
 } from "react-native";
 
-export default function AccScreen() {
-	const { t, isRTL } = useTranslation();
-	const [user, setUser] = useState<any>(null);
-	const router = useRouter();
-	const [showDeleteModal, setShowDeleteModal] = useState(false);
-	const [passwordInput, setPasswordInput] = useState("");
+import EmptyState from "@/components/ui/EmptyState";
+import FormField from "@/components/ui/FormField";
+import PrimaryButton from "@/components/ui/PrimaryButton";
+import AppBottomSheet from "@/components/ui/AppBottomSheet";
+import LoadingOverlay from "@/components/ui/LoadingOverlay";
+import { API_BASE_URL } from "@/constants/api";
+import { OPEN_CITY_PICKER } from "@/constants/events";
+import { LANGUAGE_OPTIONS } from "@/constants/languages";
+import { colors, icon } from "@/constants/theme";
+import { useTranslation } from "@/contexts/TranslationContext";
+import { removePushTokenFromServer } from "@/hooks/useNotifications";
+import { AuthService } from "@/services/api";
+import { styles } from "@/styles/app/(tabs)/acc.styles";
+import type { User } from "@/types";
+import { notifyError, notifySuccess, tapSelection } from "@/utils/haptics";
+import { formatStreetLine } from "@/utils/userAddress";
 
-	const [deleting, setDeleting] = useState<boolean>(false);
+// Profile: a grouped, tappable list (personal info, delivery address, orders,
+// preferences, account actions) instead of a passive read-only form.
+export default function AccScreen() {
+	const { t, isRTL, language, switchLanguage, switching } = useTranslation();
+	const router = useRouter();
+	const [user, setUser] = useState<User | null>(null);
+	const [loadingUser, setLoadingUser] = useState(true);
+	const [logoutOpen, setLogoutOpen] = useState(false);
+	const [deleteOpen, setDeleteOpen] = useState(false);
+	const [passwordInput, setPasswordInput] = useState("");
+	const [deleteError, setDeleteError] = useState<string | null>(null);
+	const [deleting, setDeleting] = useState(false);
+	const [pushEnabled, setPushEnabled] = useState<boolean | null>(null);
+	// Which row/action is in flight. Rows swap their chevron for a spinner the
+	// moment they're tapped (navigation can take a beat on slower phones), and
+	// logout/delete raise a full-screen loader so the tap is visibly "working".
+	const [pending, setPending] = useState<string | null>(null);
+	const [loggingOut, setLoggingOut] = useState(false);
+	const pendingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+	const Chevron = isRTL ? ChevronLeft : ChevronRight;
+
+	// Navigate with feedback: mark the row busy, push, and clear the mark when
+	// this screen regains focus (or after a safety timeout if the push failed).
+	const go = (key: string, action: () => void) => {
+		if (pending) return;
+		setPending(key);
+		if (pendingTimer.current) clearTimeout(pendingTimer.current);
+		pendingTimer.current = setTimeout(() => setPending(null), 4000);
+		requestAnimationFrame(action);
+	};
+	useEffect(
+		() => () => {
+			if (pendingTimer.current) clearTimeout(pendingTimer.current);
+		},
+		[],
+	);
+
+	// Re-fetch user data every time the screen comes into focus. Every read is
+	// optional: a guest has no session at all and must still see this screen.
+	useFocusEffect(
+		useCallback(() => {
+			let cancelled = false;
+			setPending(null);
+			(async () => {
+				try {
+					const userData = await AsyncStorage.getItem("userData");
+					const guest = await AsyncStorage.getItem("guest");
+					if (!userData && !guest) {
+						router.replace("/start");
+						return;
+					}
+					const token = userData ? JSON.parse(userData)?.token : null;
+					if (!token) {
+						if (!cancelled) setUser(null);
+						return;
+					}
+					const res = await AuthService.me();
+					const fresh = (res?.data as unknown as { user?: User } | null)?.user ?? null;
+					if (!cancelled) setUser(fresh);
+				} catch (err) {
+					console.error("Profile fetch error:", err);
+				} finally {
+					if (!cancelled) setLoadingUser(false);
+				}
+				try {
+					const perm = await Notifications.getPermissionsAsync();
+					if (!cancelled) setPushEnabled(perm.granted);
+				} catch {
+					if (!cancelled) setPushEnabled(null);
+				}
+			})();
+			return () => {
+				cancelled = true;
+			};
+		}, [router]),
+	);
+
+	const handleLogout = async () => {
+		if (loggingOut) return;
+		setLoggingOut(true);
+		setLogoutOpen(false);
+		try {
+			const raw = await AsyncStorage.getItem("userData");
+			const token = raw ? JSON.parse(raw)?.token : null;
+			await removePushTokenFromServer(token);
+		} catch (e) {
+			console.error(e);
+		}
+		await AsyncStorage.removeItem("userData");
+		setLoggingOut(false);
+		router.replace("/start");
+	};
 
 	const handleDeleteAccount = async () => {
 		if (deleting) return;
 		setDeleting(true);
+		setDeleteError(null);
 		try {
 			const userData = await AsyncStorage.getItem("userData");
-			const parsedUser = userData ? JSON.parse(userData) : null;
-			const token = parsedUser?.token;
-
-			const res = await fetch(
-				`${API_BASE_URL}/auth/delete-account`,
-				{
-					method: "DELETE",
-					headers: {
-						Authorization: `Bearer ${token}`,
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({ password: passwordInput }),
-				}
-			);
-
+			const token = userData ? JSON.parse(userData)?.token : null;
+			const res = await fetch(`${API_BASE_URL}/auth/delete-account`, {
+				method: "DELETE",
+				headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+				body: JSON.stringify({ password: passwordInput }),
+			});
 			if (res.ok) {
-				Alert.alert(t("accountDeleted"), t("accountRemoved"));
+				notifySuccess();
 				await AsyncStorage.removeItem("userData");
+				setDeleteOpen(false);
 				router.replace("/start");
 			} else {
-				const errorData = await res.json();
-				Alert.alert(
-					t("errorTitle"),
-					errorData.message || t("failedDeleteAccount")
-				);
+				const errorData = await res.json().catch(() => null);
+				notifyError();
+				setDeleteError(errorData?.message || t("failedDeleteAccount"));
 			}
 		} catch (err) {
 			console.error(err);
-			Alert.alert(t("errorTitle"), t("somethingWrong"));
+			notifyError();
+			setDeleteError(t("somethingWrong"));
 		} finally {
 			setDeleting(false);
 		}
 	};
 
-	// Re-fetch user data every time the screen comes into focus
-	useFocusEffect(
-		useCallback(() => {
-			const checkLogin = async () => {
-				const userData = await AsyncStorage.getItem("userData");
-				const guest = await AsyncStorage.getItem("guest");
+	const togglePush = async (next: boolean) => {
+		tapSelection();
+		if (next) {
+			const perm = await Notifications.requestPermissionsAsync();
+			if (perm.granted) setPushEnabled(true);
+			else Linking.openSettings();
+		} else {
+			// The OS owns the switch — send them to Settings to turn it off.
+			Linking.openSettings();
+		}
+	};
 
-				if (!userData && !guest) {
-					router.replace("/start");
-				} else {
-					try {
-						const parsedUser = userData ? JSON.parse(userData) : null;
-						const token = parsedUser?.token;
-
-						if (!token) {
-							console.error("⚠️ No token found in userData");
-							return;
-						}
-
-						const res = await fetch(
-							`${API_BASE_URL}/auth/me`,
-							{
-								headers: {
-									Authorization: `Bearer ${token}`,
-									"Content-Type": "application/json",
-								},
-							}
-						);
-
-						if (res.ok) {
-							const data = await res.json();
-							setUser(data.data.user);
-						} else {
-							console.error("❌ Failed to fetch user:", res.status);
-						}
-					} catch (err) {
-						console.error("🔥 Network/Fetch error:", err);
-					}
-				}
-			};
-			checkLogin();
-		}, [router])
+	// --- tiles ------------------------------------------------------------------------
+	const Tile = ({
+		icon: Icon,
+		label,
+		value,
+		title,
+		hint,
+		onPress,
+		right,
+		last,
+		pendingKey,
+	}: {
+		icon: typeof Mail;
+		label?: string;
+		value?: string;
+		title?: string;
+		hint?: string;
+		onPress?: () => void;
+		right?: ReactNode;
+		last?: boolean;
+		/** Set on navigating rows: while `pending === pendingKey` the chevron
+		 *  becomes a spinner. */
+		pendingKey?: string;
+	}) => (
+		<Pressable
+			onPress={onPress}
+			disabled={!onPress}
+			style={({ pressed }) => [
+				styles.tile,
+				isRTL && { flexDirection: "row-reverse" },
+				last && styles.tileLast,
+				pressed && onPress && styles.tilePressed,
+			]}
+			accessibilityRole={onPress ? "button" : undefined}
+		>
+			<View style={styles.iconPill}>
+				<Icon size={icon.size} strokeWidth={icon.strokeWidth} color={colors.textSecondary} />
+			</View>
+			<View style={styles.tileBody}>
+				{label ? <Text style={styles.tileLabel}>{label}</Text> : null}
+				{value !== undefined ? (
+					<Text style={styles.tileValue} numberOfLines={1}>
+						{value || t("notProvided")}
+					</Text>
+				) : null}
+				{title ? <Text style={styles.tileTitle}>{title}</Text> : null}
+				{hint ? <Text style={styles.tileHint}>{hint}</Text> : null}
+			</View>
+			{pendingKey && pending === pendingKey ? (
+				<ActivityIndicator size="small" color={colors.primary} />
+			) : (
+				right ?? (onPress ? (
+					<Chevron size={icon.size} strokeWidth={icon.strokeWidth} color={colors.textDisabled} />
+				) : null)
+			)}
+		</Pressable>
 	);
 
+	if (!loadingUser && !user) {
+		return (
+			<ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+				<EmptyState
+					illustration="basket"
+					title={t("guestTitle")}
+					description={t("guestBody")}
+					actionLabel={t("login")}
+					onAction={() => router.push("/start")}
+					secondaryLabel={t("createAccount")}
+					onSecondary={() => router.push("/register")}
+				/>
+			</ScrollView>
+		);
+	}
+
+	const address = user?.address;
+	const addressLine = formatStreetLine(address);
+
 	return (
-		<ScrollView
-			style={styles.container}
-			showsVerticalScrollIndicator={true}
-			contentContainerStyle={styles.scrollContent}
-		>
-			{/* Header Section */}
+		<ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
 			<View style={styles.header}>
-				<View style={styles.avatarContainer}>
-					<View style={styles.avatar}>
-						<Feather name="user" size={40} color="#f4bb26" />
-					</View>
+				<View style={styles.avatar}>
+					<UserRound size={32} strokeWidth={icon.strokeWidth} color={colors.textSecondary} />
 				</View>
-				<Text style={[styles.title, rtlText(isRTL)]}>{t("myProfile")}</Text>
-				<Text style={[styles.subtitle, rtlText(isRTL)]}>
-					{user ? t("manageAccount") : t("welcome")}
-				</Text>
+				<Text style={styles.name}>{user?.name || t("myProfile")}</Text>
+				<Text style={styles.subtitle}>{user?.email || user?.phoneNumber || t("manageAccount")}</Text>
 			</View>
 
-			{/* User Info Card */}
-			{user ? (
-				<View style={styles.infoCard}>
-					<Text style={[styles.cardTitle, rtlText(isRTL)]}>{t("accountInfo")}</Text>
+			{/* Personal information */}
+			<Text style={styles.sectionTitle}>{t("personalInformation")}</Text>
+			<View style={styles.group}>
+				<Tile icon={UserRound} label={t("fullName")} value={user?.name ?? ""} pendingKey="name" onPress={() => go("name", () => router.push("/edit-profile"))} />
+				<Tile icon={Mail} label={t("email")} value={user?.email ?? ""} pendingKey="email" onPress={() => go("email", () => router.push("/edit-profile"))} />
+				<Tile icon={Phone} label={t("phoneNumber")} value={user?.phoneNumber ?? ""} pendingKey="phone" onPress={() => go("phone", () => router.push("/edit-profile"))} last />
+			</View>
 
-					{/* Basic Information Section */}
-					<View style={[styles.infoRow, rtlRow(isRTL)]}>
-						<View style={styles.iconContainer}>
-							<Feather name="user" size={20} color="#f4bb26" />
-						</View>
-						<View style={styles.infoContent}>
-							<Text style={[styles.infoLabel, rtlText(isRTL)]}>{t("fullName")}</Text>
-							<Text style={[styles.infoValue, rtlText(isRTL)]}>{user.name}</Text>
-						</View>
-					</View>
-
-					<View style={[styles.infoRow, rtlRow(isRTL)]}>
-						<View style={styles.iconContainer}>
-							<Feather name="mail" size={20} color="#f4bb26" />
-						</View>
-						<View style={styles.infoContent}>
-							<Text style={[styles.infoLabel, rtlText(isRTL)]}>{t("email")}</Text>
-							<Text style={[styles.infoValue, rtlText(isRTL)]}>{user.email}</Text>
-						</View>
-					</View>
-
-					<View style={[styles.infoRow, rtlRow(isRTL)]}>
-						<View style={styles.iconContainer}>
-							<Feather name="phone" size={20} color="#f4bb26" />
-						</View>
-						<View style={styles.infoContent}>
-							<Text style={[styles.infoLabel, rtlText(isRTL)]}>{t("phoneNumber")}</Text>
-							<Text style={[styles.infoValue, rtlText(isRTL)]}>{user.phoneNumber}</Text>
-						</View>
-					</View>
-
-					{/* Address Section */}
-					<View style={styles.addressSection}>
-						<Text style={[styles.sectionTitle, rtlText(isRTL)]}>{t("address")}</Text>
-
-						<View style={[styles.infoRow, rtlRow(isRTL)]}>
-							<View style={styles.iconContainer}>
-								<Feather name="map-pin" size={20} color="#f4bb26" />
-							</View>
-							<View style={styles.infoContent}>
-								<Text style={[styles.infoLabel, rtlText(isRTL)]}>{t("street")}</Text>
-								<Text style={[styles.infoValue, rtlText(isRTL)]}>
-									{user.address?.street || t("notProvided")}
-								</Text>
-							</View>
-						</View>
-
-						<View style={[styles.infoRow, rtlRow(isRTL)]}>
-							<View style={styles.iconContainer}>
-								<Feather name="map" size={20} color="#f4bb26" />
-							</View>
-							<View style={styles.infoContent}>
-								<Text style={[styles.infoLabel, rtlText(isRTL)]}>{t("city")}</Text>
-								<Text style={[styles.infoValue, rtlText(isRTL)]}>
-									{user.address?.city || t("notProvided")}
-								</Text>
-							</View>
-						</View>
-
-						<View style={[styles.infoRow, rtlRow(isRTL)]}>
-							<View style={styles.iconContainer}>
-								<Feather name="navigation" size={20} color="#f4bb26" />
-							</View>
-							<View style={styles.infoContent}>
-								<Text style={[styles.infoLabel, rtlText(isRTL)]}>{t("state")}</Text>
-								<Text style={[styles.infoValue, rtlText(isRTL)]}>
-									{user.address?.state || t("notProvided")}
-								</Text>
-							</View>
-						</View>
-
-						<View style={[styles.infoRow, rtlRow(isRTL)]}>
-							<View style={styles.iconContainer}>
-								<Feather name="globe" size={20} color="#f4bb26" />
-							</View>
-							<View style={styles.infoContent}>
-								<Text style={[styles.infoLabel, rtlText(isRTL)]}>{t("country")}</Text>
-								<Text style={[styles.infoValue, rtlText(isRTL)]}>
-									{t("lebanon")}
-								</Text>
-							</View>
-						</View>
-					</View>
-				</View>
-			) : (
-				<View style={styles.guestCard}>
-					<Feather name="user-x" size={48} color="#f4bb26" />
-					<Text style={styles.guestText}>{t("browsingAsGuest")}</Text>
-					<Text style={styles.guestSubtext}>{t("signInToAccess")}</Text>
-				</View>
-			)}
-
-			{/* Action Buttons */}
-			<View style={styles.actionsContainer}>
-				{user && (
-					<>
-						{/* Row with Edit & Change Password */}
-						<View
-							style={styles.rowSpaceBetween}
-						>
-							<TouchableOpacity
-								style={[
-									styles.actionButton,
-									styles.loginButton,
-									styles.flex1MarginRight,
-								]}
-								onPress={() => router.push("/edit-profile")}
-							>
-								<Feather
-									name="edit"
-									size={20}
-									color="#000"
-									style={styles.buttonIcon}
-								/>
-								<Text style={styles.actionButtonText}>{t("editProfile")}</Text>
-							</TouchableOpacity>
-
-							<TouchableOpacity
-								style={[
-									styles.actionButton,
-									styles.loginButton,
-									styles.flex1MarginLeft,
-								]}
-								onPress={() => router.push("/changepass")}
-							>
-								<Feather
-									name="lock"
-									size={20}
-									color="#000"
-									style={styles.buttonIcon}
-								/>
-								<Text style={styles.actionButtonText}>
-									{t("changePassword")}
-								</Text>
-							</TouchableOpacity>
-						</View>
-					</>
-				)}
-
-				{user && (
-					<TouchableOpacity
-						style={[styles.actionButton, styles.loginButton]} // Same as login/logout
-						onPress={() => router.push("/order")}
-					>
-						<Feather
-							name="eye"
-							size={20}
-							color="#000"
-							style={styles.buttonIcon}
-						/>
-						<Text style={styles.actionButtonText}>{t("viewOrders")}</Text>
-					</TouchableOpacity>
-				)}
-
-				{/* Logout / Login Button */}
-				<TouchableOpacity
-					style={[
-						styles.actionButton,
-						user ? styles.logoutButton : styles.loginButton,
-					]}
-					onPress={async () => {
-						if (user) {
-							try {
-								const raw = await AsyncStorage.getItem("userData");
-								const token = raw ? JSON.parse(raw)?.token : null;
-								await removePushTokenFromServer(token);
-							} catch (e) {
-								console.error(e);
-							}
-						}
-						await AsyncStorage.removeItem("userData");
-						router.replace("/start");
+			{/* Delivery address */}
+			<Text style={styles.sectionTitle}>{t("deliveryAddresses")}</Text>
+			<View style={styles.group}>
+				<Tile
+					icon={MapPin}
+					title={address?.city || t("selectCity")}
+					hint={addressLine || t("manageAddress")}
+					onPress={() => {
+						tapSelection();
+						DeviceEventEmitter.emit(OPEN_CITY_PICKER);
 					}}
-				>
-					<Feather
-						name={user ? "log-out" : "log-in"}
-						size={20}
-						color="#000"
-						style={styles.buttonIcon}
-					/>
-					<Text style={[styles.actionButtonText, styles.logoutText]}>
-						{user ? t("logout") : t("loginHere")}
-					</Text>
-				</TouchableOpacity>
-
-				{user && (
-					<TouchableOpacity
-						style={[styles.actionButton, styles.deleteButton]}
-						onPress={() => setShowDeleteModal(true)}
-					>
-						<Feather
-							name="trash-2"
-							size={20}
-							color="#fff"
-							style={styles.buttonIcon}
-						/>
-						<Text style={[styles.actionButtonText, styles.deleteText]}>
-							{t("deleteAccount")}
-						</Text>
-					</TouchableOpacity>
-				)}
-
-				{/* ✅ Password Confirmation Modal */}
-				<Modal
-					transparent={true}
-					visible={showDeleteModal}
-					animationType="fade"
-					onRequestClose={() => setShowDeleteModal(false)}
-				>
-					<View
-						style={styles.modalOverlay}
-					>
-						<View
-							style={styles.modalBox}
-						>
-							<Text
-								style={[styles.modalTitle, rtlText(isRTL)]}
-							>
-								{t("confirmNewPassword")}
-							</Text>
-							<TextInput
-								placeholder={t("enterYourPassword")}
-								secureTextEntry
-								value={passwordInput}
-								onChangeText={setPasswordInput}
-								style={[styles.modalInput, rtlText(isRTL)]}
-							/>
-							<View
-								style={styles.modalButtonRow}
-							>
-								<TouchableOpacity
-									style={[
-										styles.actionButton,
-										styles.modalCancelButton,
-									]}
-									onPress={() => setShowDeleteModal(false)}
-								>
-									<Text style={styles.blackBoldText}>
-										{t("cancel")}
-									</Text>
-								</TouchableOpacity>
-
-								<LoadingButton
-									style={[
-										styles.actionButton,
-										styles.modalDeleteButton,
-									]}
-									onPress={handleDeleteAccount}
-								>
-									<Text style={styles.whiteBoldText}>
-										{t("deleteAccount")}
-									</Text>
-								</LoadingButton>
+					right={
+						<View style={[{ flexDirection: "row", alignItems: "center", gap: 8 }, isRTL && { flexDirection: "row-reverse" }]}>
+							<View style={styles.tag}>
+								<Text style={styles.tagText}>{t("defaultAddress")}</Text>
 							</View>
+							<Chevron size={icon.size} strokeWidth={icon.strokeWidth} color={colors.textDisabled} />
 						</View>
-					</View>
-				</Modal>
+					}
+					last
+				/>
 			</View>
+
+			{/* Orders */}
+			<Text style={styles.sectionTitle}>{t("orderHistory")}</Text>
+			<View style={styles.group}>
+				<Tile icon={ClockArrowLeft} title={t("viewOrders")} hint={t("orderHistoryHint")} pendingKey="orders" onPress={() => go("orders", () => router.push("/order"))} last />
+			</View>
+
+			{/* Preferences */}
+			<Text style={styles.sectionTitle}>{t("preferences")}</Text>
+			<View style={styles.group}>
+				<Tile
+					icon={Languages}
+					title={t("language")}
+					hint={switching ? t("switchingLanguage") : undefined}
+					right={
+						<View style={styles.segmented}>
+							{LANGUAGE_OPTIONS.map((opt) => {
+								const active = opt.code === language;
+								return (
+									<Pressable
+										key={opt.code}
+										disabled={switching}
+										style={[styles.segment, active && styles.segmentActive]}
+										onPress={() => {
+											tapSelection();
+											switchLanguage(opt.code);
+										}}
+										accessibilityRole="button"
+										accessibilityState={{ selected: active }}
+									>
+										<Text style={[styles.segmentText, active && styles.segmentTextActive]}>{opt.name}</Text>
+									</Pressable>
+								);
+							})}
+						</View>
+					}
+				/>
+				<Tile
+					icon={Bell}
+					title={t("pushNotifications")}
+					hint={t("pushNotificationsHint")}
+					right={
+						<Switch
+							value={!!pushEnabled}
+							onValueChange={togglePush}
+							trackColor={{ false: colors.borderStrong, true: colors.primary }}
+							thumbColor={colors.background}
+						/>
+					}
+					last
+				/>
+			</View>
+
+			{/* Account */}
+			<Text style={styles.sectionTitle}>{t("accountActions")}</Text>
+			<View style={styles.group}>
+				<Tile icon={Lock} title={t("changePassword")} pendingKey="password" onPress={() => go("password", () => router.push("/changepass"))} last />
+			</View>
+
+			<View style={styles.actions}>
+				<PrimaryButton
+					label={t("logout")}
+					variant="danger"
+					onPress={() => setLogoutOpen(true)}
+					icon={<LogOut size={icon.size} strokeWidth={icon.strokeWidth} color={colors.textOnDark} />}
+				/>
+				<PrimaryButton
+					label={t("deleteAccount")}
+					variant="ghost"
+					textStyle={styles.destructiveText}
+					onPress={() => {
+						setPasswordInput("");
+						setDeleteError(null);
+						setDeleteOpen(true);
+					}}
+					icon={<Trash2 size={icon.sizeSmall} strokeWidth={icon.strokeWidth} color={colors.danger} />}
+				/>
+			</View>
+
+			{/* Log-out confirmation */}
+			<AppBottomSheet visible={logoutOpen} onClose={() => setLogoutOpen(false)} scrollable={false}>
+				<Text style={styles.sheetTitle}>{t("logoutTitle")}</Text>
+				<Text style={styles.sheetBody}>{t("logoutBody")}</Text>
+				<View style={styles.sheetActions}>
+					<PrimaryButton label={t("logout")} variant="danger" onPress={handleLogout} />
+					<PrimaryButton label={t("cancel")} variant="secondary" onPress={() => setLogoutOpen(false)} />
+				</View>
+			</AppBottomSheet>
+
+			{/* Delete-account confirmation (password) */}
+			<AppBottomSheet visible={deleteOpen} onClose={() => setDeleteOpen(false)}>
+				<Text style={styles.sheetTitle}>{t("deleteAccount")}</Text>
+				<Text style={styles.sheetBody}>{t("deleteAccountBody")}</Text>
+				<FormField
+					label={t("enterYourPassword")}
+					value={passwordInput}
+					onChangeText={setPasswordInput}
+					secureTextEntry
+					autoCapitalize="none"
+					error={deleteError}
+				/>
+				<View style={styles.sheetActions}>
+					<PrimaryButton label={t("deleteAccount")} variant="danger" loading={deleting} onPress={handleDeleteAccount} />
+					<PrimaryButton label={t("cancel")} variant="secondary" onPress={() => setDeleteOpen(false)} />
+				</View>
+			</AppBottomSheet>
+
+			{/* Full-screen "working" loaders for the account actions. */}
+			<LoadingOverlay visible={loggingOut} label={t("loggingOut")} />
+			<LoadingOverlay visible={deleting} label={t("deletingAccount")} />
 		</ScrollView>
 	);
 }

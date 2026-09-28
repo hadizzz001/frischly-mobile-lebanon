@@ -1,5 +1,5 @@
 import { globalStyles } from "@/constants/GlobalStyles";
-import { DEFAULT_CENTER } from "@/constants/map";
+import { DEFAULT_CENTER, MAP_WEBVIEW_APP_NAME } from "@/constants/map";
 import { styles } from "@/styles/components/LocationPickerMap.styles";
 import { buildPickerHtml } from "@/utils/maps/pickerMapHtml";
 import { Feather } from "@expo/vector-icons";
@@ -123,6 +123,7 @@ export default function LocationPickerMap({
 					source={{ html }}
 					onMessage={handleMessage}
 					style={globalStyles.flex1}
+					applicationNameForUserAgent={MAP_WEBVIEW_APP_NAME}
 				/>
 
 				<View style={styles.footer}>

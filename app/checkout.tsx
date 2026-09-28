@@ -1,45 +1,56 @@
-import CityPicker from "@/components/CityPicker";
-import IOSDatePickerModal from "@/components/IOSDatePickerModal";
-import { MAIN_STORE_NAME } from "@/constants/brand";
-import { MAIN_SOURCE, useCart } from "@/contexts/CartContext";
-import { useTranslation } from "@/contexts/TranslationContext";
-import { ApiError, AuthService, MarketService, PromoCodeService } from "@/services/api";
-import type { User } from "@/types";
-import { isValidLebanesePhone } from "@/utils/phone";
-import { rtlRow, rtlText } from "@/utils/rtl";
-import { Feather, Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import Constants from "expo-constants";
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
-
-import { styles } from "@/styles/app/checkout.styles";
-import { collectMarketTokens } from "@/utils/market";
+import { Banknote, CreditCard, MapPin, Store, Tag, Trash2, X } from "lucide-react-native";
+import { useEffect, useMemo, useState } from "react";
 import {
 	ActivityIndicator,
-	Alert,
-	Image,
-	Modal,
 	Platform,
+	Pressable,
 	ScrollView,
 	Text,
-	TextInput,
-	TouchableOpacity,
 	View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import OrderComponent from "../components/CreateOrderButton";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
+import OrderComponent from "@/components/CreateOrderButton";
+import IOSDatePickerModal from "@/components/IOSDatePickerModal";
+import AppBottomSheet from "@/components/ui/AppBottomSheet";
+import BackButton from "@/components/ui/BackButton";
+import EmptyState from "@/components/ui/EmptyState";
+import FormField from "@/components/ui/FormField";
+import PrimaryButton from "@/components/ui/PrimaryButton";
+import { MAIN_STORE_NAME } from "@/constants/brand";
+import { colors, icon } from "@/constants/theme";
+import { MAIN_SOURCE, useCart } from "@/contexts/CartContext";
+import { useTranslation } from "@/contexts/TranslationContext";
+import { useBusyAction } from "@/hooks/useBusyAction";
+import { useUsdToLbpRate } from "@/hooks/useUsdToLbpRate";
+import { ApiError, AuthService, MarketService, PromoCodeService } from "@/services/api";
+import { styles } from "@/styles/app/checkout.styles";
+import type { Address, User } from "@/types";
 import type {
 	AppliedPromo,
 	CheckoutInputs,
 	CheckoutState,
 } from "@/types/app/checkout.types";
+import { formatLbp, formatUsd } from "@/utils/currency";
+import { computeDeliveryFee, getDeliveryConfig, type DeliveryConfig } from "@/utils/deliveryFee";
+import { notifyError, notifySuccess } from "@/utils/haptics";
+import { interpolate } from "@/utils/i18n";
+import { collectMarketTokens } from "@/utils/market";
+import { formatLebanesePhoneInput, isValidLebanesePhone } from "@/utils/phone";
+import { rtlRow, rtlText } from "@/utils/rtl";
+import { formatStreetLine } from "@/utils/userAddress";
 
 export default function CheckoutScreen() {
-	const { t, isRTL } = useTranslation();
+	const { t, td, isRTL } = useTranslation();
+	const insets = useSafeAreaInsets();
+	const rate = useUsdToLbpRate();
 	const [showModal, setShowModal] = useState<boolean>(false);
+	const [riderNotes, setRiderNotes] = useState("");
+	const [promoError, setPromoError] = useState<string | null>(null);
 	const [modalResponse, setModalResponse] = useState<string | null>(null);
 	const [paymentMethod, setPaymentMethod] = useState<string>("card"); // "card" or "cash"
 	const [promoCode, setPromoCode] = useState<string>("");
@@ -49,7 +60,16 @@ export default function CheckoutScreen() {
 
 	const { cart, removeFromCart, subtotal, calculatePriceDetails, cartSource, cartMarket } =
 		useCart();
-	const [deliveryFee] = useState<number>(0);
+	const [deliveryConfig, setDeliveryConfig] = useState<DeliveryConfig>({
+		deliveryFee: 0,
+		freeDeliveryThreshold: 0,
+	});
+	// Dynamic delivery fee: the store's flat fee, waived once the cart subtotal
+	// reaches its free-delivery threshold. Recomputes as the subtotal changes.
+	const deliveryFee = useMemo(
+		() => computeDeliveryFee(deliveryConfig, Number(subtotal)),
+		[deliveryConfig, subtotal],
+	);
 	const [total, setTotal] = useState<string>("0.00");
 	const [marketDisplayName, setMarketDisplayName] = useState<string | null>(null);
 
@@ -82,13 +102,30 @@ export default function CheckoutScreen() {
 			.catch(() => {});
 	}, [cartSource, cartMarket]);
 
+	// Delivery config of the store this cart belongs to — FreshlyLB's own
+	// (Setting.deliveryFee/freeDeliveryThreshold) or the market's. The actual
+	// fee is derived from the live subtotal below (dynamic: free once the
+	// subtotal reaches the threshold). The backend charges the same figure when
+	// the order is created, so the total shown is what the shopper actually pays.
+	useEffect(() => {
+		let cancelled = false;
+		const marketId =
+			!cartSource || cartSource === MAIN_SOURCE ? null : cartSource;
+		getDeliveryConfig(marketId)
+			.then((config) => {
+				if (!cancelled) setDeliveryConfig(config);
+			})
+			.catch(() => {});
+		return () => {
+			cancelled = true;
+		};
+	}, [cartSource]);
+
 	const [deliveryTime, setDeliveryTime] = useState(new Date());
 	const [showDatePicker, setShowDatePicker] = useState(false);
 	const [pickerMode, setPickerMode] = useState("date"); // "date" | "time"
 
 	const router = useRouter();
-	const token =
-		Constants.expoConfig?.extra?.jwtToken || process.env.EXPO_PUBLIC_JWT_TOKEN;
 
 	// ✅ Unified state
 	const [state, setState] = useState<CheckoutState>({
@@ -190,15 +227,8 @@ export default function CheckoutScreen() {
 		const d = Number(deliveryFee);
 		const disc = Number(discountAmount);
 
-		// Calculate fee on (subtotal + delivery)
-		const processFee = (s + d) * 0.029 + 0.3;
-
-		// Round to 2 decimals
-		// const fees = Math.round(processFee * 100) / 100;
-		const fees = 0;
-
-		// Final total (subtract discount)
-		const totalAmount = s + d + fees - disc;
+		// Final total (subtract discount). No processing fee is charged.
+		const totalAmount = s + d - disc;
 
 		return Math.max(totalAmount, 0).toFixed(2); // Ensure total doesn't go negative
 	};
@@ -209,14 +239,16 @@ export default function CheckoutScreen() {
 
 	const validatePromoCode = async (): Promise<void> => {
 		if (!promoCode.trim()) {
-			Alert.alert(t("errorTitle"), t("enterPromoCodeFirst"));
+			setPromoError(t("enterPromoCodeFirst"));
 			return;
 		}
-
+		setPromoError(null);
 		setPromoLoading(true);
 
 		// ----------------------- DEBUG: entered code + cart market -----------------
-		const enteredCode = promoCode.toUpperCase();
+		// Trim: Android keyboards add a trailing space after autocomplete, and
+		// "ABC " is not "ABC" to the server.
+		const enteredCode = promoCode.trim().toUpperCase();
 		console.log("\n========== 🎟️  PROMO DEBUG START ==========");
 		console.log("📝 Entered promo code:", enteredCode);
 		console.log("🛒 cartSource (market _id or 'MAIN'):", cartSource);
@@ -255,7 +287,7 @@ export default function CheckoutScreen() {
 			);
 
 			const data = await PromoCodeService.validate({
-				code: promoCode.toUpperCase(),
+				code: enteredCode,
 				orderTotal: orderTotal,
 				market: marketId,
 			});
@@ -332,17 +364,15 @@ export default function CheckoutScreen() {
 					setPromoCode("");
 					setAppliedPromo(null);
 					setDiscountAmount(0);
-					Alert.alert(t("errorTitle"), t("promoWrongMarket"));
+					notifyError();
+					setPromoError(t("promoWrongMarket"));
 					return;
 				}
 
 				const applied = data.data as unknown as AppliedPromo;
 				setAppliedPromo(applied);
 				setDiscountAmount(applied.discountAmount);
-				Alert.alert(
-					t("success"),
-					`${t("promoApplied")} $${applied.discountAmount.toFixed(2)}`,
-				);
+				notifySuccess();
 			} else {
 				console.log(
 					"❌ Backend rejected the code. message:",
@@ -350,7 +380,8 @@ export default function CheckoutScreen() {
 				);
 				console.log("========== 🎟️  PROMO DEBUG END ==========\n");
 				setPromoCode("");
-				Alert.alert(t("errorTitle"), data.message || t("invalidPromoCode"));
+				notifyError();
+				setPromoError(data.message || t("invalidPromoCode"));
 			}
 		} catch (error) {
 			// A backend rejection (non-2xx) surfaces as ApiError — show its message
@@ -363,13 +394,15 @@ export default function CheckoutScreen() {
 				);
 				console.log("========== 🎟️  PROMO DEBUG END ==========\n");
 				setPromoCode("");
-				Alert.alert(t("errorTitle"), message || t("invalidPromoCode"));
+				notifyError();
+				setPromoError(message || t("invalidPromoCode"));
 				return;
 			}
 			console.error("🔥 Error validating promo code:", error);
 			console.log("========== 🎟️  PROMO DEBUG END ==========\n");
 			setPromoCode("");
-			Alert.alert(t("errorTitle"), t("validatePromoFailed"));
+			notifyError();
+			setPromoError(t("validatePromoFailed"));
 		} finally {
 			setPromoLoading(false);
 		}
@@ -387,165 +420,128 @@ export default function CheckoutScreen() {
 		setModalResponse(response); // trigger child effect
 	};
 
-	const handleRemoveFromCart = (id: string): void => removeFromCart(id);
+	const { isBusy, anyBusy, run } = useBusyAction();
 
-	useEffect(() => {
-		console.log("🚚 Delivery Time:", deliveryTime);
-		console.log("📅 ISO:", deliveryTime.toISOString());
-		console.log("⏰ Local:", deliveryTime.toString());
-	}, [deliveryTime]);
+	const handleRemoveFromCart = (id: string): void =>
+		run(`remove-${id}`, () => removeFromCart(id));
+
+	// Address the order will ship to. Read-only on purpose: the city is bound
+	// to the catalog the cart was built from, so it can only be changed from
+	// the home screen's location pill (which handles the cart-zone conflict)
+	// or the profile — never mid-checkout.
+	const address: Address | null | undefined = state.user?.address;
+	const hasPin =
+		typeof address?.location?.latitude === "number" &&
+		typeof address?.location?.longitude === "number";
+	const addressLine = formatStreetLine(address);
+
+	const isMain = !cartSource || cartSource === MAIN_SOURCE;
+	const storeLabel = marketDisplayName ?? (isMain ? MAIN_STORE_NAME : t("market"));
+	const totalNumber = Number(total) || 0;
 
 	if (state.loading) {
 		return (
 			<View style={styles.loadingContainer}>
-				<Text>{t("loadingUserInfo")}</Text>
+				<ActivityIndicator color={colors.primary} />
+				<Text style={styles.text}>{t("loadingUserInfo")}</Text>
 			</View>
 		);
 	}
 
-	const inputBg = "#FFFFFF";
-	const inputText = "#000000";
-	const placeholderColor = "#666666";
-
 	if (!cart || cart.length === 0) {
 		return (
-			<View style={styles.emptyContainer}>
-				<Text style={styles.emptyText}>{t("noItemsInBag")}</Text>
-				<TouchableOpacity
-					style={styles.button}
-					onPress={() => router.push("/shop")}
-				>
-					<Text style={styles.buttonText}>{t("continueShopping")}</Text>
-				</TouchableOpacity>
-			</View>
+			<SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
+				<EmptyState
+					illustration="basket"
+					title={t("cartEmptyTitle")}
+					description={t("cartEmptyBody")}
+					actionLabel={t("continueShopping")}
+					onAction={() => router.push("/shop")}
+				/>
+			</SafeAreaView>
 		);
 	}
 
 	return (
-		<SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
+		<SafeAreaView edges={["top"]} style={styles.safeArea}>
+			<View style={[styles.topBar, rtlRow(isRTL)]}>
+				<BackButton />
+				<Text style={styles.topBarTitle}>{t("shippingInformation")}</Text>
+			</View>
+
 			<ScrollView
 				style={styles.container}
 				contentContainerStyle={styles.scrollContent}
+				keyboardShouldPersistTaps="handled"
 			>
-				<TouchableOpacity
-					onPress={() => router.back()}
-					style={styles.backButton}
-				>
-					<Feather name="chevron-left" size={24} color="#000000" />
-				</TouchableOpacity>
-
-				<Text style={[styles.heading, rtlText(isRTL)]}>{t("shippingInformation")}</Text>
-
-				<TextInput
-					style={styles.input}
-					placeholder={t("emailRequiredField")}
-					value={state.inputs.email}
-					//onChangeText={(v) => handleInput("email", v)}
-					keyboardType="email-address"
-					editable={false}
-				/>
-
-				<TextInput
-					style={styles.input}
-					placeholder={t("fullNameRequired")}
-					value={state.inputs.name}
-					onChangeText={(v) => handleInput("name", v)}
-				/>
-
-				<View style={styles.countryWrapper}>
-					<TouchableOpacity
-						onPress={() => Alert.alert(t("errorTitle"), t("countryFixed"))}
-					>
-						<View pointerEvents="none">
-							<TextInput
-								style={styles.input}
-								value={t("lebanon")}
-								editable={false}
-							/>
+				{/* --- Address card ------------------------------------------------ */}
+				<Text style={[styles.heading, rtlText(isRTL)]}>{t("deliveryAddress")}</Text>
+				<View style={[styles.addressCard, !hasPin && styles.addressCardMissing]}>
+					<View style={[styles.addressRow, rtlRow(isRTL)]}>
+						<View style={styles.addressIcon}>
+							<MapPin size={icon.size} strokeWidth={icon.strokeWidth} color={hasPin ? colors.primaryDark : colors.warning} />
 						</View>
-					</TouchableOpacity>
+						<View style={styles.flex1}>
+							<Text style={[styles.addressTitle, rtlText(isRTL)]} numberOfLines={1}>
+								{hasPin ? address?.city || t("selectCity") : t("addDeliveryAddress")}
+							</Text>
+							<Text style={[styles.addressSub, rtlText(isRTL)]} numberOfLines={2}>
+								{hasPin ? addressLine || t("manageAddress") : t("addressSetFromHome")}
+							</Text>
+						</View>
+					</View>
 				</View>
 
-				<CityPicker
-					value={state.inputs.city}
-					onValueChange={(v) => handleInput("city", v)}
-					placeholder={t("cityRequired")}
-					disabled
-					style={styles.cityPicker}
+				{/* --- Contact ------------------------------------------------------ */}
+				<Text style={[styles.heading, rtlText(isRTL)]}>{t("contactDetails")}</Text>
+				<FormField label={t("fullName")} value={state.inputs.name} onChangeText={(v) => handleInput("name", v)} autoCapitalize="words" />
+				<FormField
+					label={t("phoneLabel")}
+					prefix="+961"
+					value={state.inputs.phone.replace(/^\+?961/, "").trim()}
+					onChangeText={(v) => handleInput("phone", formatLebanesePhoneInput(v))}
+					keyboardType="phone-pad"
+					maxLength={9}
+					hint={t("phoneHint")}
 				/>
+				<FormField label={t("emailLabel")} value={state.inputs.email} editable={false} />
 
-				<TextInput
-					style={[styles.input, styles.inputDisabled]}
-					placeholder={t("stateRequired")}
-					value={state.inputs.state}
-					editable={false}
+				{/* --- Delivery details ------------------------------------------- */}
+				<Text style={[styles.heading, rtlText(isRTL)]}>{t("deliveryDetails")}</Text>
+				<FormField
+					label={t("dtime")}
+					value={deliveryTime.toLocaleString("en-US", {
+						month: "short",
+						day: "2-digit",
+						hour: "numeric",
+						minute: "2-digit",
+						hour12: true,
+					})}
+					onPressField={() => setShowDatePicker(true)}
 				/>
-
-				<View style={styles.row}>
-					<TextInput
-						style={[styles.input, styles.flex1]}
-						placeholder={t("phoneRequired")}
-						value={state.inputs.phone}
-						keyboardType="phone-pad"
-						onChangeText={(v) => handleInput("phone", v)}
+				{Platform.OS === "android" && showDatePicker && (
+					<DateTimePicker
+						value={deliveryTime}
+						mode={pickerMode as "date" | "time"}
+						display="default"
+						minimumDate={new Date()}
+						onChange={(event, selectedDate) => {
+							if (event.type !== "set") {
+								setShowDatePicker(false);
+								setPickerMode("date");
+								return;
+							}
+							const newDate = selectedDate || deliveryTime;
+							setDeliveryTime(newDate);
+							if (pickerMode === "date") {
+								setPickerMode("time");
+							} else {
+								setShowDatePicker(false);
+								setPickerMode("date");
+							}
+						}}
 					/>
-				</View>
-
-				<TextInput
-					style={[styles.input, styles.inputDisabled]}
-					placeholder={t("streetRequired")}
-					value={state.inputs.street}
-					editable={false}
-				/>
-
-				<Text style={[styles.heading, rtlText(isRTL)]}>{t("dtime")}</Text>
-
-				<TouchableOpacity
-					onPress={() => setShowDatePicker(true)}
-					style={styles.input}
-				>
-					<Text>
-						{deliveryTime.toLocaleString("en-US", {
-							year: "numeric",
-							month: "2-digit",
-							day: "2-digit",
-							hour: "numeric",
-							minute: "2-digit",
-							second: "2-digit",
-							hour12: true,
-						})}
-					</Text>
-
-					{Platform.OS === "android" && showDatePicker && (
-						<DateTimePicker
-							value={deliveryTime}
-							mode={pickerMode as "date" | "time"}
-							display="default"
-							minimumDate={new Date()}
-							onChange={(event, selectedDate) => {
-								if (event.type !== "set") {
-									setShowDatePicker(false);
-									setPickerMode("date");
-									return;
-								}
-
-								if (pickerMode === "date") {
-									// user picked date → now pick time
-									const newDate = selectedDate || deliveryTime;
-									setDeliveryTime(newDate);
-									setPickerMode("time");
-								} else {
-									// user picked time → done
-									const newDate = selectedDate || deliveryTime;
-									setDeliveryTime(newDate);
-									setShowDatePicker(false);
-									setPickerMode("date");
-								}
-							}}
-						/>
-					)}
-				</TouchableOpacity>
-
+				)}
 				<IOSDatePickerModal
 					visible={Platform.OS === "ios" && showDatePicker}
 					value={deliveryTime}
@@ -557,215 +553,185 @@ export default function CheckoutScreen() {
 					}}
 					onCancel={() => setShowDatePicker(false)}
 				/>
-				<Text style={[styles.heading, rtlText(isRTL)]}>{t("paymentMethod")}</Text>
+				<FormField
+					label={t("riderInstructionsLabel")}
+					value={riderNotes}
+					onChangeText={setRiderNotes}
+					placeholder={t("riderInstructionsPlaceholder")}
+					multiline
+					numberOfLines={2}
+					maxLength={300}
+				/>
 
-				<View style={styles.paymentOptions}>
-					<TouchableOpacity
-						style={[
-							styles.paymentOption,
-							paymentMethod === "card" && styles.paymentOptionSelected,
-						]}
-						onPress={() => setPaymentMethod("card")}
-					>
-						<Feather
-							name="credit-card"
-							size={24}
-							color={paymentMethod === "card" ? "#000" : "#666"}
-						/>
-						<Text
-							style={[
-								styles.paymentOptionText,
-								paymentMethod === "card" && styles.paymentOptionTextSelected,
-							]}
-						>
-							{t("onlinePayment")}
-						</Text>
-					</TouchableOpacity>
-
-					<TouchableOpacity
-						style={[
-							styles.paymentOption,
-							paymentMethod === "cash" && styles.paymentOptionSelected,
-						]}
-						onPress={() => setPaymentMethod("cash")}
-					>
-						<Feather
-							name="dollar-sign"
-							size={24}
-							color={paymentMethod === "cash" ? "#000" : "#666"}
-						/>
-						<Text
-							style={[
-								styles.paymentOptionText,
-								paymentMethod === "cash" && styles.paymentOptionTextSelected,
-							]}
-						>
-							{t("cashOnDelivery")}
-						</Text>
-					</TouchableOpacity>
-				</View>
-
-				<Text style={[styles.heading, rtlText(isRTL)]}>{t("promoCode")}</Text>
-				<View style={styles.promoCodeContainer}>
-					<TextInput
-						style={[styles.input, styles.flex1MarginRight10]}
-						placeholder={t("enterPromoCode")}
-						value={promoCode}
-						onChangeText={(text) => {
-							setPromoCode(text);
-							// Clear applied promo when user starts typing a new code
-							if (appliedPromo && text !== appliedPromo.promoCode.code) {
-								setAppliedPromo(null);
-								setDiscountAmount(0);
-							}
-						}}
-						autoCapitalize="characters"
-					/>
-					<TouchableOpacity
-						style={[
-							styles.applyButton,
-							promoLoading && styles.applyButtonDisabled,
-						]}
-						onPress={validatePromoCode}
-						disabled={promoLoading}
-					>
-						{promoLoading ? (
-							<ActivityIndicator size="small" color="#fff" />
-						) : (
-							<Text style={styles.applyButtonText}>{t("apply")}</Text>
-						)}
-					</TouchableOpacity>
-				</View>
-
-				<Text style={[styles.heading, rtlText(isRTL)]}>{t("orderSummary")}</Text>
-
-				{/* Market / source badge */}
-				{(() => {
-					const isMain = !cartSource || cartSource === MAIN_SOURCE;
-					const label = marketDisplayName ?? (isMain ? MAIN_STORE_NAME : "Market");
-					return (
-						<View style={[styles.sourceBadge, isMain ? styles.sourceBadgeMain : styles.sourceBadgeMarket]}>
-							<Ionicons
-								name="storefront-outline"
-								size={15}
-								color={isMain ? "#1a6e2e" : "#7c4700"}
-							/>
-							<Text style={[styles.sourceBadgeText, isMain ? styles.textGreen : styles.textOrange]}>
-								{label}
-							</Text>
-						</View>
-					);
-				})()}
-
-				<View>
-					{cart.map((item, index) => {
-						const quantity = item.quantity || 1;
-						const priceDetails = calculatePriceDetails(item, quantity);
-
+				{/* --- Payment ------------------------------------------------------ */}
+				<Text style={[styles.heading, rtlText(isRTL)]}>{t("payment")}</Text>
+				<View style={[styles.paymentOptions, rtlRow(isRTL)]}>
+					{(
+						[
+							{ key: "card", label: t("onlinePayment"), Icon: CreditCard },
+							{ key: "cash", label: t("cashOnDelivery"), Icon: Banknote },
+						] as const
+					).map(({ key, label, Icon }) => {
+						const active = paymentMethod === key;
 						return (
-							<View key={`${item._id}-${index}`} style={styles.cartItem}>
-								<Image
-									source={{ uri: item.picture?.replace("/upload/", "/upload/") || undefined }}
-									style={styles.cartImage}
-									resizeMode="contain"
-								/>
-								<View style={styles.flex1}>
-									<Text>{item.title}</Text>
-									<Text>
-										{t("quantity")} {quantity}
-									</Text>
-									<Text style={styles.price}>
-										${priceDetails.finalPrice.toFixed(2)}
-									</Text>
-								</View>
-								<TouchableOpacity
-									onPress={() => handleRemoveFromCart(item._id)}
-								>
-									<Ionicons name="trash" size={20} color="red" />
-								</TouchableOpacity>
-							</View>
+							<Pressable
+								key={key}
+								style={[styles.paymentOption, active && styles.paymentOptionSelected]}
+								onPress={() => setPaymentMethod(key)}
+								accessibilityRole="radio"
+								accessibilityState={{ selected: active }}
+							>
+								<Icon size={icon.sizeLarge} strokeWidth={icon.strokeWidth} color={active ? colors.primaryDark : colors.textSecondary} />
+								<Text style={[styles.paymentOptionText, active && styles.paymentOptionTextSelected]}>{label}</Text>
+							</Pressable>
 						);
 					})}
 				</View>
 
+				{/* --- Promo code ------------------------------------------------- */}
+				<Text style={[styles.heading, rtlText(isRTL)]}>{t("promoCode")}</Text>
+				{appliedPromo ? (
+					<View style={[styles.promoApplied, rtlRow(isRTL)]}>
+						<Tag size={icon.size} strokeWidth={icon.strokeWidth} color={colors.success} />
+						<Text style={styles.promoAppliedText}>
+							{interpolate(t("promoCodeApplied"), { amount: formatUsd(discountAmount) })}
+						</Text>
+						<Pressable
+							onPress={() => {
+								setAppliedPromo(null);
+								setDiscountAmount(0);
+								setPromoCode("");
+							}}
+							hitSlop={8}
+						>
+							<X size={icon.size} strokeWidth={icon.strokeWidth} color={colors.textMuted} />
+						</Pressable>
+					</View>
+				) : (
+					<View>
+						<View style={[styles.promoCodeContainer, rtlRow(isRTL)]}>
+							<View style={styles.flex1}>
+								<FormField
+									label={t("enterPromoCode")}
+									value={promoCode}
+									onChangeText={(text) => {
+										setPromoCode(text);
+										if (promoError) setPromoError(null);
+									}}
+									autoCapitalize="characters"
+									autoCorrect={false}
+									error={promoError}
+									showError={false}
+									containerStyle={{ marginBottom: 0 }}
+								/>
+							</View>
+							<PrimaryButton
+								label={t("apply")}
+								onPress={validatePromoCode}
+								loading={promoLoading}
+								style={styles.applyButton}
+							/>
+						</View>
+						{/* Under the whole row, not inside the field: the server's
+						    messages can be a full sentence, and an inline error used
+						    to grow the field and drop the button below the input. */}
+						{promoError ? (
+							<Text style={[styles.promoError, rtlText(isRTL)]}>{promoError}</Text>
+						) : null}
+					</View>
+				)}
+
+				{/* --- Order summary --------------------------------------------- */}
+				<Text style={[styles.heading, rtlText(isRTL)]}>{t("orderSummary")}</Text>
+				<View style={[styles.sourceBadge, rtlRow(isRTL)]}>
+					<Store size={icon.sizeSmall} strokeWidth={icon.strokeWidth} color={colors.primaryDark} />
+					<Text style={styles.sourceBadgeText}>{storeLabel}</Text>
+				</View>
+				<View style={styles.itemsCard}>
+					{cart.map((item, index) => {
+						const quantity = item.quantity || 1;
+						const priceDetails = calculatePriceDetails(item, quantity);
+						return (
+							<View key={`${item._id}-${index}`} style={[styles.cartItem, rtlRow(isRTL), index === cart.length - 1 && styles.cartItemLast]}>
+								<View style={styles.cartImageWrap}>
+									<Image source={{ uri: item.picture || undefined }} style={styles.cartImage} contentFit="contain" cachePolicy="memory-disk" />
+								</View>
+								<View style={styles.flex1}>
+									<Text style={[styles.itemName, rtlText(isRTL)]} numberOfLines={2}>
+										{td(item.name)}
+									</Text>
+									<Text style={[styles.text, rtlText(isRTL)]}>
+										{t("quantity")} {quantity}
+									</Text>
+								</View>
+								<Text style={styles.price}>{formatUsd(priceDetails.finalPrice)}</Text>
+								<Pressable onPress={() => handleRemoveFromCart(item._id)} disabled={anyBusy} hitSlop={8} style={styles.removeBtn}>
+									{isBusy(`remove-${item._id}`) ? (
+										<ActivityIndicator size="small" color={colors.textMuted} />
+									) : (
+										<Trash2 size={icon.size} strokeWidth={icon.strokeWidth} color={colors.textMuted} />
+									)}
+								</Pressable>
+							</View>
+						);
+					})}
+				</View>
+			</ScrollView>
+
+			{/* --- Sticky order bar ---------------------------------------------- */}
+			<View style={[styles.stickyBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
 				<View style={[styles.summaryRow, rtlRow(isRTL)]}>
-					<Text>{t("subtotal")}</Text>
-					<Text>${subtotal.toFixed(2)}</Text>
+					<Text style={styles.summaryLabel}>{t("subtotal")}</Text>
+					<Text style={styles.summaryValue}>{formatUsd(Number(subtotal))}</Text>
 				</View>
 				<View style={[styles.summaryRow, rtlRow(isRTL)]}>
-					<Text>{t("delivery")}</Text>
-					<Text>${deliveryFee.toFixed(2)}</Text>
-				</View>
-				<View style={[styles.summaryRow, rtlRow(isRTL)]}>
-					<Text>{t("processFees")}</Text>
-					<Text> 0</Text>
+					<Text style={styles.summaryLabel}>{t("deliveryFee")}</Text>
+					<Text style={styles.summaryValue}>{deliveryFee > 0 ? formatUsd(deliveryFee) : t("free")}</Text>
 				</View>
 				{discountAmount > 0 && (
 					<View style={[styles.summaryRow, rtlRow(isRTL)]}>
-						<Text>{t("discount")}</Text>
-						<Text>-${discountAmount.toFixed(2)}</Text>
+						<Text style={styles.summaryLabel}>{t("discount")}</Text>
+						<Text style={[styles.summaryValue, styles.summaryDiscount]}>-{formatUsd(discountAmount)}</Text>
 					</View>
 				)}
-				<View style={[styles.summaryRow, rtlRow(isRTL)]}>
-					<Text style={styles.boldText}>{t("total")}</Text>
-					<Text style={styles.boldText}>${total}</Text>
+				<View style={[styles.summaryRow, styles.totalRow, rtlRow(isRTL)]}>
+					<Text style={styles.totalLabel}>{t("totalAmount")}</Text>
+					<View>
+						<Text style={styles.totalValue}>{formatUsd(totalNumber)}</Text>
+						<Text style={styles.totalLbp}>{interpolate(t("totalWithLbp"), { lbp: formatLbp(totalNumber, rate) })}</Text>
+					</View>
 				</View>
-
 				<OrderComponent
 					items={cart}
 					customer={state.user}
 					phone={state.inputs.phone}
-					onValidatePhone={() => {
-						if (!isValidLebanesePhone(state.inputs.phone)) {
-							Alert.alert(t("errorTitle"), t("phoneMustBe78Digits"));
-							return false;
-						}
-						return true;
-					}}
+					onValidatePhone={() => isValidLebanesePhone(state.inputs.phone)}
 					setShowModal={setShowModal}
 					modalResponse={modalResponse}
 					paymentMethod={paymentMethod}
 					deliveryTime={deliveryTime.toISOString()}
 					appliedPromo={appliedPromo}
 					discountAmount={discountAmount}
+					notes={riderNotes}
+					disabledReason={
+						!hasPin
+							? t("addressRequiredToOrder")
+							: !isValidLebanesePhone(state.inputs.phone)
+							? t("phoneMustBe78Digits")
+							: null
+					}
 				/>
-			</ScrollView>
-			<Modal visible={showModal} transparent animationType="slide">
-				<View style={styles.modalBackground}>
-					<View style={styles.modalContainer}>
-						<Text style={styles.modalTitle}>
-							{t("ageVerificationTitle")}
-						</Text>
+			</View>
 
-						<Text style={styles.modalSubtitle}>
-							{t("ageVerification")}
-						</Text>
-
-						{/* Buttons container */}
-						<View style={styles.modalButtons}>
-							{/* YES BUTTON */}
-							<TouchableOpacity
-								onPress={() => handleModalResponse("yes")}
-								style={styles.modalYesButton}
-							>
-								<Text style={styles.modalYesText}>
-									{t("yes")}
-								</Text>
-							</TouchableOpacity>
-
-							{/* NO BUTTON */}
-							<TouchableOpacity
-								onPress={() => handleModalResponse("no")}
-								style={styles.modalNoButton}
-							>
-								<Text style={styles.modalNoText}>
-									{t("no")}
-								</Text>
-							</TouchableOpacity>
-						</View>
-					</View>
+			{/* Age check (18+ items) */}
+			<AppBottomSheet visible={showModal} onClose={() => setShowModal(false)} scrollable={false}>
+				<Text style={styles.sheetTitle}>{t("ageVerificationTitle")}</Text>
+				<Text style={styles.sheetBody}>{t("ageVerification")}</Text>
+				<View style={styles.sheetActions}>
+					<PrimaryButton label={t("yes")} onPress={() => handleModalResponse("yes")} />
+					<PrimaryButton label={t("no")} variant="secondary" onPress={() => handleModalResponse("no")} />
 				</View>
-			</Modal>
+			</AppBottomSheet>
 		</SafeAreaView>
 	);
 }

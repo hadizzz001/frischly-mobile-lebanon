@@ -12,20 +12,36 @@ const { width, height } = Dimensions.get("window");
 export const SCREEN_WIDTH: number = width;
 export const SCREEN_HEIGHT: number = height;
 
+// --- Shared 3-column product grid ----------------------------------------
+// Every catalog grid (home, market home, shop, search, category, kitchens)
+// shows 3 cards per row: 16px screen gutter on each side + an 8px gap between
+// cards. GRID_GAP (16) stays the spacing for everything that isn't a grid row
+// (carousel separators, search bar row).
+export const GRID_GUTTER = 16;
+export const GRID_GAP = 16;
+export const PRODUCT_GRID_GAP = 8;
+export const PRODUCT_GRID_COLUMNS = 3;
+// Floored so three cards + two gaps never add up to a hair more than the row
+// (a flex-wrap grid would then drop the third card to the next line).
+export const PRODUCT_GRID_ITEM_WIDTH = Math.floor(
+	(SCREEN_WIDTH - GRID_GUTTER * 2 - PRODUCT_GRID_GAP * (PRODUCT_GRID_COLUMNS - 1)) /
+		PRODUCT_GRID_COLUMNS,
+);
+
 // --- app/(tabs)/menu.tsx — categories grid -------------------------------
-export const MENU_NUM_COLUMNS = 2;
-export const MENU_ITEM_WIDTH = SCREEN_WIDTH / MENU_NUM_COLUMNS - 20;
+// Same 3-per-row geometry as the product grid.
+export const MENU_NUM_COLUMNS = PRODUCT_GRID_COLUMNS;
+export const MENU_ITEM_WIDTH = PRODUCT_GRID_ITEM_WIDTH;
 export const MENU_ITEM_HEIGHT = 130;
 
 // --- app/kitchen-category/[id].tsx ---------------------------------------
-// Two cards per row: 12px outer padding on each side + 12px gutter between.
-export const KITCHEN_CATEGORY_CARD_WIDTH = (SCREEN_WIDTH - 36) / 2;
+export const KITCHEN_CATEGORY_CARD_WIDTH = PRODUCT_GRID_ITEM_WIDTH;
 
 // --- app/shop.tsx --------------------------------------------------------
-export const SHOP_ITEM_WIDTH = SCREEN_WIDTH / 3 - 12; // 3 items per row, adjust margin
+export const SHOP_ITEM_WIDTH = PRODUCT_GRID_ITEM_WIDTH;
 
 // --- app/shop1.tsx -------------------------------------------------------
-export const SHOP1_ITEM_WIDTH = SCREEN_WIDTH / 3 - 13; // three items per row with spacing
+export const SHOP1_ITEM_WIDTH = PRODUCT_GRID_ITEM_WIDTH;
 
 // --- components/CatSlider.tsx --------------------------------------------
 export const CAT_SLIDER_ITEM_WIDTH = SCREEN_WIDTH / 4 - 15; // 4 items per row
@@ -41,9 +57,24 @@ export const MARKETS_SLIDER_ITEM_WIDTH = SCREEN_WIDTH / 3 - 16;
 export const MARKETS_SLIDER_SNAP_INTERVAL =
 	MARKETS_SLIDER_ITEM_WIDTH + MARKETS_SLIDER_ITEM_SPACING;
 
+// --- components/ProductCard.tsx ------------------------------------------
+// Product titles are cut to this many characters (a "..." is appended) so the
+// name never pushes the price/add button out of a card in the grid.
+export const PRODUCT_CARD_NAME_MAX_CHARS = 40;
+// Cards narrower than this (the 3-per-row grid, the hot-sale row on small
+// phones) switch to the compact layout: tighter padding, smaller type, USD on
+// its own line — so the price is never cut off.
+export const PRODUCT_CARD_COMPACT_MAX_WIDTH = 150;
+
 // --- components/ProductList.tsx ------------------------------------------
-export const PRODUCT_LIST_ITEM_WIDTH = SCREEN_WIDTH / 3 - 15;
+export const PRODUCT_LIST_ITEM_WIDTH = PRODUCT_GRID_ITEM_WIDTH;
 
 // --- components/ProductSlide.tsx -----------------------------------------
-export const PRODUCT_SLIDE_ITEM_WIDTH = SCREEN_WIDTH / 3 - 12; // Show exactly 3 per row
-export const PRODUCT_SLIDE_ITEM_HEIGHT = 180;
+// Horizontal "hot sale" carousel: same geometry as the 3-column grid (card
+// width + PRODUCT_GRID_GAP) so exactly 3 cards fill the row; the rest scroll.
+export const PRODUCT_SLIDE_ITEM_WIDTH = PRODUCT_GRID_ITEM_WIDTH;
+export const PRODUCT_SLIDE_ITEM_HEIGHT = 300; // room for the card's price/save lines + add button
+
+// --- components/Marquee.tsx ----------------------------------------------
+/** Empty space between the two copies of a marquee's text. */
+export const MARQUEE_GAP = 60;

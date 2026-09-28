@@ -6,7 +6,7 @@ export const styles = StyleSheet.create({
 	topBanner: {
 		justifyContent: "center",
 		alignItems: "center",
-		backgroundColor: "#f4bb26",
+		backgroundColor: "#F59E0B",
 		borderBottomLeftRadius: 60,
 		borderBottomRightRadius: 60,
 		overflow: "hidden",
@@ -70,7 +70,11 @@ export const styles = StyleSheet.create({
 	},
 	appleButtonText: { color: "#fff", fontWeight: "700", fontSize: 16 },
 	noAccountText: { color: "#000", fontSize: 18, fontWeight: "700" },
-	registerLink: { color: "#f4bb26", fontWeight: "700" },
+	registerLink: {
+		color: "#F59E0B",
+		fontWeight: "700",
+		textDecorationLine: "underline",
+	},
 	centerBoldText: { fontSize: 18, textAlign: "center", fontWeight: "700" },
 	blackText: { color: "#000" },
 	dropdownContainer: {
@@ -91,7 +95,7 @@ export const styles = StyleSheet.create({
 		top: 40,
 		backgroundColor: "#fff",
 		borderWidth: 1,
-		borderColor: "#ccc",
+		borderColor: "#d1d5db",
 		borderRadius: 10,
 		shadowColor: "#000",
 		shadowOpacity: 0.2,

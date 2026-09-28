@@ -7,3 +7,19 @@
 export const SEARCH_STOPWORDS = new Set([
 	"and", "the", "with", "for", "of", "to", "in", "on", "a", "an",
 ]);
+
+/**
+ * Rotating suggestions shown in the header's search field, one after another
+ * ("Search 'Cake'", "Search 'Salad'", ...). They are run through `td()`, so
+ * they follow the app language like any other dynamic name.
+ */
+export const SEARCH_SUGGESTIONS = [
+	"Cake",
+	"Salad",
+	"Bread",
+	"Cheese",
+	"Coffee",
+	"Chocolate",
+	"Chicken",
+	"Fruits",
+];

@@ -15,7 +15,7 @@ export const globalStyles = StyleSheet.create({
 	flex1: { flex: 1 },
 	centerContent: { justifyContent: "center", alignItems: "center" },
 	whiteBg: { backgroundColor: "#FFFFFF" },
-	lightGrayBg: { backgroundColor: "#f8f8f8" },
+	lightGrayBg: { backgroundColor: "#F9FAFB" },
 	grow: { flexGrow: 1 },
 	paddingHorizontal10: { paddingHorizontal: 10 },
 	size200: { width: 200, height: 200 },

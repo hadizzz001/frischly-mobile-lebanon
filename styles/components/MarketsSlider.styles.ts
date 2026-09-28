@@ -1,5 +1,7 @@
 import { StyleSheet } from "react-native";
 
+import { colors, radius, shadow } from "@/constants/theme";
+
 import {
 	MARKETS_SLIDER_ITEM_SPACING as ITEM_SPACING,
 	MARKETS_SLIDER_ITEM_WIDTH as ITEM_WIDTH,
@@ -27,18 +29,26 @@ export const styles = StyleSheet.create({
 		width: ITEM_WIDTH,
 		marginHorizontal: ITEM_SPACING / 2,
 		alignItems: "center",
+		backgroundColor: colors.background,
+		borderRadius: radius.card,
+		padding: 8,
+		...shadow.card,
 	},
 	imageWrapper: {
 		width: "100%",
-		height: 90,
+		height: 84,
 		justifyContent: "center",
 		alignItems: "center",
+		backgroundColor: colors.surfaceAlt,
+		borderRadius: radius.badge,
+		padding: 8,
+		overflow: "hidden",
 	},
 	image: { width: "100%", height: "100%" },
 	placeholder: {
 		fontSize: 28,
 		fontWeight: "700",
-		color: "#f4bb26",
+		color: colors.textSecondary,
 	},
 	header: {
 		flexDirection: "row",
@@ -48,5 +58,6 @@ export const styles = StyleSheet.create({
 		paddingHorizontal: 12,
 		paddingVertical: 8,
 	},
-	headerText: { fontSize: 20, fontWeight: "700", color: "#000" },
+	headerTitleRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+	headerText: { fontSize: 18, fontWeight: "700", color: colors.text },
 });

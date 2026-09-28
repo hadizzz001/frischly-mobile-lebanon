@@ -25,7 +25,7 @@ export const styles = StyleSheet.create({
 	mainPlaceholder: {
 		fontSize: 64,
 		fontWeight: "700",
-		color: "#f4bb26",
+		color: "#F59E0B",
 	},
 	title: {
 		fontSize: 22,
@@ -40,28 +40,28 @@ export const styles = StyleSheet.create({
 		alignItems: "center",
 		justifyContent: "center",
 		gap: 8,
-		backgroundColor: "#f4bb26",
+		backgroundColor: "#F59E0B",
 		borderRadius: 10,
 		paddingVertical: 14,
 		marginHorizontal: 16,
 		marginTop: 14,
 	},
 	addAllBtnDisabled: {
-		backgroundColor: "#cccccc",
+		opacity: 0.5,
 	},
 	checkoutBtn: {
 		flexDirection: "row",
 		alignItems: "center",
 		justifyContent: "center",
 		gap: 8,
-		backgroundColor: "#22a45d",
+		backgroundColor: "#F59E0B",
 		borderRadius: 10,
 		paddingVertical: 14,
 		marginHorizontal: 16,
 		marginTop: 14,
 	},
 	addAllBtnText: {
-		color: "#fff",
+		color: "#111827",
 		fontWeight: "700",
 		fontSize: 16,
 	},
@@ -125,18 +125,34 @@ export const styles = StyleSheet.create({
 	finalPrice: {
 		fontSize: 15,
 		fontWeight: "700",
-		color: "#f4bb26",
+		color: "#F59E0B",
 	},
+	// Per-item add-to-cart control — same yellow +/- buttons as the product
+	// cards on the home page, so adding one dish behaves identically here.
 	qtyBox: {
+		flexDirection: "row",
 		alignItems: "center",
 		minWidth: 54,
 	},
-	qtyLabel: {
-		fontSize: 11,
-		color: "#888",
+	qtyBtn: {
+		backgroundColor: "#F59E0B",
+		borderRadius: 6,
+		paddingHorizontal: 10,
+		paddingVertical: 6,
+		minWidth: 30,
+		alignItems: "center",
+	},
+	qtyBtnDisabled: { opacity: 0.35 },
+	qtyBtnText: { fontSize: 14, fontWeight: "700", color: "#111827" },
+	addBtn: {
+		backgroundColor: "#F59E0B",
+		borderRadius: 6,
+		paddingHorizontal: 12,
+		paddingVertical: 6,
 	},
 	qtyValue: {
-		fontSize: 16,
+		marginHorizontal: 10,
+		fontSize: 14,
 		fontWeight: "700",
 		color: "#222",
 	},

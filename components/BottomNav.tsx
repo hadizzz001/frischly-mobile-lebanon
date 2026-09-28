@@ -1,21 +1,31 @@
+import { usePathname, useRouter } from "expo-router";
+import { House, LayoutGrid, ShoppingCart, UserRound } from "lucide-react-native";
+import { Pressable, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
 import {
 	BOTTOM_NAV_ACTIVE_COLOR as ACTIVE_COLOR,
 	BOTTOM_NAV_INACTIVE_COLOR as INACTIVE_COLOR,
 	BOTTOM_NAV_TABS as TABS,
 } from "@/constants/navigation";
+import { icon } from "@/constants/theme";
 import { useCart } from "@/contexts/CartContext";
-import { Feather } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
-import { usePathname, useRouter } from "expo-router";
-import { Platform, TouchableOpacity, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { styles } from "@/styles/components/BottomNav.styles";
+import { tapLight } from "@/utils/haptics";
+
+const ICONS = {
+	home: House,
+	menu: LayoutGrid,
+	"shopping-cart": ShoppingCart,
+	user: UserRound,
+} as const;
 
 export default function BottomNav() {
 	const router = useRouter();
 	const pathname = usePathname();
 	const insets = useSafeAreaInsets();
 	const { cart } = useCart();
+	const count = cart?.reduce((n, item) => n + (item.quantity || 1), 0) ?? 0;
 
 	const isActive = (path: string) => {
 		if (path === "/") return pathname === "/";
@@ -23,9 +33,7 @@ export default function BottomNav() {
 	};
 
 	const handlePress = (path: string) => {
-		if (Platform.OS === "ios") {
-			Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-		}
+		tapLight();
 		router.navigate(path as never);
 	};
 
@@ -34,21 +42,25 @@ export default function BottomNav() {
 			{TABS.map((tab) => {
 				const active = isActive(tab.path);
 				const color = active ? ACTIVE_COLOR : INACTIVE_COLOR;
+				const Icon = ICONS[tab.icon as keyof typeof ICONS] ?? House;
 
 				return (
-					<TouchableOpacity
+					<Pressable
 						key={tab.key}
 						style={styles.tab}
-						activeOpacity={0.7}
 						onPress={() => handlePress(tab.path)}
+						accessibilityRole="tab"
+						accessibilityState={{ selected: active }}
 					>
-						<View>
-							<Feather name={tab.icon as never} size={24} color={color} />
-							{tab.key === "cart" && cart && cart.length > 0 && (
-								<View style={styles.cartBadge} />
+						<View style={[styles.iconWrap, active && styles.iconWrapActive]}>
+							<Icon size={icon.sizeLarge} strokeWidth={active ? 2.4 : icon.strokeWidth} color={color} />
+							{tab.key === "cart" && count > 0 && (
+								<View style={styles.cartBadge}>
+									<Text style={styles.cartBadgeText}>{count > 99 ? "99+" : count}</Text>
+								</View>
 							)}
 						</View>
-					</TouchableOpacity>
+					</Pressable>
 				);
 			})}
 		</View>

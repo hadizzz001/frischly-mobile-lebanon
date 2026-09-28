@@ -1,0 +1,72 @@
+import { StyleSheet } from "react-native";
+
+import { colors, radius, spacing } from "@/constants/theme";
+
+export const styles = StyleSheet.create({
+	currentCard: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: spacing.md,
+		padding: spacing.md,
+		borderRadius: radius.card,
+		backgroundColor: colors.surface,
+		borderWidth: 1,
+		borderColor: colors.border,
+		marginBottom: spacing.md,
+	},
+	pinCircle: {
+		width: 40,
+		height: 40,
+		borderRadius: radius.full,
+		backgroundColor: colors.primarySoft,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	currentLabel: { fontSize: 12, color: colors.textMuted, fontWeight: "600" },
+	currentCity: { fontSize: 16, fontWeight: "700", color: colors.text, marginTop: 2 },
+	currentStreet: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
+	gpsButton: { marginBottom: spacing.md },
+	error: { fontSize: 13, color: colors.danger, marginBottom: spacing.md },
+	searchBox: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: spacing.sm,
+		height: 48,
+		borderRadius: radius.sheet,
+		backgroundColor: colors.surfaceAlt,
+		paddingHorizontal: spacing.md,
+		marginBottom: spacing.sm,
+	},
+	searchInput: { flex: 1, fontSize: 15, color: colors.text, paddingVertical: 0 },
+	row: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
+		minHeight: 48,
+		paddingHorizontal: spacing.sm,
+		borderBottomWidth: 1,
+		borderBottomColor: colors.border,
+	},
+	rowText: { fontSize: 15, color: colors.text },
+	rowTextActive: { fontWeight: "700", color: colors.primaryDark },
+	empty: { paddingVertical: spacing.lg, textAlign: "center", color: colors.textMuted },
+	// Cart conflict state
+	conflictTitle: { fontSize: 18, fontWeight: "700", color: colors.text, marginBottom: spacing.sm },
+	conflictBody: { fontSize: 14, lineHeight: 20, color: colors.textMuted, marginBottom: spacing.md },
+	conflictItem: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: spacing.sm,
+		paddingVertical: spacing.sm,
+		borderBottomWidth: 1,
+		borderBottomColor: colors.border,
+	},
+	conflictThumb: {
+		width: 40,
+		height: 40,
+		borderRadius: radius.badge,
+		backgroundColor: colors.surfaceAlt,
+	},
+	conflictName: { flex: 1, fontSize: 14, color: colors.text },
+	conflictActions: { marginTop: spacing.md, gap: spacing.sm },
+});

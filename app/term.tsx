@@ -1,13 +1,14 @@
 import { useTranslation } from "@/contexts/TranslationContext";
-import { ScrollView, Text } from "react-native";
+import { Text } from "react-native";
+
+import PolicyScreen from "@/components/PolicyScreen";
 import { styles } from "@/styles/app/term.styles";
 
 export default function TermsAndConditions() {
 	const { t } = useTranslation();
 
 	return (
-		<ScrollView contentContainerStyle={styles.container}>
-			<Text style={styles.title}>{t("termsTitle")}</Text>
+		<PolicyScreen title={t("termsTitle")}>
 
 			<Text style={styles.paragraph}>{t("termsIntro")}</Text>
 
@@ -31,6 +32,6 @@ export default function TermsAndConditions() {
 
 			<Text style={styles.subtitle}>7. {t("termsContactTitle")}</Text>
 			<Text style={styles.paragraph}>{t("termsContact")}</Text>
-		</ScrollView>
+		</PolicyScreen>
 	);
 }

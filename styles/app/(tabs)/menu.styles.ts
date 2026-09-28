@@ -1,21 +1,26 @@
 import { StyleSheet } from "react-native";
 
 import {
+	GRID_GUTTER,
 	MENU_ITEM_HEIGHT as ITEM_HEIGHT,
 	MENU_ITEM_WIDTH as ITEM_WIDTH,
+	PRODUCT_GRID_GAP,
 } from "@/constants/layout";
+import { colors, radius, spacing } from "@/constants/theme";
 
+// 3-per-row category grid: same gutter/gap/card width as the product grid.
 export const styles = StyleSheet.create({
 	safeArea: {
-		backgroundColor: "#fff",
+		backgroundColor: colors.background,
 		paddingBottom: 10, // ✔ extra bottom padding (iPad fix)
 	},
 
 	gridContainer: {
-		paddingHorizontal: 10,
+		paddingHorizontal: GRID_GUTTER,
 		paddingBottom: 200, // ✔ ensures bottom items are fully visible
-		paddingTop: 20, // ✔ ensures bottom items are fully visible
+		paddingTop: 20,
 	},
+	row: { gap: PRODUCT_GRID_GAP, marginBottom: spacing.md },
 
 	loadingBox: {
 		height: ITEM_HEIGHT,
@@ -25,27 +30,28 @@ export const styles = StyleSheet.create({
 
 	card: {
 		width: ITEM_WIDTH,
-		margin: 8,
 		backgroundColor: "transparent",
 		alignItems: "center",
 	},
 
 	imageWrapper: {
 		width: "100%",
-		height: 100,
-		backgroundColor: "#f9f9f9",
+		aspectRatio: 1,
+		backgroundColor: colors.surface,
 		justifyContent: "center",
 		alignItems: "center",
-		borderRadius: 8,
+		borderRadius: radius.badge,
 		marginBottom: 6,
+		padding: spacing.xs,
 	},
 
-	image: { width: "100%", height: "100%", borderRadius: 8 },
+	image: { width: "100%", height: "100%", borderRadius: radius.badge },
 
 	name: {
-		fontSize: 14,
+		fontSize: 13,
+		lineHeight: 17,
 		fontWeight: "500",
-		color: "#333",
+		color: colors.text,
 		textAlign: "center",
 	},
 });

@@ -1,10 +1,10 @@
-import { DEFAULT_CENTER } from "@/constants/map";
+import { DEFAULT_CENTER, leafletTileLayerJs } from "@/constants/map";
 
 /**
- * A self-contained Leaflet/OpenStreetMap page that exposes a global
- * `updateRider(lat, lng)` that the React Native side calls (via
- * injectJavaScript) every time a fresh location arrives — so the marker moves
- * live without ever reloading the page.
+ * A self-contained Leaflet page that exposes a global `updateRider(lat, lng)`
+ * that the React Native side calls (via injectJavaScript) every time a fresh
+ * location arrives — so the marker moves live without ever reloading the
+ * page. Basemap tiles come from the shared provider in constants/map.ts.
  */
 export const buildMapHtml = (lat: number, lng: number) => `<!DOCTYPE html>
 <html>
@@ -19,6 +19,7 @@ export const buildMapHtml = (lat: number, lng: number) => `<!DOCTYPE html>
     background: #22a45d; width: 22px; height: 22px; border-radius: 50%;
     border: 3px solid #fff; box-shadow: 0 0 0 2px #22a45d;
   }
+  .leaflet-control-attribution { font-size: 9px; opacity: .8; }
 </style>
 </head>
 <body>
@@ -26,24 +27,30 @@ export const buildMapHtml = (lat: number, lng: number) => `<!DOCTYPE html>
 <script>
   var startLat = ${Number.isFinite(lat) ? lat : DEFAULT_CENTER.lat};
   var startLng = ${Number.isFinite(lng) ? lng : DEFAULT_CENTER.lng};
-  var map = L.map('map', { zoomControl: true, attributionControl: false })
+  var map = L.map('map', { zoomControl: true, attributionControl: true })
               .setView([startLat, startLng], 15);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-  }).addTo(map);
+  map.attributionControl.setPrefix(false);
+  ${leafletTileLayerJs("map")}
 
   var riderIcon = L.divIcon({ className: '', html: '<div class="rider-pin"></div>', iconSize: [22, 22], iconAnchor: [11, 11] });
   var marker = null;
 
   window.updateRider = function (la, ln) {
     if (la == null || ln == null) return true;
-    var ll = [la, ln];
+    var ll = L.latLng(la, ln);
     if (!marker) {
       marker = L.marker(ll, { icon: riderIcon }).addTo(map);
-    } else {
-      marker.setLatLng(ll);
+      map.setView(ll, 15);
+      return true;
     }
-    map.setView(ll, map.getZoom() < 13 ? 15 : map.getZoom());
+    marker.setLatLng(ll);
+    // Only re-centre once the rider drifts out of the inner ~60% of the
+    // view. Keeps the rider on screen while letting the shopper pan/zoom
+    // freely between updates, and avoids fetching a fresh set of tiles on
+    // every poll when the rider has barely moved.
+    if (!map.getBounds().pad(-0.2).contains(ll)) {
+      map.panTo(ll);
+    }
     return true;
   };
 

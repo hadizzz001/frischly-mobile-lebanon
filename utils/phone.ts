@@ -45,3 +45,23 @@ export const isValidLebanesePhone = (
   input: string | number | null | undefined
 ): boolean => /^\d{7,8}$/.test(extractLocalLebanesePhoneDigits(input));
 
+
+/**
+ * Lebanese display mask "XX XXXXXX": keeps digits only, caps at 8 and inserts
+ * the space after the 2-digit prefix. Used while typing in the phone fields;
+ * strip the space before sending (`normalizeLebanesePhone` handles it).
+ */
+export const formatLebanesePhoneInput = (input: string): string => {
+  const digits = String(input || "").replace(/\D/g, "").slice(0, 8);
+  return digits.length > 2 ? `${digits.slice(0, 2)} ${digits.slice(2)}` : digits;
+};
+
+/** Live password rules shown on the auth screens (mirrors the backend). */
+export const passwordRules = (password: string) => ({
+  length: password.length >= 8,
+  upper: /[A-Z]/.test(password),
+  lower: /[a-z]/.test(password),
+  number: /\d/.test(password),
+});
+export const isStrongPassword = (password: string): boolean =>
+  Object.values(passwordRules(password)).every(Boolean);

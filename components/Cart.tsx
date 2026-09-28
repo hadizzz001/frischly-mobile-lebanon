@@ -1,230 +1,389 @@
-import { useBooleanValue } from "@/contexts/CartBoolContext";
-import { useCart } from "@/contexts/CartContext";
-import type { CartItem } from "@/types";
-import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { CircleAlert, Minus, Plus, Trash2 } from "lucide-react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-	Alert,
-	Image,
-	Modal,
-	ScrollView,
+	ActivityIndicator,
+	FlatList,
+	LayoutAnimation,
+	Pressable,
 	Text,
-	TouchableOpacity,
 	View,
 } from "react-native";
+import { Swipeable } from "react-native-gesture-handler";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-
+import AppBottomSheet from "@/components/ui/AppBottomSheet";
+import EmptyState from "@/components/ui/EmptyState";
+import PrimaryButton from "@/components/ui/PrimaryButton";
+import { colors, icon } from "@/constants/theme";
+import { MAIN_SOURCE, useCart } from "@/contexts/CartContext";
 import { useTranslation } from "@/contexts/TranslationContext";
+import { useBusyAction } from "@/hooks/useBusyAction";
+import { useUsdToLbpRate } from "@/hooks/useUsdToLbpRate";
+import { ProductService } from "@/services/api";
 import { styles } from "@/styles/components/Cart.styles";
+import type { CartItem } from "@/types";
+import { formatLbp, formatUsd } from "@/utils/currency";
+import { computeDeliveryFee, getDeliveryConfig, type DeliveryConfig } from "@/utils/deliveryFee";
+import { notifyWarning, tapLight, tapMedium } from "@/utils/haptics";
+import { interpolate } from "@/utils/i18n";
 
+// Cart screen body: swipe-to-delete rows with an inline [- n +] stepper, a
+// live out-of-stock check, and a sticky checkout bar (free-delivery progress,
+// subtotal / delivery / total, ≈ LBP) pinned above the bottom nav.
 export default function Cart() {
-	const { t, td } = useTranslation();
-
-	const { cart, removeFromCart, subtotal, addToCart, calculatePriceDetails, clearCart } =
-		useCart();
-
-	const { isBooleanValue, setBooleanValue } = useBooleanValue();
-	const [showModal, setShowModal] = useState(false);
-	const [modalResponse, setModalResponse] = useState<string | null>(null);
-
-	const handleModalResponse = (response: string) => {
-		setShowModal(false);
-		setModalResponse(response);
-
-		if (response === "yes") {
-			router.push("/checkout");
-		}
-	};
-
+	const { t, td, isRTL } = useTranslation();
 	const router = useRouter();
+	const insets = useSafeAreaInsets();
+	const rate = useUsdToLbpRate();
+	const { cart, removeFromCart, subtotal, addToCart, calculatePriceDetails, clearCart, cartSource } =
+		useCart();
+	const { isBusy, anyBusy, run } = useBusyAction();
 
-	const handleRemoveFromCart = (itemId: string) => {
-		removeFromCart(itemId);
+	const [ageCheckOpen, setAgeCheckOpen] = useState(false);
+	const [clearOpen, setClearOpen] = useState(false);
+	const [clearing, setClearing] = useState(false);
+	const swipeRefs = useRef<Map<string, Swipeable>>(new Map());
+
+	// --- delivery config (free-delivery threshold progress) ----------------------
+	const [deliveryConfig, setDeliveryConfig] = useState<DeliveryConfig>({
+		deliveryFee: 0,
+		freeDeliveryThreshold: 0,
+	});
+	useEffect(() => {
+		let cancelled = false;
+		const marketId = !cartSource || cartSource === MAIN_SOURCE ? null : cartSource;
+		getDeliveryConfig(marketId)
+			.then((c) => {
+				if (!cancelled) setDeliveryConfig(c);
+			})
+			.catch(() => {});
+		return () => {
+			cancelled = true;
+		};
+	}, [cartSource]);
+	const deliveryFee = useMemo(
+		() => computeDeliveryFee(deliveryConfig, Number(subtotal)),
+		[deliveryConfig, subtotal],
+	);
+	const total = Math.max(Number(subtotal) + deliveryFee, 0);
+	const threshold = deliveryConfig.freeDeliveryThreshold;
+	const remainingForFree = threshold > 0 ? Math.max(threshold - Number(subtotal), 0) : 0;
+	const progress = threshold > 0 ? Math.min(Number(subtotal) / threshold, 1) : 0;
+
+	// --- live stock re-validation --------------------------------------------------
+	// The cart carries the stock captured when an item was added; re-read it
+	// so an item that sold out meanwhile is flagged here instead of failing at
+	// the final order request.
+	const [liveStock, setLiveStock] = useState<Record<string, number>>({});
+	const [checkingStock, setCheckingStock] = useState(false);
+	const ids = cart.map((c) => c._id).join(",");
+	useEffect(() => {
+		if (!ids) return;
+		let cancelled = false;
+		setCheckingStock(true);
+		Promise.all(
+			ids.split(",").map(async (id) => {
+				try {
+					const res = await ProductService.getById(id);
+					const stock = Number(res?.data?.stock);
+					return [id, Number.isFinite(stock) ? stock : NaN] as const;
+				} catch {
+					return [id, NaN] as const;
+				}
+			}),
+		)
+			.then((pairs) => {
+				if (cancelled) return;
+				const next: Record<string, number> = {};
+				pairs.forEach(([id, stock]) => {
+					if (Number.isFinite(stock)) next[id] = stock;
+				});
+				setLiveStock(next);
+			})
+			.finally(() => {
+				if (!cancelled) setCheckingStock(false);
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [ids]);
+
+	const stockOf = (item: CartItem): number | null => {
+		const live = liveStock[item._id];
+		if (Number.isFinite(live)) return live;
+		const captured = Number(item?.stock);
+		return Number.isFinite(captured) && captured > 0 ? captured : null;
 	};
+	const isUnavailable = (item: CartItem) => liveStock[item._id] === 0;
+	const hasUnavailable = cart.some(isUnavailable);
 
-	// Open the product page for a cart line.
-	const goToProduct = (itemId: string) => {
-		router.push(`/product/${itemId}`);
-	};
+	// --- actions ------------------------------------------------------------------------
+	const handleRemove = useCallback(
+		(itemId: string) => {
+			notifyWarning();
+			LayoutAnimation.easeInEaseOut();
+			run(`remove-${itemId}`, () => removeFromCart(itemId));
+		},
+		[removeFromCart, run],
+	);
 
-	// How many units of this item the shopper may still add. The cart item
-	// carries the stock captured when it was added; when that is unknown (or
-	// zero/invalid) we don't cap, exactly like the cart reducer's own logic.
-	const maxQtyFor = (item: CartItem): number | null => {
-		const stock = Number(item?.stock);
-		return Number.isFinite(stock) && stock > 0 ? stock : null;
-	};
-
-	// +/- on a cart line. `addToCart` sets the absolute quantity for an item
-	// that is already in the cart, so we hand it the new total.
-	const changeQuantity = (item: CartItem, nextQuantity: number) => {
-		const max = maxQtyFor(item);
+	const changeQuantity = (item: CartItem, nextQuantity: number, key: string) => {
+		const max = stockOf(item);
 		const capped = max === null ? nextQuantity : Math.min(nextQuantity, max);
 		if (capped < 1) return;
-		addToCart(item, capped);
+		tapLight();
+		run(key, () => {
+			addToCart(item, capped);
+		});
 	};
 
-	const handleClearCart = () => {
-		Alert.alert(t("clearCartTitle"), t("clearCartConfirm"), [
-			{ text: t("cancel"), style: "cancel" },
-			{
-				text: t("clearCart"),
-				style: "destructive",
-				onPress: () => clearCart(),
-			},
-		]);
-	};
-
-	const goToCart = () => {
-
-		const has18PlusItem = cart.some((item) => item?.is18Plus === true);
-
-		console.log("18 == ", has18PlusItem);
-
-		if (has18PlusItem) {
-			setShowModal(true); // show modal on parent
-			return; // STOP here for now
+	const goToCheckout = () => {
+		if (hasUnavailable) return;
+		if (cart.some((item) => item?.is18Plus === true)) {
+			setAgeCheckOpen(true);
+			return;
 		}
+		tapMedium();
 		router.push("/checkout");
-
-
 	};
 
+	const confirmAge = (isAdult: boolean) => {
+		setAgeCheckOpen(false);
+		if (isAdult) router.push("/checkout");
+	};
+
+	// --- rows ------------------------------------------------------------------------------
+	const renderDeleteAction = (itemId: string) => (
+		<Pressable
+			style={styles.deleteAction}
+			onPress={() => {
+				swipeRefs.current.get(itemId)?.close();
+				handleRemove(itemId);
+			}}
+			accessibilityRole="button"
+			accessibilityLabel={t("removeItem")}
+		>
+			<Trash2 size={icon.size} strokeWidth={icon.strokeWidth} color={colors.textOnDark} />
+			<Text style={styles.deleteActionText}>{t("removeItem")}</Text>
+		</Pressable>
+	);
+
+	const renderItem = ({ item }: { item: CartItem }) => {
+		const quantity = item.quantity || 1;
+		const priceDetails = calculatePriceDetails(item, quantity);
+		const unit = calculatePriceDetails(item, 1).finalPrice;
+		const max = stockOf(item);
+		const unavailable = isUnavailable(item);
+		const canIncrease = !unavailable && (max === null || quantity < max);
+
+		return (
+			<View>
+				<Swipeable
+					ref={(ref) => {
+						if (ref) swipeRefs.current.set(item._id, ref);
+						else swipeRefs.current.delete(item._id);
+					}}
+					renderRightActions={isRTL ? undefined : () => renderDeleteAction(item._id)}
+					renderLeftActions={isRTL ? () => renderDeleteAction(item._id) : undefined}
+					onSwipeableWillOpen={tapLight}
+					overshootRight={false}
+					overshootLeft={false}
+					friction={2}
+				>
+					<View
+						style={[
+							styles.cartItem,
+							isRTL && { flexDirection: "row-reverse" },
+							unavailable && styles.cartItemUnavailable,
+						]}
+					>
+						<Pressable onPress={() => router.push(`/product/${item._id}`)} style={styles.itemImageWrap}>
+							<Image
+								source={{ uri: item.picture || undefined }}
+								style={[styles.itemImage, unavailable && styles.itemImageUnavailable]}
+								contentFit="contain"
+								cachePolicy="memory-disk"
+							/>
+						</Pressable>
+
+						<View style={styles.details}>
+							<Pressable onPress={() => router.push(`/product/${item._id}`)}>
+								<Text style={styles.itemTitle} numberOfLines={2}>
+									{td(item.name)}
+								</Text>
+							</Pressable>
+							<Text style={styles.unitPrice}>{formatUsd(unit)} × {quantity}</Text>
+
+							<View style={[styles.rowBottom, isRTL && { flexDirection: "row-reverse" }]}>
+								<View style={styles.stepper}>
+									<Pressable
+										style={[styles.stepBtn, quantity <= 1 && styles.stepBtnDisabled]}
+										onPress={() => changeQuantity(item, quantity - 1, `dec-${item._id}`)}
+										disabled={quantity <= 1 || anyBusy}
+										accessibilityRole="button"
+										accessibilityLabel="-"
+									>
+										{isBusy(`dec-${item._id}`) ? (
+											<ActivityIndicator size="small" color={colors.text} />
+										) : (
+											<Minus size={icon.sizeSmall} strokeWidth={2.5} color={colors.text} />
+										)}
+									</Pressable>
+									<Text style={styles.qtyValue}>{String(quantity)}</Text>
+									<Pressable
+										style={[styles.stepBtn, !canIncrease && styles.stepBtnDisabled]}
+										onPress={() => changeQuantity(item, quantity + 1, `inc-${item._id}`)}
+										disabled={!canIncrease || anyBusy}
+										accessibilityRole="button"
+										accessibilityLabel="+"
+									>
+										{isBusy(`inc-${item._id}`) ? (
+											<ActivityIndicator size="small" color={colors.text} />
+										) : (
+											<Plus size={icon.sizeSmall} strokeWidth={2.5} color={colors.text} />
+										)}
+									</Pressable>
+								</View>
+								<Text style={styles.price}>{formatUsd(priceDetails.finalPrice)}</Text>
+							</View>
+						</View>
+					</View>
+				</Swipeable>
+
+				{unavailable && (
+					<View style={[styles.unavailableBanner, isRTL && { flexDirection: "row-reverse" }]}>
+						<CircleAlert size={icon.sizeSmall} strokeWidth={icon.strokeWidth} color={colors.warning} />
+						<Text style={styles.unavailableText}>{t("itemOutOfStockBanner")}</Text>
+						<Pressable onPress={() => handleRemove(item._id)} hitSlop={8}>
+							{isBusy(`remove-${item._id}`) ? (
+								<ActivityIndicator size="small" color={colors.text} />
+							) : (
+								<Text style={[styles.unavailableText, { color: colors.link, textDecorationLine: "underline" }]}>
+									{t("removeItem")}
+								</Text>
+							)}
+						</Pressable>
+					</View>
+				)}
+			</View>
+		);
+	};
+
+	if (!cart || cart.length === 0) {
+		return (
+			<View style={styles.container}>
+				<EmptyState
+					illustration="basket"
+					title={t("cartEmptyTitle")}
+					description={t("cartEmptyBody")}
+					actionLabel={t("startShopping")}
+					onAction={() => router.push("/shop")}
+				/>
+			</View>
+		);
+	}
 
 	return (
 		<View style={styles.container}>
-			<Text style={styles.heading}>{t("yourShoppingBag")}</Text>
+			<Text style={styles.heading}>{t("cartTitle")}</Text>
+			<Text style={styles.hint}>
+				{checkingStock ? t("checkingStock") : t("swipeToDeleteHint")}
+			</Text>
 
-			<ScrollView style={styles.cartList}>
-				{cart && cart.length > 0 ? (
-					cart.map((obj, index) => {
-						const quantity = obj.quantity || 1;
-						const priceDetails = calculatePriceDetails(obj, quantity);
+			<FlatList
+				data={cart}
+				keyExtractor={(item, index) => `${item._id}-${index}`}
+				renderItem={renderItem}
+				contentContainerStyle={styles.listContent}
+				showsVerticalScrollIndicator={false}
+			/>
 
-						const maxQty = maxQtyFor(obj);
-						const canIncrease = maxQty === null || quantity < maxQty;
-
-						return (
-							<View key={`${obj._id}-${index}`} style={styles.cartItem}>
-								<TouchableOpacity
-									activeOpacity={0.7}
-									onPress={() => goToProduct(obj._id)}
-								>
-									<Image source={{ uri: obj.picture }} style={styles.itemImage} />
-								</TouchableOpacity>
-
-								<View style={styles.details}>
-									<TouchableOpacity
-										activeOpacity={0.7}
-										onPress={() => goToProduct(obj._id)}
-									>
-										<Text style={styles.itemTitle}>{td(obj.name)}</Text>
-									</TouchableOpacity>
-
-									<View style={styles.quantityRow}>
-										<Text style={styles.label}>{t("quantity")}</Text>
-
-										<TouchableOpacity
-											style={[
-												styles.qtyBtn,
-												quantity <= 1 && styles.qtyBtnDisabled,
-											]}
-											onPress={() => changeQuantity(obj, quantity - 1)}
-											disabled={quantity <= 1}
-										>
-											<Text style={styles.qtyBtnText}>-</Text>
-										</TouchableOpacity>
-
-										<Text style={styles.qtyValue}>{String(quantity)}</Text>
-
-										<TouchableOpacity
-											style={[
-												styles.qtyBtn,
-												!canIncrease && styles.qtyBtnDisabled,
-											]}
-											onPress={() => changeQuantity(obj, quantity + 1)}
-											disabled={!canIncrease}
-										>
-											<Text style={styles.qtyBtnText}>+</Text>
-										</TouchableOpacity>
-									</View>
-
-									<Text style={styles.price}>
-										${priceDetails.finalPrice.toFixed(2)}
-									</Text>
-								</View>
-
-								<TouchableOpacity
-									style={styles.removeBtn}
-									onPress={() => handleRemoveFromCart(obj._id)}
-								>
-									<Ionicons name="trash" size={20} color="red" />
-								</TouchableOpacity>
-							</View>
-						);
-					})
-				) : (
-					<Text style={styles.emptyText}>{t("noItemsInBag")}</Text>
-				)}
-			</ScrollView>
-
-			<View style={styles.footer}>
-				<Text style={styles.total}>
-					{t("total")}: ${subtotal.toFixed(2)}{" "}
-				</Text>
-
-				<TouchableOpacity style={styles.checkoutBtn} onPress={goToCart}>
-					<Text style={styles.checkoutText}>{t("goToCheckout")}</Text>
-				</TouchableOpacity>
-
-				{cart && cart.length > 0 ? (
-					<TouchableOpacity
-						style={styles.clearCartLink}
-						onPress={handleClearCart}
-					>
-						<Text style={styles.clearCartText}>{t("clearCart")}</Text>
-					</TouchableOpacity>
-				) : null}
-			</View>
-
-
-			<Modal visible={showModal} transparent animationType="slide">
-				<View style={styles.modalBackground}>
-					<View style={styles.modalContainer}>
-						<Text style={styles.modalTitle}>
-							{t("ageVerificationTitle")}
+			{/* Sticky checkout bar — decoupled from the scroll view. */}
+			<View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 8) + 8 }]}>
+				{threshold > 0 && (
+					<View style={styles.progressWrap}>
+						<Text style={styles.progressText}>
+							{remainingForFree > 0
+								? interpolate(t("freeDeliveryProgress"), { amount: formatUsd(remainingForFree) })
+								: t("freeDeliveryUnlocked")}
 						</Text>
-
-						<Text style={styles.modalMessage}>
-							{t("ageVerification")}
-						</Text>
-
-						<View style={styles.modalButtons}>
-							{/* YES */}
-							<TouchableOpacity
-								onPress={() => handleModalResponse("yes")}
-								style={styles.yesButton}
-							>
-								<Text style={styles.yesButtonText}>
-									{t("yes")}
-								</Text>
-							</TouchableOpacity>
-
-							{/* NO */}
-							<TouchableOpacity
-								onPress={() => handleModalResponse("no")}
-								style={styles.noButton}
-							>
-								<Text style={styles.noButtonText}>
-									{t("no")}
-								</Text>
-							</TouchableOpacity>
+						<View style={styles.progressTrack}>
+							<View
+								style={[
+									styles.progressFill,
+									{ width: `${Math.round(progress * 100)}%` },
+									progress >= 1 && styles.progressFillDone,
+								]}
+							/>
 						</View>
 					</View>
-				</View>
-			</Modal>
+				)}
 
+				<View style={[styles.summaryRow, isRTL && { flexDirection: "row-reverse" }]}>
+					<Text style={styles.summaryLabel}>{t("subtotal")}</Text>
+					<Text style={styles.summaryValue}>{formatUsd(Number(subtotal))}</Text>
+				</View>
+				<View style={[styles.summaryRow, isRTL && { flexDirection: "row-reverse" }]}>
+					<Text style={styles.summaryLabel}>{t("deliveryFee")}</Text>
+					<Text style={styles.summaryValue}>
+						{deliveryFee > 0 ? formatUsd(deliveryFee) : t("free")}
+					</Text>
+				</View>
+				<View style={[styles.summaryRow, styles.totalRow, isRTL && { flexDirection: "row-reverse" }]}>
+					<Text style={styles.totalLabel}>{t("totalAmount")}</Text>
+					<View>
+						<Text style={styles.totalValue}>{formatUsd(total)}</Text>
+						<Text style={styles.totalLbp}>
+							{t("approx")} {formatLbp(total, rate)}
+						</Text>
+					</View>
+				</View>
+
+				<PrimaryButton
+					label={hasUnavailable ? t("cartHasOutOfStock") : t("goToCheckout")}
+					onPress={goToCheckout}
+					disabled={hasUnavailable || anyBusy}
+					style={styles.checkoutBtn}
+				/>
+				<Pressable style={styles.clearCartLink} onPress={() => setClearOpen(true)}>
+					<Text style={styles.clearCartText}>{t("clearCart")}</Text>
+				</Pressable>
+			</View>
+
+			{/* Age check (18+ items) as a bottom sheet instead of a modal dialog. */}
+			<AppBottomSheet visible={ageCheckOpen} onClose={() => setAgeCheckOpen(false)} scrollable={false}>
+				<Text style={styles.sheetTitle}>{t("ageVerificationTitle")}</Text>
+				<Text style={styles.sheetBody}>{t("ageVerification")}</Text>
+				<View style={styles.sheetActions}>
+					<PrimaryButton label={t("yes")} onPress={() => confirmAge(true)} />
+					<PrimaryButton label={t("no")} variant="secondary" onPress={() => confirmAge(false)} />
+				</View>
+			</AppBottomSheet>
+
+			{/* Clear-cart confirmation. */}
+			<AppBottomSheet visible={clearOpen} onClose={() => setClearOpen(false)} scrollable={false}>
+				<Text style={styles.sheetTitle}>{t("clearCartTitle")}</Text>
+				<Text style={styles.sheetBody}>{t("clearCartConfirm")}</Text>
+				<View style={styles.sheetActions}>
+					<PrimaryButton
+						label={t("clearCart")}
+						variant="danger"
+						loading={clearing}
+						onPress={async () => {
+							setClearing(true);
+							try {
+								await clearCart();
+							} finally {
+								setClearing(false);
+								setClearOpen(false);
+							}
+						}}
+					/>
+					<PrimaryButton label={t("cancel")} variant="secondary" onPress={() => setClearOpen(false)} />
+				</View>
+			</AppBottomSheet>
 		</View>
 	);
 }

@@ -47,7 +47,7 @@ export default function CategoriesGrid() {
 	if (loading) {
 		return (
 			<View style={styles.loadingBox}>
-				<ActivityIndicator size="large" color="#f4bb26" />
+				<ActivityIndicator size="large" color="#F59E0B" />
 				<Text>{t("loadingCategories")}</Text>
 			</View>
 		);
@@ -83,6 +83,7 @@ export default function CategoriesGrid() {
 				renderItem={renderCategory}
 				keyExtractor={(item) => item._id}
 				numColumns={NUM_COLUMNS}
+				columnWrapperStyle={styles.row}
 				contentContainerStyle={styles.gridContainer}
 				showsVerticalScrollIndicator={false}
 			/>

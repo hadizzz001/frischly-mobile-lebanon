@@ -31,8 +31,6 @@ export interface CartContextValue {
   clearCart: () => Promise<void>;
   subtotal: number;
   calculatePriceDetails: (item: Partial<CartItem>, quantity?: number) => PriceDetails;
-  kitchenCheckoutIds: Record<string, boolean>;
-  markKitchenAdded: (kitchenId: string | number | null | undefined) => void;
   cartSource: string | null;
   cartMarket: MarketRef;
 }

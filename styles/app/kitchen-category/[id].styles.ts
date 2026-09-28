@@ -1,6 +1,10 @@
 import { StyleSheet } from "react-native";
 
-import { KITCHEN_CATEGORY_CARD_WIDTH as CARD_WIDTH } from "@/constants/layout";
+import {
+	KITCHEN_CATEGORY_CARD_WIDTH as CARD_WIDTH,
+	GRID_GUTTER,
+	PRODUCT_GRID_GAP,
+} from "@/constants/layout";
 
 export const styles = StyleSheet.create({
 	safeArea: { flex: 1, backgroundColor: "#fff" },
@@ -33,26 +37,29 @@ export const styles = StyleSheet.create({
 		color: "#222",
 		textAlign: "center",
 	},
+	// 3-per-row grid, same geometry as the product grid (gap-based so a short
+	// last row stays left-aligned instead of spreading to the edges).
 	grid: {
 		flexDirection: "row",
 		flexWrap: "wrap",
-		justifyContent: "space-between",
-		paddingHorizontal: 12,
+		columnGap: PRODUCT_GRID_GAP,
+		rowGap: 14,
+		paddingHorizontal: GRID_GUTTER,
 		paddingTop: 12,
 		paddingBottom: 140,
 	},
 	card: {
 		width: CARD_WIDTH,
-		marginBottom: 14,
 		backgroundColor: "#fff",
 		borderRadius: 10,
 		borderWidth: 1,
 		borderColor: "#eee",
-		padding: 8,
+		padding: 6,
+		justifyContent: "space-between",
 	},
 	imageWrapper: {
 		width: "100%",
-		height: 120,
+		aspectRatio: 1,
 		backgroundColor: "#f9f9f9",
 		justifyContent: "center",
 		alignItems: "center",
@@ -64,10 +71,10 @@ export const styles = StyleSheet.create({
 	placeholder: {
 		fontSize: 34,
 		fontWeight: "700",
-		color: "#f4bb26",
+		color: "#F59E0B",
 	},
 	name: {
-		fontSize: 14,
+		fontSize: 13,
 		fontWeight: "600",
 		color: "#222",
 		textAlign: "center",
@@ -82,27 +89,31 @@ export const styles = StyleSheet.create({
 		flexDirection: "row",
 		alignItems: "center",
 		justifyContent: "center",
-		gap: 6,
-		backgroundColor: "#f4bb26",
+		gap: 4,
+		backgroundColor: "#F59E0B",
 		borderRadius: 8,
 		paddingVertical: 8,
+		paddingHorizontal: 4,
 	},
 	addBtnDisabled: {
-		backgroundColor: "#cccccc",
+		opacity: 0.5,
 	},
 	checkoutBtn: {
 		flexDirection: "row",
 		alignItems: "center",
 		justifyContent: "center",
-		gap: 6,
-		backgroundColor: "#22a45d",
+		gap: 4,
+		backgroundColor: "#F59E0B",
 		borderRadius: 8,
 		paddingVertical: 8,
+		paddingHorizontal: 4,
 	},
+	// Shrinks to fit the narrow 3-per-row card instead of being cut off.
 	btnText: {
-		color: "#fff",
+		flexShrink: 1,
+		color: "#111827",
 		fontWeight: "700",
-		fontSize: 13,
+		fontSize: 12,
 	},
 	emptyText: {
 		fontSize: 14,

@@ -22,5 +22,21 @@ export const MarketService = {
 
 	// A market's own categories/subcategories (MarketCategory collection).
 	categories: (id: string) =>
-		httpClient.get<MarketCategory[]>(`/markets/${id}/categories`),
+		httpClient
+			.get<MarketCategory[]>(`/markets/${id}/categories`)
+			.then((res) => {
+				// The server answers `{ data: { data: [...], subcategories: [...] } }`.
+				// Two arrays means the client's list-envelope unwrap leaves it alone,
+				// so `res.data` was an object and every caller saw "no categories"
+				// (the market page hid its whole "Shop by category" row). Hoist the
+				// category array here so `res.data` is always the list.
+				const payload = res?.data as unknown;
+				const list = Array.isArray(payload)
+					? payload
+					: (payload as { data?: unknown } | null)?.data;
+				return {
+					...res,
+					data: (Array.isArray(list) ? list : []) as MarketCategory[],
+				};
+			}),
 };

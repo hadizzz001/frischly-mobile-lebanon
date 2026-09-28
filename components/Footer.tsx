@@ -81,8 +81,8 @@ export default function Footer() {
 							<Text style={styles.sectionTitle}>{sec.label}</Text>
 							<AntDesign
 								name={sec.isOpen ? "up" : "down"}
-								size={16}
-								color="black"
+								size={14}
+								color="#8a8a8a"
 							/>
 						</TouchableOpacity>
 						{sec.isOpen && (

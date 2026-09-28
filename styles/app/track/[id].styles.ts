@@ -110,6 +110,6 @@ export const styles = StyleSheet.create({
 		paddingVertical: 13,
 		borderRadius: 10,
 	},
-	mapsBtnDisabled: { backgroundColor: "#cccccc" },
+	mapsBtnDisabled: { opacity: 0.5 },
 	mapsBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
 });

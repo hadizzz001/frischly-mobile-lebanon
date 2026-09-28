@@ -1,91 +1,40 @@
 "use client";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
-import {
-    ActivityIndicator,
-    Image,
-    Text,
-    TouchableOpacity,
-    View,
-} from "react-native";
-import Feather from "react-native-vector-icons/Feather";
+import { useEffect, useRef, useState } from "react";
+import { ActivityIndicator, LayoutAnimation, Text, View } from "react-native";
 
+import ProductCard from "@/components/ProductCard";
+import RegionEmptyState from "@/components/RegionEmptyState";
+import { ProductGridSkeleton } from "@/components/ui/Skeleton";
 import { PRODUCT_PAGE_SIZE as LIMIT } from "@/constants/api";
-import { useBooleanValue } from "@/contexts/CartBoolContext";
-import { useCart } from "@/contexts/CartContext";
+import { PRODUCT_GRID_ITEM_WIDTH } from "@/constants/layout";
+import { colors } from "@/constants/theme";
 import { useTranslation } from "@/contexts/TranslationContext";
-import { AuthService, ProductService } from "@/services/api";
+import { ProductService } from "@/services/api";
 import { styles } from "@/styles/components/ProductList.styles";
-import type { CartItem, Product, User } from "@/types";
+import type { Product } from "@/types";
 import type { ShopPageProps } from "@/types/components/ProductList.types";
 import { isServedByAdmin } from "@/utils/cityVisibility";
 import { getUserCityAndPin } from "@/utils/userCity";
 
-export default function ShopPage({ refreshTrigger, setRefreshing, marketId }: ShopPageProps) {
-	const { t, td } = useTranslation();
-	const router = useRouter();
+export default function ShopPage({
+	refreshTrigger,
+	setRefreshing,
+	marketId,
+	onContent,
+	hideLoader,
+	loadMoreSignal,
+}: ShopPageProps) {
+	const { t } = useTranslation();
 	const [products, setProducts] = useState<Product[]>([]);
 	const [loading, setLoading] = useState<boolean>(true);
 	const [loadingMore, setLoadingMore] = useState<boolean>(false);
 	const [page, setPage] = useState<number>(1);
 	const [hasMore, setHasMore] = useState<boolean>(true);
-	const { isBooleanValue, setBooleanValue } = useBooleanValue();
-	const [user, setUser] = useState<User | null>(null);
-	// inside ShopPage component
-
-	const { addToCart, removeFromCart, cart } = useCart();
-	const [quantities, setQuantities] = useState<Record<string, number>>({});
-	const [showQty, setShowQty] = useState<Record<string, boolean>>({}); // track which products show quantity
-
-	// Keep the +/- quantity UI in sync with the actual cart (also reflects a
-	// cart "restore" when switching markets).
-	useEffect(() => {
-		const nextQuantities: Record<string, number> = {};
-		const nextShowQty: Record<string, boolean> = {};
-		cart.forEach((cartItem: CartItem) => {
-			nextQuantities[cartItem._id] = cartItem.quantity || 1;
-			nextShowQty[cartItem._id] = true;
-		});
-		setQuantities(nextQuantities);
-		setShowQty(nextShowQty);
-	}, [cart]);
-
-	const increaseQty = (product: Product) => {
-		const currentQty = quantities[product._id] || 0;
-
-		// ✅ STOP IF REACH STOCK LIMIT
-		if (currentQty >= product.stock) {
-			return; // or Alert.alert("Stock limit reached")
-		}
-
-		const newQty = currentQty + 1;
-		// Adding from a different market shows a confirm dialog and is applied
-		// asynchronously, so only reflect the change locally when it was added.
-		const result = addToCart(product, newQty);
-		if (result?.added) {
-			setQuantities({ ...quantities, [product._id]: newQty });
-			setShowQty({ ...showQty, [product._id]: true });
-		}
-	};
-
-	const decreaseQty = (product: Product) => {
-		const currentQty = quantities[product._id] || 0;
-
-		if (currentQty <= 1) {
-			const updatedQuantities = { ...quantities };
-			delete updatedQuantities[product._id];
-			setQuantities(updatedQuantities);
-			removeFromCart(product._id);
-			setShowQty({ ...showQty, [product._id]: false });
-		} else {
-			const newQty = currentQty - 1;
-			setQuantities({ ...quantities, [product._id]: newQty });
-			addToCart(product, newQty);
-		}
-	};
-
-	const toggleCart = () => setBooleanValue(!isBooleanValue);
+	// The shopper's region isn't served by the main store -> dead-end guard.
+	const [unserved, setUnserved] = useState<{ city: string } | null>(null);
+	// Live copies for the load-more handler (which runs from a parent effect).
+	const stateRef = useRef({ loadingMore: false, hasMore: true, page: 1, loading: true });
+	stateRef.current = { loadingMore, hasMore, page, loading };
 
 	// Fetch products
 	const fetchProducts = async (pageNum: number = 1) => {
@@ -94,6 +43,7 @@ export default function ShopPage({ refreshTrigger, setRefreshing, marketId }: Sh
 			if (pageNum === 1) {
 				setPage(1);
 				setHasMore(true);
+				setUnserved(null);
 			}
 
 			// Market mode: list THIS market's products. Markets have their own city
@@ -111,6 +61,7 @@ export default function ShopPage({ refreshTrigger, setRefreshing, marketId }: Sh
 				});
 				const marketProducts = res.data || [];
 				if (marketProducts.length < LIMIT) setHasMore(false);
+				LayoutAnimation.easeInEaseOut();
 				setProducts((prev) =>
 					pageNum === 1 ? marketProducts : [...prev, ...marketProducts]
 				);
@@ -125,6 +76,7 @@ export default function ShopPage({ refreshTrigger, setRefreshing, marketId }: Sh
 			if (!(await isServedByAdmin(city, pin))) {
 				setProducts([]);
 				setHasMore(false);
+				setUnserved({ city });
 				return;
 			}
 
@@ -142,6 +94,7 @@ export default function ShopPage({ refreshTrigger, setRefreshing, marketId }: Sh
 			const newProducts = res.data || [];
 
 			if (newProducts.length < LIMIT) setHasMore(false); // no more products
+			LayoutAnimation.easeInEaseOut();
 			setProducts((prev) =>
 				pageNum === 1 ? newProducts : [...prev, ...newProducts]
 			);
@@ -163,160 +116,50 @@ export default function ShopPage({ refreshTrigger, setRefreshing, marketId }: Sh
 			setRefreshing(true);
 			fetchProducts(1).finally(() => setRefreshing(false));
 		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [refreshTrigger, setRefreshing]);
 
-	// Check login & fetch user
+	// Infinite scroll: the parent ScrollView signals "near the bottom".
 	useEffect(() => {
-		const checkLogin = async () => {
-			const userData = await AsyncStorage.getItem("userData");
-			const guest = await AsyncStorage.getItem("guest");
+		if (!loadMoreSignal) return;
+		const s = stateRef.current;
+		if (s.loading || s.loadingMore || !s.hasMore) return;
+		const nextPage = s.page + 1;
+		setPage(nextPage);
+		fetchProducts(nextPage);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [loadMoreSignal]);
 
-			if (!userData && !guest) {
-				router.replace("/start");
-			} else {
-				try {
-					const res = await AuthService.me();
-					const payload = res.data as unknown as { user?: User };
-					setUser(payload?.user ?? null);
-				} catch (err) {
-					console.error("🔥 Network/Fetch error:", err);
-				}
-				setLoading(false);
-			}
-		};
-		checkLogin();
-	}, []);
-
-	const renderItem = ({ item }: { item: Product }) => {
-		const basePrice = item.price || 0;
-		const discountPercent = item.discount || 0;
-		const taxPercent = item.tax || 0;
-		const bottleRefund = item.bottlerefund || 0;
-
-		const discountAmount = (basePrice * discountPercent) / 100;
-		const priceAfterDiscount = basePrice - discountAmount;
-		const taxAmount = (priceAfterDiscount * taxPercent) / 100;
-		const finalPrice = priceAfterDiscount;
-
-		return (
-			<TouchableOpacity
-				key={item._id}
-				onPress={() => router.push(`/product/${item._id}`)}
-				activeOpacity={0.8}
-				style={styles.card}
-			>
-				<View style={styles.imageWrapper}>
-					<Image
-						source={{ uri: item.picture || "https://via.placeholder.com/150" }}
-						style={styles.image}
-						resizeMode="contain"
-					/>
-					{item.stock === 0 && (
-						<View style={styles.outOfStockOverlay}>
-							<Text style={styles.outOfStockText}>{t("out")}</Text>
-						</View>
-					)}
-					{discountPercent > 0 && (
-						<View style={styles.discountBadge}>
-							<Text style={styles.discountText}>-{discountPercent}%</Text>
-						</View>
-					)}
-				</View>
-				<Text style={styles.name} numberOfLines={2}>
-					{td(item.name)}
-				</Text>
-
-				{basePrice !== finalPrice ? (
-					<View style={styles.priceRow}>
-						<Text style={styles.basePrice}>${basePrice.toFixed(2)}</Text>
-						<Text style={styles.finalPrice}>${finalPrice.toFixed(2)}</Text>
-					</View>
-				) : (
-					<View style={styles.priceRow}>
-						<Text style={styles.finalPrice}>${finalPrice.toFixed(2)}</Text>
-					</View>
-				)}
-
-				{/* Quantity buttons only if product is in stock */}
-				{item.stock > 0 && (
-					<View style={styles.qtyRow}>
-						{showQty[item._id] ? (
-							<>
-								<TouchableOpacity
-									onPress={() => decreaseQty(item)}
-									style={styles.qtyBtn}
-								>
-									<Text style={styles.qtyText}>-</Text>
-								</TouchableOpacity>
-								<Text style={styles.qtyValue}>{quantities[item._id] || 1}</Text>
-								<TouchableOpacity
-									onPress={() => increaseQty(item)}
-									style={styles.qtyBtn}
-								>
-									<Text style={styles.qtyText}>+</Text>
-								</TouchableOpacity>
-							</>
-						) : (
-							<TouchableOpacity
-								onPress={() => increaseQty(item)}
-								style={[styles.qtyBtn, styles.qtyBtnCartPadding]}
-							>
-								<Feather name="shopping-cart" size={20} color="#fff" />
-							</TouchableOpacity>
-						)}
-					</View>
-				)}
-			</TouchableOpacity>
-		);
-	};
-
-	const handleLoadMore = () => {
-		if (!loadingMore && hasMore) {
-			const nextPage = page + 1;
-			setPage(nextPage);
-			fetchProducts(nextPage);
-		}
-	};
+	// Tell the home screen whether this section ended up with content. An
+	// unserved region counts as content: the empty state IS the content, and
+	// must not be replaced by the generic "no store" page.
+	useEffect(() => {
+		if (!loading) onContent?.(products.length > 0 || !!unserved);
+	}, [loading, products, unserved, onContent]);
 
 	if (loading && page === 1) {
-		return (
-			<View style={styles.loader}>
-				<ActivityIndicator size="large" color="#f4bb26" />
-			</View>
-		);
+		if (hideLoader) return null;
+		return <ProductGridSkeleton count={6} />;
 	}
 
-	// Group products into rows of 3. This component renders inside the home
-	// screen's vertical ScrollView, so a nested vertical FlatList would trigger
-	// the "VirtualizedLists should never be nested" warning. We render the grid
-	// with plain Views instead (the parent ScrollView handles scrolling).
-	const rows = [];
-	for (let i = 0; i < products.length; i += 3) {
-		rows.push(products.slice(i, i + 3));
+	if (unserved) {
+		return <RegionEmptyState region={unserved.city} />;
 	}
 
+	// Rendered as a wrapped row of cards (not a FlatList): this component lives
+	// inside the home screen's vertical ScrollView, so a nested VirtualizedList
+	// would warn — the parent handles scrolling and paging.
 	return (
 		<View style={styles.container}>
 			<View style={styles.grid}>
-				{rows.map((row, rowIndex) => (
-					<View key={`row-${rowIndex}`} style={styles.row}>
-						{row.map((item) => renderItem({ item }))}
-						{/* Fill the last row's empty slots so cards stay left-aligned. */}
-						{row.length < 3 &&
-							Array.from({ length: 3 - row.length }).map((_, i) => (
-								<View
-									key={`spacer-${rowIndex}-${i}`}
-									style={styles.gridItem}
-								/>
-							))}
-					</View>
+				{products.map((item) => (
+					<ProductCard key={item._id} product={item} width={PRODUCT_GRID_ITEM_WIDTH} />
 				))}
-
-				{loadingMore && <ActivityIndicator style={styles.loadingMoreIndicator} />}
-				{!loadingMore && hasMore && (
-					<TouchableOpacity style={styles.loadMoreBtn} onPress={handleLoadMore}>
-						<Text style={styles.loadMoreText}>{t("loadMore")}</Text>
-					</TouchableOpacity>
+				{loadingMore && (
+					<ActivityIndicator style={styles.loadingMoreIndicator} color={colors.primary} />
+				)}
+				{!hasMore && products.length > 0 && (
+					<Text style={styles.endNote}>{t("endOfList")}</Text>
 				)}
 			</View>
 		</View>

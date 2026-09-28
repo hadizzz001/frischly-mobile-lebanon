@@ -3,7 +3,7 @@ import type { CartItem } from "@/types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { usePathname, useRouter } from "expo-router";
 import { createContext, useContext, useEffect, useReducer, useRef, useState, type ReactNode } from "react";
-import { Alert } from "react-native";
+import { Alert, DeviceEventEmitter } from "react-native";
 
 import type {
     AddResult,
@@ -94,10 +94,6 @@ const cartReducer = (state: CartItem[], action: CartAction): CartItem[] => {
 const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cart, dispatch] = useReducer(cartReducer, []);
   const [subtotal, setSubtotal] = useState(0);
-  // Ids of kitchens the user added via "Add all to cart". Kept at app level (and
-  // persisted) so the "Go to Checkout" button survives navigating away from the
-  // home screen and back, while staying isolated per-kitchen.
-  const [kitchenCheckoutIds, setKitchenCheckoutIds] = useState<Record<string, boolean>>({});
   const { t } = useTranslation();
   const router = useRouter();
   const pathname = usePathname();
@@ -108,13 +104,28 @@ const CartProvider = ({ children }: { children: ReactNode }) => {
   // functions can check it without changing their callers. It is refreshed on
   // every navigation, so a login / guest change is picked up immediately.
   const isGuestRef = useRef(false);
+  // Who the cart currently belongs to: the logged-in user's id, "guest", or
+  // "none". A cart is personal, so whenever this changes — a login, a logout, a
+  // switch to another account — the cart is emptied. null means "not read yet",
+  // which is the app simply starting up and must NOT wipe the saved cart.
+  const cartOwnerRef = useRef<string | null>(null);
   useEffect(() => {
     let active = true;
     (async () => {
       try {
         const userData = await AsyncStorage.getItem("userData");
         const guest = await AsyncStorage.getItem("guest");
-        if (active) isGuestRef.current = !userData || guest === "true";
+        if (!active) return;
+        isGuestRef.current = !userData || guest === "true";
+
+        const userId = userData
+          ? String(JSON.parse(userData)?.user?._id || "") || "user"
+          : "";
+        const owner = userId || (guest === "true" ? "guest" : "none");
+
+        const previousOwner = cartOwnerRef.current;
+        cartOwnerRef.current = owner;
+        if (previousOwner && previousOwner !== owner) clearCart();
       } catch {
         // Keep the previous value if the read fails.
       }
@@ -122,6 +133,7 @@ const CartProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       active = false;
     };
+    // clearCart is stable for the life of the provider.
   }, [pathname]);
 
   // Guests cannot modify the cart: redirect them to the login screen and report
@@ -145,10 +157,9 @@ const CartProvider = ({ children }: { children: ReactNode }) => {
             payload: JSON.parse(storedCart || "[]"),
           });
         }
-        const storedKitchens = await AsyncStorage.getItem("kitchenCheckoutIds");
-        if (storedKitchens) {
-          setKitchenCheckoutIds(JSON.parse(storedKitchens || "{}"));
-        }
+        // Legacy key: the kitchen "Go to Checkout" state is now derived from
+        // the cart itself, so drop any map left behind by an older build.
+        await AsyncStorage.removeItem("kitchenCheckoutIds");
       } catch (error) {
         console.error("Error loading cart data:", error);
       }
@@ -161,30 +172,6 @@ const CartProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     AsyncStorage.setItem("cart", JSON.stringify(cart)).catch(console.error);
   }, [cart]);
-
-  // Persist the kitchen-checkout map whenever it changes.
-  useEffect(() => {
-    AsyncStorage.setItem(
-      "kitchenCheckoutIds",
-      JSON.stringify(kitchenCheckoutIds)
-    ).catch(console.error);
-  }, [kitchenCheckoutIds]);
-
-  // When the cart becomes empty (checkout, clear, etc.) reset every kitchen's
-  // button back to "Add all to cart".
-  useEffect(() => {
-    if (cart.length === 0) {
-      setKitchenCheckoutIds((prev) =>
-        Object.keys(prev).length ? {} : prev
-      );
-    }
-  }, [cart.length]);
-
-  // Mark a specific kitchen as added (drives its Go-to-Checkout button).
-  const markKitchenAdded = (kitchenId: string | number | null | undefined) => {
-    if (!kitchenId) return;
-    setKitchenCheckoutIds((prev) => ({ ...prev, [String(kitchenId)]: true }));
-  };
 
   // Helper: Calculate price breakdown for one item
   const calculatePriceDetails = (item: Partial<CartItem>, quantity = 1): PriceDetails => {
@@ -326,13 +313,67 @@ const CartProvider = ({ children }: { children: ReactNode }) => {
   const clearCart = async (): Promise<void> => {
     try {
       dispatch({ type: "CLEAR_CART" });
-      setKitchenCheckoutIds({});
       await AsyncStorage.removeItem("cart");
-      await AsyncStorage.removeItem("kitchenCheckoutIds");
     } catch (error) {
       console.error("Error clearing cart:", error);
     }
   };
+
+  // The whole catalogue is city-scoped: the stores, markets and kitchens that
+  // deliver to Beirut are not the ones that deliver to Tripoli, so a cart
+  // filled in one city is meaningless in another. Whenever the shopper changes
+  // their city — from the header pill, from edit-profile, from anywhere that
+  // fires `userCityChanged` — the cart is emptied.
+  //
+  // The city the current cart belongs to is remembered (and persisted) so the
+  // same event fired on app start, when the default city is resolved, never
+  // wipes a cart that was filled in that very city.
+  const cartCityRef = useRef<string | null>(null);
+  useEffect(() => {
+    let active = true;
+
+    const sameCity = (a: string, b: string) =>
+      a.trim().toLowerCase() === b.trim().toLowerCase();
+
+    // Seed the baseline: the stored value, else the city on the saved profile.
+    (async () => {
+      try {
+        const stored = await AsyncStorage.getItem("cartCity");
+        if (!active) return;
+        if (stored) {
+          cartCityRef.current = stored;
+          return;
+        }
+        const raw = await AsyncStorage.getItem("userData");
+        const city = raw ? JSON.parse(raw)?.user?.address?.city : null;
+        if (!active || !city) return;
+        cartCityRef.current = String(city);
+        await AsyncStorage.setItem("cartCity", String(city));
+      } catch {
+        // No baseline -> the first city change is treated as "same city".
+      }
+    })();
+
+    const sub = DeviceEventEmitter.addListener(
+      "userCityChanged",
+      (payload?: { city?: string }) => {
+        const nextCity = String(payload?.city || "").trim();
+        if (!nextCity) return;
+
+        const previousCity = cartCityRef.current;
+        cartCityRef.current = nextCity;
+        AsyncStorage.setItem("cartCity", nextCity).catch(() => {});
+
+        if (previousCity && !sameCity(previousCity, nextCity)) clearCart();
+      },
+    );
+
+    return () => {
+      active = false;
+      sub.remove();
+    };
+    // clearCart is stable for the life of the provider.
+  }, []);
 
   return (
     <CartContext.Provider
@@ -344,10 +385,6 @@ const CartProvider = ({ children }: { children: ReactNode }) => {
         clearCart,
         subtotal,
         calculatePriceDetails, // expose helper for UI
-        // Per-kitchen "added" tracking that drives the Go-to-Checkout button on
-        // the home kitchen cards (persisted, survives navigation).
-        kitchenCheckoutIds,
-        markKitchenAdded,
         // Source the cart currently belongs to (a market _id or "MAIN"), or null
         // when the cart is empty. `cartMarket` is the populated market object
         // (or null for the main admin store) of the items in the cart.

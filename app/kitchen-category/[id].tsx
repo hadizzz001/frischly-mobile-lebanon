@@ -1,11 +1,14 @@
-import { filterByCity, getKitchenCartItems } from "@/components/KitchenSlider";
+import BackButton from "@/components/ui/BackButton";
 import { useCart } from "@/contexts/CartContext";
 import { useTranslation } from "@/contexts/TranslationContext";
-import { KitchenService } from "@/services/api";
+import { useBusyAction } from "@/hooks/useBusyAction";
 import type { Kitchen } from "@/types";
-import { getAdminCities, getAdminDeliveryRegions } from "@/utils/cityVisibility";
+import {
+	getKitchenCartItems,
+	isKitchenInCart,
+	loadStoreKitchens,
+} from "@/utils/kitchen";
 import { rtlRow } from "@/utils/rtl";
-import { getUserCityAndPin } from "@/utils/userCity";
 import { Feather } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -21,9 +24,10 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { styles } from "@/styles/app/kitchen-category/[id].styles";
 
-// Lists every kitchen that belongs to a single kitchen category. Reached from
-// the home screen's category slider. Tapping a kitchen opens /kitchen/[id]
-// (the existing screen) with that kitchen's items.
+// Lists the kitchens of ONE store that are filed under a single kitchen
+// category. Reached from a kitchen slider: from the home screen it lists
+// FreshlyLB's own kitchens, from a market page (`?marketId=`) that market's
+// own. Tapping a kitchen opens /kitchen/[id] with that kitchen's items.
 export default function KitchenCategoryPage() {
 	const { t, td, isRTL } = useTranslation();
 	const router = useRouter();
@@ -32,7 +36,8 @@ export default function KitchenCategoryPage() {
 		name?: string;
 		marketId?: string;
 	}>();
-	const { addItemsToCart, kitchenCheckoutIds, markKitchenAdded } = useCart();
+	const { addItemsToCart, cart } = useCart();
+	const { isBusy, anyBusy, run } = useBusyAction();
 
 	const [kitchens, setKitchens] = useState<Kitchen[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -40,57 +45,26 @@ export default function KitchenCategoryPage() {
 	// to whatever the API reports on the kitchens themselves.
 	const [title, setTitle] = useState(typeof name === "string" ? name : "");
 
-	// Read a kitchen's market id whether `market` is a plain id string or a
-	// populated Market object (same helper as KitchenSlider).
-	const kitchenMarketId = (k: Kitchen): string | null => {
-		const m = k.market;
-		if (!m) return null;
-		return typeof m === "string" ? m : m._id || null;
-	};
-
 	useEffect(() => {
+		let cancelled = false;
+
 		const fetchKitchens = async () => {
 			try {
 				setLoading(true);
 
-				// Same city + delivery-range rule as the home slider: a logged-in
-				// user only sees kitchens whose market serves that city (plus
-				// main-store kitchens that the admin serves in that city AND whose
-				// delivery-range circle covers the shopper's exact map pin).
-				const [{ city, pin }, adminCities, adminRegions] = await Promise.all([
-					getUserCityAndPin(),
-					getAdminCities(),
-					getAdminDeliveryRegions(),
-				]);
+				// One shared loader for the slider and this screen, scoped to the
+				// store the shopper came from: `marketId` -> that market's own
+				// kitchens, otherwise FreshlyLB's. It applies the store's
+				// visibility rule too, so this list always matches the category
+				// card that opened it.
+				const list = await loadStoreKitchens(marketId, id);
+				if (cancelled) return;
 
-				// NOTE: the public endpoint currently ignores the `category` query
-				// param and returns every kitchen, so we must filter by category id
-				// ourselves. Each kitchen carries a populated `category` object.
-				const res = await KitchenService.listPublicByCategory(id);
-				const all = Array.isArray(res?.data) ? res.data : [];
-
-				let inCategory = all.filter((k) => {
-					const cat = k?.category;
-					const catId =
-						cat && typeof cat === "object" ? cat._id : cat;
-					return String(catId) === String(id);
-				});
-
-				// Reached from a single market's home page: only show that
-				// market's own kitchens within this category.
-				if (marketId) {
-					inCategory = inCategory.filter(
-						(k) => kitchenMarketId(k) === String(marketId),
-					);
-				}
-
-				const filtered = filterByCity(inCategory, city, adminCities, pin, adminRegions);
-
-				setKitchens(filtered);
+				setKitchens(list);
 
 				// Derive the header title from the data when it wasn't passed in.
 				if (!title) {
-					const firstCat = filtered[0]?.category;
+					const firstCat = list[0]?.category;
 					const fromData =
 						firstCat && typeof firstCat === "object"
 							? firstCat.name
@@ -99,12 +73,16 @@ export default function KitchenCategoryPage() {
 				}
 			} catch (err) {
 				console.error("Kitchen category fetch error:", err);
-				setKitchens([]);
+				if (!cancelled) setKitchens([]);
 			} finally {
-				setLoading(false);
+				if (!cancelled) setLoading(false);
 			}
 		};
+
 		if (id) fetchKitchens();
+		return () => {
+			cancelled = true;
+		};
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [id, marketId]);
 
@@ -125,15 +103,16 @@ export default function KitchenCategoryPage() {
 		).length;
 		const skipped = totalActive - items.length;
 
-		const result = addItemsToCart(items);
+		run(`add-${kitchen._id}`, () => {
+			const result = addItemsToCart(items);
 
-		if (result?.added) {
-			markKitchenAdded(kitchen._id);
-			Alert.alert(
-				t("success"),
-				skipped > 0 ? t("kitchenAddedWithSkipped") : t("kitchenAddedToCart"),
-			);
-		}
+			if (result?.added) {
+				Alert.alert(
+					t("success"),
+					skipped > 0 ? t("kitchenAddedWithSkipped") : t("kitchenAddedToCart"),
+				);
+			}
+		});
 	};
 
 	return (
@@ -141,12 +120,7 @@ export default function KitchenCategoryPage() {
 			<Stack.Screen options={{ headerShown: false }} />
 			<SafeAreaView edges={["top"]} style={styles.safeArea}>
 				<View style={[styles.topBar, rtlRow(isRTL)]}>
-					<TouchableOpacity
-						onPress={() => router.back()}
-						style={styles.backButton}
-					>
-						<Feather name="chevron-left" size={24} color="#222" />
-					</TouchableOpacity>
+					<BackButton onPress={() => router.back()} style={styles.backButton} />
 					<Text style={styles.topTitle} numberOfLines={1}>
 						{title ? td(title) : t("kitchens")}
 					</Text>
@@ -155,7 +129,7 @@ export default function KitchenCategoryPage() {
 
 				{loading ? (
 					<View style={styles.center}>
-						<ActivityIndicator size="large" color="#f4bb26" />
+						<ActivityIndicator size="large" color="#F59E0B" />
 					</View>
 				) : !kitchens.length ? (
 					<View style={styles.center}>
@@ -164,10 +138,15 @@ export default function KitchenCategoryPage() {
 				) : (
 					<ScrollView contentContainerStyle={styles.grid}>
 						{kitchens.map((kitchen) => {
-							const addableCount = getKitchenCartItems(kitchen).length;
-							// Per-kitchen flag persisted in the cart context, so the
-							// "Go to Checkout" button survives navigation.
-							const inCart = !!kitchenCheckoutIds[kitchen._id];
+							const addableItems = getKitchenCartItems(kitchen);
+							const addableCount = addableItems.length;
+							// Read straight from the cart: the button flips back to
+							// "Add all to cart" as soon as any of this kitchen's items
+							// are removed or the order is placed (a persisted
+							// per-kitchen flag used to keep showing "Go to Checkout"
+							// forever). Kitchens that merely share a product with the
+							// one that was added stay on "Add all to cart".
+							const inCart = isKitchenInCart(kitchen, cart);
 
 							return (
 								<View key={kitchen._id} style={styles.card}>
@@ -202,8 +181,15 @@ export default function KitchenCategoryPage() {
 											activeOpacity={0.85}
 											onPress={() => router.push("/checkout")}
 										>
-											<Feather name="credit-card" size={16} color="#fff" />
-											<Text style={styles.btnText}>{t("goToCheckout")}</Text>
+											<Feather name="credit-card" size={14} color="#111827" />
+											<Text
+												style={styles.btnText}
+												numberOfLines={1}
+												adjustsFontSizeToFit
+												minimumFontScale={0.7}
+											>
+												{t("goToCheckout")}
+											</Text>
 										</TouchableOpacity>
 									) : (
 										<TouchableOpacity
@@ -212,11 +198,28 @@ export default function KitchenCategoryPage() {
 												addableCount === 0 && styles.addBtnDisabled,
 											]}
 											activeOpacity={0.85}
-											disabled={addableCount === 0}
+											disabled={addableCount === 0 || anyBusy}
 											onPress={() => addKitchenToCart(kitchen)}
 										>
-											<Feather name="shopping-cart" size={16} color="#fff" />
-											<Text style={styles.btnText}>{t("addAllToCart")}</Text>
+											{isBusy(`add-${kitchen._id}`) ? (
+												<ActivityIndicator size="small" color="#111827" />
+											) : (
+												<>
+													<Feather
+														name="shopping-cart"
+														size={14}
+														color="#111827"
+													/>
+													<Text
+														style={styles.btnText}
+														numberOfLines={1}
+														adjustsFontSizeToFit
+														minimumFontScale={0.7}
+													>
+														{t("addAllToCart")}
+													</Text>
+												</>
+											)}
 										</TouchableOpacity>
 									)}
 								</View>

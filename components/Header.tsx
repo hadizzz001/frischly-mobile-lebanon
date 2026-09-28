@@ -1,307 +1,254 @@
-import { LANGUAGE_OPTIONS } from "@/constants/languages";
-import { LEBANESE_CITIES } from "@/constants/lebaneseCities";
-import { useTranslation } from "@/contexts/TranslationContext";
-import { AuthService } from "@/services/api";
-import { styles } from "@/styles/components/Header.styles";
-import { getCityCoordinates, getStateForCity } from "@/utils/cityDetection";
-import { Feather } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
+import { Bell, ChevronDown, MapPin, Mic, Search, UserRound } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import {
-    DeviceEventEmitter,
-    FlatList,
-    Image,
-    Modal,
-    Pressable,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+	DeviceEventEmitter,
+	Pressable,
+	Text,
+	TextInput,
+	View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import LocationSheet from "@/components/LocationSheet";
+import SearchPlaceholder from "@/components/SearchPlaceholder";
+import { OPEN_CITY_PICKER, OPEN_VOICE_SEARCH, USER_CITY_CHANGED } from "@/constants/events";
+import { LANGUAGE_OPTIONS } from "@/constants/languages";
+import { colors, icon } from "@/constants/theme";
+import { useTranslation } from "@/contexts/TranslationContext";
+import { useUnreadNotifications } from "@/hooks/useUnreadNotifications";
+import { AuthService } from "@/services/api";
+import { styles } from "@/styles/components/Header.styles";
+import type { User } from "@/types";
+import { tapLight } from "@/utils/haptics";
+import { formatStreetLine, getCachedAddress, isSignedIn } from "@/utils/userAddress";
 
+// Appbar. Every read of the session is guarded: a guest launch has no
+// `userData` at all, so nothing here may assume a user object exists — the
+// guest branch renders a "Login / Register" chip in place of the location pill.
 export default function Header() {
-  const router = useRouter();
-  const [searchText, setSearchText] = useState("");
-  const { t, language, switchLanguage, isRTL } = useTranslation();
-  const [dropdownOpen, setDropdownOpen] = useState(false);
+	const router = useRouter();
+	const insets = useSafeAreaInsets();
+	const { t, language, switchLanguage, isRTL } = useTranslation();
+	const unread = useUnreadNotifications();
 
-  // Editable location pill: shows the logged-in shopper's saved city, and lets
-  // them switch it from a dropdown (saved straight back to their profile).
-  // Hidden entirely for guests (no profile to save a city against).
-  const [isGuest, setIsGuest] = useState(false);
-  const [userCity, setUserCity] = useState("");
-  const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
-  const [savingCity, setSavingCity] = useState(false);
-  // Type-to-filter box inside the city modal — the list now covers every
-  // regular Lebanese town, so scrolling alone isn't the fastest way to find one.
-  const [citySearch, setCitySearch] = useState("");
+	const [searchText, setSearchText] = useState("");
+	const [dropdownOpen, setDropdownOpen] = useState(false);
+	const [isGuest, setIsGuest] = useState(true);
+	const [userCity, setUserCity] = useState("");
+	// Street/building line for the location sheet — never repeats the city.
+	const [userStreet, setUserStreet] = useState("");
+	const [locationOpen, setLocationOpen] = useState(false);
 
-  const visibleCities = LEBANESE_CITIES.filter((city) =>
-    city.toLowerCase().includes(citySearch.trim().toLowerCase())
-  );
+	// Session + saved address. Local cache first (instant), then refreshed from
+	// the server so a city changed elsewhere shows up here.
+	useEffect(() => {
+		let cancelled = false;
+		(async () => {
+			try {
+				const signedIn = await isSignedIn();
+				if (cancelled) return;
+				setIsGuest(!signedIn);
+				if (!signedIn) return;
 
-  const openCityDropdown = () => {
-    setCitySearch("");
-    setCityDropdownOpen(true);
-  };
+				const cached = await getCachedAddress();
+				if (cancelled) return;
+				setUserCity(cached?.city ?? "");
+				setUserStreet(formatStreetLine(cached));
 
-  useEffect(() => {
-    const loadCity = async () => {
-      try {
-        const guestFlag = await AsyncStorage.getItem("guest");
-        if (guestFlag === "true") {
-          setIsGuest(true);
-          return;
-        }
-        const stored = await AsyncStorage.getItem("userData");
-        if (!stored) {
-          setIsGuest(true);
-          return;
-        }
-        setIsGuest(false);
-        const parsed = JSON.parse(stored);
-        const storedCity =
-          parsed?.user?.address?.city || parsed?.address?.city || "";
-        if (storedCity) setUserCity(storedCity);
+				try {
+					const res = await AuthService.me();
+					const fresh = (res?.data as unknown as { user?: User } | null)?.user;
+					if (cancelled || !fresh) return;
+					setUserCity(fresh.address?.city ?? "");
+					setUserStreet(formatStreetLine(fresh.address));
+				} catch {
+					// keep the cached values
+				}
+			} catch {
+				if (!cancelled) setIsGuest(true);
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, []);
 
-        // Refresh from the server so a city changed elsewhere shows up here.
-        try {
-          const res = await AuthService.me();
-          const freshUser = (res.data as unknown as { user?: { address?: { city?: string } } })?.user;
-          const freshCity = freshUser?.address?.city;
-          if (freshCity) setUserCity(freshCity);
-        } catch {
-          // ignore — keep whatever was stored locally
-        }
-      } catch {
-        setIsGuest(true);
-      }
-    };
-    loadCity();
-  }, []);
+	// Follow address changes made anywhere else (profile editor, checkout
+	// address card, …) and open requests from empty states / the voice sheet.
+	useEffect(() => {
+		const changed = DeviceEventEmitter.addListener(
+			USER_CITY_CHANGED,
+			(payload: string | { city?: string; street?: string }) => {
+				const city = typeof payload === "string" ? payload : payload?.city;
+				if (city) setUserCity(city);
+				if (typeof payload === "object" && payload?.street !== undefined) {
+					setUserStreet(formatStreetLine({ city: city ?? "", street: payload.street }));
+				}
+			},
+		);
+		const open = DeviceEventEmitter.addListener(OPEN_CITY_PICKER, async () => {
+			// Check the session live rather than trusting `isGuest`: it starts
+			// as true until the mount effect resolves, so an early tap on the
+			// profile's address tile used to bounce a signed-in shopper to
+			// /start instead of opening the picker.
+			const signedIn = await isSignedIn().catch(() => false);
+			if (!signedIn) {
+				router.push("/start");
+				return;
+			}
+			setIsGuest(false);
+			setLocationOpen(true);
+		});
+		return () => {
+			changed.remove();
+			open.remove();
+		};
+	}, [router]);
 
-  // Listen for city changes made elsewhere (e.g. the edit-profile screen, its
-  // map pin picker, or this same dropdown on another mount) so the nav pill
-  // updates instantly without needing a screen refresh. The event payload can
-  // be either a plain city string (legacy) or a richer object carrying the
-  // derived state/location too.
-  useEffect(() => {
-    const sub = DeviceEventEmitter.addListener(
-      "userCityChanged",
-      (payload: string | { city?: string }) => {
-        const city = typeof payload === "string" ? payload : payload?.city;
-        if (city) setUserCity(city);
-      }
-    );
-    return () => sub.remove();
-  }, []);
+	const handleSearchSubmit = () => {
+		const q = searchText.trim();
+		if (q) router.push(`/shop?search=${encodeURIComponent(q)}`);
+	};
 
-  const handleSelectCity = async (city: string) => {
-    setCityDropdownOpen(false);
-    if (!city || city === userCity) return;
-    const previousCity = userCity;
-    setUserCity(city); // optimistic
-    setSavingCity(true);
-    try {
-      // Auto-derive the Lebanese governorate (state) from the newly picked
-      // city so the profile's state always stays valid and in sync, without
-      // the shopper needing to set it separately or refresh anything.
-      const state = getStateForCity(city);
-      // Also snap the map pin to this city's approximate center — otherwise
-      // switching city from this nav pill leaves the shopper's saved map pin
-      // pointing at their old city, out of sync with the city shown here.
-      const location = getCityCoordinates(city);
+	const openVoice = () => {
+		tapLight();
+		DeviceEventEmitter.emit(OPEN_VOICE_SEARCH);
+	};
 
-      // The backend replaces the whole `address` object on update rather than
-      // merging it — so we must carry forward the shopper's existing
-      // street alongside the new city, otherwise their previously saved
-      // street address gets silently wiped out just by switching city from
-      // this nav pill.
-      const stored = await AsyncStorage.getItem("userData");
-      const parsed = stored ? JSON.parse(stored) : null;
-      const existingAddress = parsed?.user?.address || {};
+	const selectedLang =
+		LANGUAGE_OPTIONS.find((l) => l.code === language) ?? LANGUAGE_OPTIONS[0];
 
-      const nextAddress = {
-        ...existingAddress,
-        city,
-        ...(state ? { state } : {}),
-        ...(location ? { location } : {}),
-      };
+	return (
+		<View style={[styles.topNav, { paddingTop: insets.top }]}>
+			<View style={[styles.row, isRTL && styles.rowReverse]}>
+				<Pressable onPress={() => router.push("/")} accessibilityRole="imagebutton">
+					<Image
+						source={{
+							uri: "https://res.cloudinary.com/dxefurewd/image/upload/v1778403318/freshly_1-removebg-preview_mwrt49.png",
+						}}
+						style={styles.logo}
+						contentFit="contain"
+						cachePolicy="memory-disk"
+					/>
+				</Pressable>
 
-      await AuthService.updateProfile({ address: nextAddress });
+				{isGuest ? (
+					<Pressable
+						style={({ pressed }) => [styles.guestChip, pressed && { opacity: 0.85 }]}
+						onPress={() => router.push("/start")}
+						accessibilityRole="button"
+						accessibilityHint={t("guestChipHint")}
+					>
+						<UserRound size={icon.sizeSmall} strokeWidth={icon.strokeWidth} color={colors.primaryText} />
+						<Text style={styles.guestChipText} numberOfLines={1}>
+							{t("loginOrRegister")}
+						</Text>
+					</Pressable>
+				) : (
+					<Pressable
+						style={({ pressed }) => [
+							styles.locationButton,
+							isRTL && styles.rowReverse,
+							pressed && { opacity: 0.85 },
+						]}
+						onPress={() => setLocationOpen(true)}
+						accessibilityRole="button"
+					>
+						<MapPin size={icon.size} strokeWidth={icon.strokeWidth} color={colors.primaryDark} />
+						<View style={styles.locationTextWrap}>
+							<Text style={styles.locationLabel} numberOfLines={1}>
+								{t("deliverTo")}
+							</Text>
+							<Text style={styles.locationText} numberOfLines={1}>
+								{userCity || t("selectCity")}
+							</Text>
+						</View>
+						<ChevronDown size={icon.sizeSmall} strokeWidth={icon.strokeWidth} color={colors.textMuted} />
+					</Pressable>
+				)}
 
-      // Keep the local cache in sync so the rest of the app (city-based
-      // filtering) picks up the change immediately.
-      if (stored && parsed) {
-        const nextUser = parsed?.user
-          ? { ...parsed.user, address: nextAddress }
-          : parsed?.user;
-        await AsyncStorage.setItem(
-          "userData",
-          JSON.stringify({ ...parsed, user: nextUser })
-        );
-      }
+				<Pressable
+					style={({ pressed }) => [styles.iconButton, pressed && { backgroundColor: colors.surfaceAlt }]}
+					onPress={() => router.push("/notifications" as never)}
+					accessibilityRole="button"
+					accessibilityLabel={t("notifications")}
+				>
+					<Bell size={icon.sizeLarge} strokeWidth={icon.strokeWidth} color={colors.text} />
+					{unread > 0 ? (
+						<View style={styles.badge}>
+							<Text style={styles.badgeText}>{unread > 99 ? "99+" : unread}</Text>
+						</View>
+					) : null}
+				</Pressable>
 
-      // Tell the home screen, edit-profile screen (and any other listeners)
-      // to reload their city-scoped feeds / form fields now that the
-      // shopper's city (and map pin) changed.
-      DeviceEventEmitter.emit("userCityChanged", { city, state, location });
-    } catch (err) {
-      console.error("Failed to update city:", err);
-      setUserCity(previousCity); // revert on failure
-    } finally {
-      setSavingCity(false);
-    }
-  };
+				<View style={styles.dropdownContainer}>
+					<Pressable
+						style={[styles.dropdownButton, isRTL && styles.rowReverse]}
+						onPress={() => setDropdownOpen((v) => !v)}
+						accessibilityRole="button"
+					>
+						<Image source={{ uri: selectedLang.flag }} style={styles.flag} cachePolicy="memory-disk" />
+						<ChevronDown size={icon.sizeSmall} strokeWidth={icon.strokeWidth} color={colors.textMuted} />
+					</Pressable>
+					{dropdownOpen && (
+						<View style={styles.dropdownList}>
+							{LANGUAGE_OPTIONS.map((lang) => (
+								<Pressable
+									key={lang.code}
+									style={[styles.dropdownItem, isRTL && styles.rowReverse]}
+									onPress={() => {
+										tapLight();
+										switchLanguage(lang.code);
+										setDropdownOpen(false);
+									}}
+								>
+									<Image source={{ uri: lang.flag }} style={styles.flag} cachePolicy="memory-disk" />
+									<Text style={[styles.dropdownText, lang.code === language && styles.dropdownTextActive]}>
+										{lang.name}
+									</Text>
+								</Pressable>
+							))}
+						</View>
+					)}
+				</View>
+			</View>
 
-  const handleSearchSubmit = () => {
-    if (searchText.trim() !== "") {
-      router.push(`/shop?search=${encodeURIComponent(searchText)}`);
-    }
-  };
+			{/* Search — the placeholder is an animated suggestion ticker, so the
+			    input itself carries none. The mic is an inline suffix so voice
+			    lives in the primary touch path instead of a floating button. */}
+			<View style={[styles.searchWrapper, isRTL && styles.rowReverse]}>
+				<Search size={icon.size} strokeWidth={icon.strokeWidth} color={colors.textMuted} />
+				<TextInput
+					style={styles.searchBox}
+					value={searchText}
+					onChangeText={setSearchText}
+					returnKeyType="search"
+					onSubmitEditing={handleSearchSubmit}
+					autoCorrect={false}
+				/>
+				<SearchPlaceholder visible={!searchText} />
+				<Pressable
+					style={({ pressed }) => [styles.micButton, pressed && { opacity: 0.8 }]}
+					onPress={openVoice}
+					accessibilityRole="button"
+					accessibilityLabel={t("voiceSearchByVoice")}
+					hitSlop={6}
+				>
+					<Mic size={icon.size} strokeWidth={icon.strokeWidth} color={colors.primaryDark} />
+				</Pressable>
+			</View>
 
-  const languages = LANGUAGE_OPTIONS;
-
-  const selectedLang = languages.find((l) => l.code === language) || languages[0];
-
-  console.log("Current language:", language);
-
-
-
-  return (
-    <View style={styles.topNav}>
-      {/* Logo */}
-      <TouchableOpacity onPress={() => router.push("/")}>
-        <Image
-          source={{
-            uri: "https://res.cloudinary.com/dxefurewd/image/upload/v1778403318/freshly_1-removebg-preview_mwrt49.png",
-          }}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-      </TouchableOpacity>
-
-      {/* Search */}
-      <View style={styles.searchWrapper}>
-        <TextInput
-          style={styles.searchBox}
-          placeholder={t("searchPlaceholder")}
-          placeholderTextColor="#555"
-          value={searchText}
-          onChangeText={setSearchText}
-          returnKeyType="search"
-          onSubmitEditing={handleSearchSubmit}
-        />
-      </View>
-
-      {/* Editable location — sourced from the shopper's profile city. Hidden
-          for guests since there's no profile to save a city against. */}
-      {!isGuest && (
-        <View style={styles.locationContainer}>
-          <TouchableOpacity
-            style={[styles.locationButton, isRTL && styles.rowReverse]}
-            onPress={() => (cityDropdownOpen ? setCityDropdownOpen(false) : openCityDropdown())}
-            disabled={savingCity}
-          >
-            <Feather name="map-pin" size={16} color="#f4bb26" />
-            <Text
-              style={[
-                styles.locationText,
-                isRTL ? styles.marginRightSmall : null,
-              ]}
-              numberOfLines={1}
-            >
-              {userCity || t("selectCity")}
-            </Text>
-            <Text style={styles.arrow}>{cityDropdownOpen ? "▲" : "▼"}</Text>
-          </TouchableOpacity>
-
-          {/* The list is rendered in a Modal rather than as an absolutely
-              positioned child of the header. `topNav` has a fixed height, so
-              an overflowing dropdown was being clipped — which on Android also
-              made it impossible to touch or scroll. A Modal floats above every
-              screen, so the full city list scrolls normally. */}
-          <Modal
-            visible={cityDropdownOpen}
-            transparent
-            animationType="fade"
-            onRequestClose={() => setCityDropdownOpen(false)}
-          >
-            <Pressable
-              style={styles.cityModalBackdrop}
-              onPress={() => setCityDropdownOpen(false)}
-            >
-              {/* Swallow taps inside the sheet so they don't close it. */}
-              <Pressable style={styles.cityModalSheet} onPress={() => {}}>
-                <Text style={styles.cityModalTitle}>{t("selectCity")}</Text>
-
-                <TextInput
-                  style={styles.citySearchInput}
-                  placeholder={t("searchPlaceholder")}
-                  placeholderTextColor="#888"
-                  value={citySearch}
-                  onChangeText={setCitySearch}
-                  autoCorrect={false}
-                />
-
-                <FlatList
-                  data={visibleCities}
-                  keyExtractor={(city) => city}
-                  style={styles.cityModalList}
-                  keyboardShouldPersistTaps="handled"
-                  initialNumToRender={20}
-                  renderItem={({ item: city }) => (
-                    <TouchableOpacity
-                      style={[styles.dropdownItem, isRTL && styles.rowReverse]}
-                      onPress={() => handleSelectCity(city)}
-                    >
-                      <Text
-                        style={[
-                          styles.dropdownText,
-                          city === userCity && styles.dropdownTextActive,
-                        ]}
-                      >
-                        {city}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                />
-              </Pressable>
-            </Pressable>
-          </Modal>
-        </View>
-      )}
-
-      {/* Custom Language Dropdown */}
-      <View style={styles.dropdownContainer}>
-        <TouchableOpacity
-          style={[styles.dropdownButton, isRTL && styles.rowReverse]}
-          onPress={() => setDropdownOpen(!dropdownOpen)}
-        >
-          <Image source={{ uri: selectedLang.flag }} style={styles.flag} />
-          <Text style={styles.arrow}>{dropdownOpen ? "▲" : "▼"}</Text>
-        </TouchableOpacity>
-
-        {dropdownOpen && (
-          <View style={styles.dropdownList}>
-            {languages.map((lang) => (
-              <TouchableOpacity
-                key={lang.code}
-                style={[styles.dropdownItem, isRTL && styles.rowReverse]}
-                onPress={() => {
-                  switchLanguage(lang.code);
-                  setDropdownOpen(false);
-                }}
-              >
-                <Image source={{ uri: lang.flag }} style={styles.flag} />
-                <Text style={styles.dropdownText}>{lang.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-      </View>
-    </View>
-  );
+			{/* Always mounted (it's a modal, inert while closed) so an open
+			    request can never arrive before the sheet exists. */}
+			<LocationSheet
+				visible={locationOpen}
+				onClose={() => setLocationOpen(false)}
+				currentCity={userCity}
+				currentStreet={userStreet}
+				onSaved={(city) => setUserCity(city)}
+			/>
+		</View>
+	);
 }

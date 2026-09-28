@@ -1,5 +1,7 @@
 import { StyleSheet } from "react-native";
 
+import { colors, radius, spacing } from "@/constants/theme";
+
 export const styles = StyleSheet.create({
 	loadingIndicator: { flex: 1, justifyContent: "center" },
 	backButton: {
@@ -8,57 +10,9 @@ export const styles = StyleSheet.create({
 	listContent: {
 		paddingBottom: 120,
 	},
-	cancelModalOverlay: {
-		flex: 1,
-		justifyContent: "center",
-		alignItems: "center",
-		backgroundColor: "rgba(0,0,0,0.5)",
-	},
-	cancelModalCard: {
-		width: "85%",
-		backgroundColor: "#fff",
-		borderRadius: 8,
-		padding: 20,
-	},
-	cancelModalTitle: {
-		fontWeight: "bold",
-		marginBottom: 10,
-	},
-	cancelModalInput: {
-		borderWidth: 1,
-		borderColor: "#ccc",
-		borderRadius: 6,
-		padding: 10,
-		marginBottom: 15,
-		height: 80,
-		textAlignVertical: "top",
-	},
-	cancelModalActions: {
-		flexDirection: "row",
-		justifyContent: "space-between",
-	},
-	cancelModalCancelBtn: {
-		padding: 10,
-		backgroundColor: "#ccc",
-		borderRadius: 6,
-		flex: 1,
-		marginRight: 5,
-	},
-	cancelModalCancelText: {
-		textAlign: "center",
-		color: "#000",
-	},
-	cancelModalSubmitBtn: {
-		padding: 10,
-		backgroundColor: "red",
-		borderRadius: 6,
-		flex: 1,
-		marginLeft: 5,
-	},
-	cancelModalSubmitText: {
-		textAlign: "center",
-		color: "#fff",
-	},
+	sheetTitle: { fontSize: 18, fontWeight: "700", color: colors.text, marginBottom: spacing.sm },
+	sheetBody: { fontSize: 14, lineHeight: 20, color: colors.textMuted, marginBottom: spacing.md },
+	sheetActions: { gap: spacing.sm },
 	container: {
 		flex: 1,
 		padding: 12,
@@ -197,37 +151,31 @@ export const styles = StyleSheet.create({
 		gap: 6,
 		marginTop: 4,
 	},
+	// Compact action chips. Amber = go-forward actions (track / pay / repeat)
+	// with charcoal text; the one action that undoes an order is charcoal
+	// with white text so it reads as "different" without shouting.
 	actionBtn: {
 		flexDirection: "row",
 		alignItems: "center",
 		justifyContent: "center",
-		gap: 4,
-		paddingVertical: 7,
-		paddingHorizontal: 9,
-		borderRadius: 8,
+		gap: spacing.xs + 2,
+		minHeight: 36,
+		paddingVertical: spacing.sm,
+		paddingHorizontal: spacing.md - 2,
+		borderRadius: radius.badge,
 		minWidth: 44,
 	},
 	actionBtnText: {
-		color: "#fff",
+		color: colors.primaryText,
 		fontWeight: "700",
-		fontSize: 11,
+		fontSize: 12,
 		textAlign: "center",
 	},
-	trackBtn: {
-		backgroundColor: "#2563eb",
-	},
-	payBtn: {
-		backgroundColor: "#16a34a",
-	},
-	cancelBtn: {
-		backgroundColor: "#dc2626",
-	},
-	repeatBtn: {
-		backgroundColor: "#f4bb26",
-	},
-	repeatBtnText: {
-		color: "#222222",
-	},
+	trackBtn: { backgroundColor: colors.primary },
+	payBtn: { backgroundColor: colors.primary },
+	repeatBtn: { backgroundColor: colors.primary },
+	cancelBtn: { backgroundColor: colors.textSecondary },
+	cancelBtnText: { color: colors.textOnDark },
 	safeArea: {
 		flex: 1,
 		backgroundColor: "#f7f7f8",

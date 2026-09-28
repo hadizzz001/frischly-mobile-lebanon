@@ -1,9 +1,11 @@
+import Marquee from "@/components/Marquee";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { AnnouncementService } from "@/services/api";
 import { styles } from "@/styles/components/Textslide.styles";
 import type { Announcement } from "@/types";
 import type { NewsTickerProps } from "@/types/components/Textslide.types";
-import { Feather } from "@expo/vector-icons";
+import { Gift } from "lucide-react-native";
+import { colors } from "@/constants/theme";
 import { useEffect, useState } from "react";
 import {
     Modal,
@@ -12,10 +14,9 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import TextTicker from "react-native-text-ticker";
 
 export default function NewsTicker({ refreshTrigger }: NewsTickerProps) {
-	const { t, td, language } = useTranslation();
+	const { t, td, language, isRTL } = useTranslation();
 	const [textItems, setTextItems] = useState<string[]>([]);
 	const [promoData, setPromoData] = useState<Announcement[]>([]);
 	const [modalVisible, setModalVisible] = useState<boolean>(false);
@@ -42,7 +43,7 @@ export default function NewsTicker({ refreshTrigger }: NewsTickerProps) {
 	useEffect(() => {
 		setTextItems(
 			promoData.map(
-				(item) => `${td(item.title)}: ${td(item.description)}`,
+				(item) => `${td(item.title ?? "")}: ${td(item.description ?? "")}`,
 			),
 		);
 		// eslint-disable-next-line react-hooks/exhaustive-deps
@@ -58,20 +59,15 @@ export default function NewsTicker({ refreshTrigger }: NewsTickerProps) {
 				activeOpacity={0.8}
 			>
 				<View style={styles.iconContainer}>
-					<Feather name="gift" size={18} color="#f4bb26" />
+					<Gift size={14} strokeWidth={2} color={colors.primaryDark} />
 				</View>
 				<View style={styles.tickerContainer}>
-					<TextTicker
+					{/* Two copies, one linear loop, no pause: see components/Marquee. */}
+					<Marquee
+						text={combinedText}
 						style={styles.tickerText}
-						duration={30000}
-						loop
-						bounce={false}
-						repeatSpacer={80}
-						marqueeDelay={1500}
-						scrollSpeed={10}
-					>
-						{combinedText}
-					</TextTicker>
+						reverse={isRTL}
+					/>
 				</View>
 			</TouchableOpacity>
 
@@ -87,8 +83,8 @@ export default function NewsTicker({ refreshTrigger }: NewsTickerProps) {
 						<ScrollView style={styles.scrollView}>
 							{promoData.map((promo, index) => (
 								<View key={index} style={styles.promoCard}>
-									<Text style={styles.companyName}>{td(promo.title)}</Text>
-									<Text style={styles.description}>{td(promo.description)}</Text>
+									<Text style={styles.companyName}>{td(promo.title ?? "")}</Text>
+									<Text style={styles.description}>{td(promo.description ?? "")}</Text>
 								</View>
 							))}
 						</ScrollView>
@@ -104,3 +100,5 @@ export default function NewsTicker({ refreshTrigger }: NewsTickerProps) {
 		</View>
 	) : null;
 }
+
+// hmr-probe

@@ -1,13 +1,14 @@
 import { useTranslation } from "@/contexts/TranslationContext";
-import { ScrollView, Text } from "react-native";
+import { Text } from "react-native";
+
+import PolicyScreen from "@/components/PolicyScreen";
 import { styles } from "@/styles/app/privacy.styles";
 
 export default function PrivacyPolicy() {
 	const { t } = useTranslation();
 
 	return (
-		<ScrollView contentContainerStyle={styles.container}>
-			<Text style={styles.title}>{t("privacyTitle")}</Text>
+		<PolicyScreen title={t("privacyTitle")}>
 
 			<Text style={styles.paragraph}>{t("privacyIntro")}</Text>
 
@@ -38,6 +39,6 @@ export default function PrivacyPolicy() {
 				{"\n"}
 				{t("privacyContactAddress")}
 			</Text>
-		</ScrollView>
+		</PolicyScreen>
 	);
 }

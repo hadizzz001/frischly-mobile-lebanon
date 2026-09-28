@@ -157,7 +157,7 @@ export default function RepeatOrderButton() {
 						<ActivityIndicator color="#222222" />
 					) : (
 						<>
-							<MaterialCommunityIcons name="cart" size={20} color="#f4bb26" />
+							<MaterialCommunityIcons name="cart" size={20} color="#F59E0B" />
 							<Text style={styles.buttonText}>{t("repeatOrder")}</Text>
 						</>
 					)}

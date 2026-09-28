@@ -156,7 +156,7 @@ export default function FeedbackModal({
 						disabled={submitting}
 					>
 						{submitting ? (
-							<ActivityIndicator color="#000" />
+							<ActivityIndicator color="#111827" />
 						) : (
 							<Text style={styles.submitBtnText}>{t("submitFeedback")}</Text>
 						)}

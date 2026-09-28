@@ -1,255 +1,108 @@
 import { StyleSheet } from "react-native";
 
+import { colors, radius, shadow, spacing } from "@/constants/theme";
+
 export const styles = StyleSheet.create({
-	scrollContent: { paddingBottom: 160, flexGrow: 1 },
-	rowSpaceBetween: { flexDirection: "row", justifyContent: "space-between" },
-	flex1MarginRight: { flex: 1, marginRight: 4 },
-	flex1MarginLeft: { flex: 1, marginLeft: 4 },
-	modalOverlay: {
-		flex: 1,
-		justifyContent: "center",
-		alignItems: "center",
-		backgroundColor: "rgba(0,0,0,0.5)",
-	},
-	modalBox: {
-		backgroundColor: "#fff",
-		padding: 20,
-		borderRadius: 12,
-		width: "80%",
-		alignItems: "center",
-	},
-	modalTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 10 },
-	modalInput: {
-		borderWidth: 1,
-		borderColor: "#ccc",
-		borderRadius: 8,
-		padding: 10,
-		width: "100%",
-		marginBottom: 15,
-	},
-	modalButtonRow: { flexDirection: "row", justifyContent: "space-between", width: "100%" },
-	modalCancelButton: { flex: 1, backgroundColor: "#ccc", marginRight: 5 },
-	modalDeleteButton: { flex: 1, backgroundColor: "#FF4444", marginLeft: 5 },
-	blackBoldText: { color: "#000", fontWeight: "bold" },
-	whiteBoldText: { color: "#fff", fontWeight: "bold" },
-	container: {
-		flex: 1,
-		backgroundColor: "#FFFFFF",
-	},
+	container: { flex: 1, backgroundColor: colors.surface },
+	scrollContent: { paddingBottom: spacing.xl, flexGrow: 1 },
+
+	// --- header -------------------------------------------------------------------
 	header: {
 		alignItems: "center",
-		paddingVertical: 20, // reduced from 40
-		paddingHorizontal: 20,
-	},
-	avatarContainer: {
-		marginBottom: 16,
+		paddingVertical: spacing.lg,
+		paddingHorizontal: spacing.md,
+		backgroundColor: colors.background,
+		borderBottomWidth: 1,
+		borderBottomColor: colors.border,
 	},
 	avatar: {
-		width: 80,
-		height: 80,
-		borderRadius: 40,
-		backgroundColor: "#000000",
+		width: 72,
+		height: 72,
+		borderRadius: radius.full,
+		backgroundColor: colors.surfaceAlt,
 		justifyContent: "center",
 		alignItems: "center",
-		shadowColor: "#000",
-		shadowOffset: {
-			width: 0,
-			height: 2,
-		},
-		shadowOpacity: 0.1,
-		shadowRadius: 4,
-		elevation: 3,
+		marginBottom: spacing.sm,
 	},
-	title: {
-		fontSize: 28,
-		fontWeight: "bold",
-		color: "#000000",
-		marginBottom: 8,
+	name: { fontSize: 20, fontWeight: "700", color: colors.text, textAlign: "center" },
+	subtitle: { fontSize: 14, color: colors.textMuted, textAlign: "center", marginTop: 2 },
+
+	// --- grouped sections ---------------------------------------------------------
+	sectionTitle: {
+		fontSize: 12,
+		fontWeight: "700",
+		color: colors.textMuted,
+		textTransform: "uppercase",
+		letterSpacing: 0.5,
+		marginTop: spacing.lg,
+		marginBottom: spacing.sm,
+		marginHorizontal: spacing.md,
 	},
-	subtitle: {
-		fontSize: 16,
-		color: "#666666",
-		textAlign: "center",
+	group: {
+		marginHorizontal: spacing.md,
+		borderRadius: radius.card,
+		backgroundColor: colors.background,
+		...shadow.card,
+		overflow: "hidden",
 	},
-	infoCard: {
-		backgroundColor: "#FFFFFF",
-		margin: 20,
-		borderRadius: 16,
-		padding: 20,
-		shadowColor: "#000",
-		shadowOffset: {
-			width: 0,
-			height: 2,
-		},
-		shadowOpacity: 0.1,
-		shadowRadius: 8,
-		elevation: 4,
-		borderWidth: 1,
-		borderColor: "#F0F0F0",
-	},
-	guestCard: {
-		backgroundColor: "#FFFFFF",
-		margin: 20,
-		borderRadius: 16,
-		padding: 40,
-		alignItems: "center",
-		shadowColor: "#000",
-		shadowOffset: {
-			width: 0,
-			height: 2,
-		},
-		shadowOpacity: 0.1,
-		shadowRadius: 8,
-		elevation: 4,
-		borderWidth: 1,
-		borderColor: "#F0F0F0",
-	},
-	guestText: {
-		fontSize: 18,
-		fontWeight: "600",
-		color: "#000000",
-		marginTop: 16,
-		textAlign: "center",
-	},
-	guestSubtext: {
-		fontSize: 14,
-		color: "#666666",
-		marginTop: 8,
-		textAlign: "center",
-	},
-	cardTitle: {
-		fontSize: 20,
-		fontWeight: "bold",
-		color: "#000000",
-		marginBottom: 20,
-	},
-	infoRow: {
+	tile: {
 		flexDirection: "row",
 		alignItems: "center",
-		paddingVertical: 12,
+		gap: spacing.md,
+		minHeight: 60,
+		paddingHorizontal: spacing.md,
+		paddingVertical: spacing.sm,
 		borderBottomWidth: 1,
-		borderBottomColor: "#F5F5F5",
+		borderBottomColor: colors.border,
 	},
-	iconContainer: {
+	tileLast: { borderBottomWidth: 0 },
+	tilePressed: { backgroundColor: colors.surface },
+	iconPill: {
 		width: 40,
 		height: 40,
-		borderRadius: 20,
-		backgroundColor: "#FFF8E1",
-		justifyContent: "center",
-		alignItems: "center",
-		marginRight: 16,
-	},
-	infoContent: {
-		flex: 1,
-	},
-	infoLabel: {
-		fontSize: 12,
-		color: "#666666",
-		textTransform: "uppercase",
-		fontWeight: "600",
-		letterSpacing: 0.5,
-		textAlign: "center",
-	},
-	infoValue: {
-		fontSize: 16,
-		color: "#000000",
-		fontWeight: "500",
-		marginTop: 2,
-		textAlign: "center",
-	},
-	addressSection: {
-		marginTop: 20,
-		paddingTop: 20,
-		borderTopWidth: 1,
-		borderTopColor: "#E0E0E0",
-	},
-	sectionTitle: {
-		fontSize: 18,
-		fontWeight: "700",
-		color: "#f4bb26",
-		textAlign: "center",
-		marginBottom: 16,
-		letterSpacing: 1,
-	},
-	actionsContainer: {
-		paddingHorizontal: 20,
-		paddingBottom: 200, // extra space for safe scroll
-	},
-	actionButton: {
-		flexDirection: "row",
+		borderRadius: radius.full,
+		backgroundColor: colors.surfaceAlt,
 		alignItems: "center",
 		justifyContent: "center",
-		paddingVertical: 16,
-		paddingHorizontal: 24,
-		borderRadius: 12,
-		marginVertical: 8,
-		shadowColor: "#000",
-		shadowOffset: {
-			width: 0,
-			height: 2,
-		},
-		shadowOpacity: 0.1,
-		shadowRadius: 4,
-		elevation: 3,
 	},
-	loginButton: {
-		backgroundColor: "#f4bb26",
+	tileBody: { flex: 1 },
+	tileLabel: { fontSize: 12, color: colors.textMuted, fontWeight: "600" },
+	tileValue: { fontSize: 15, color: colors.text, fontWeight: "500", marginTop: 2 },
+	tileTitle: { fontSize: 15, color: colors.text, fontWeight: "600" },
+	tileHint: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+	tag: {
+		paddingHorizontal: spacing.sm,
+		paddingVertical: 2,
+		borderRadius: radius.badge,
+		backgroundColor: colors.primarySoft,
 	},
-	logoutButton: {
-		backgroundColor: "#f4bb26",
-	},
-	deleteButton: {
-		backgroundColor: "#FF4444",
-	},
-	buttonIcon: {
-		marginRight: 8,
-	},
-	actionButtonText: {
-		fontSize: 16,
-		fontWeight: "600",
-	},
-	loginText: {
-		color: "#000000",
-	},
-	logoutText: {
-		color: "#000000",
-	},
-	deleteText: {
-		color: "#FFFFFF",
-	},
-	viewOrdersButton: {
-		backgroundColor: "#f4bb26", // example yellow or keep same style as others
-	},
-
-	viewOrdersText: {
-		color: "#000",
-	},
-
-	rowActions: {
+	tagText: { fontSize: 11, fontWeight: "700", color: colors.primaryPressed },
+	segmented: {
 		flexDirection: "row",
-		justifyContent: "space-between",
-		marginBottom: 16,
+		backgroundColor: colors.surfaceAlt,
+		borderRadius: radius.badge,
+		padding: 2,
 	},
-
-	actionButtonSmall: {
-		flexDirection: "row",
+	segment: {
+		paddingHorizontal: spacing.md,
+		height: 32,
+		borderRadius: radius.badge - 2,
 		alignItems: "center",
 		justifyContent: "center",
-		paddingVertical: 12,
-		paddingHorizontal: 14,
-		borderRadius: 10,
-		flex: 1,
-		marginHorizontal: 4,
-		backgroundColor: "#f4bb26",
-		shadowColor: "#000",
-		shadowOffset: { width: 0, height: 2 },
-		shadowOpacity: 0.1,
-		shadowRadius: 4,
-		elevation: 3,
 	},
+	segmentActive: { backgroundColor: colors.background, ...shadow.card },
+	segmentText: { fontSize: 13, fontWeight: "600", color: colors.textMuted },
+	segmentTextActive: { color: colors.text },
 
-	actionButtonTextSmall: {
-		fontSize: 14,
-		fontWeight: "600",
-	},
+	// --- account actions ------------------------------------------------------------
+	actions: { marginHorizontal: spacing.md, marginTop: spacing.lg, gap: spacing.sm },
+	destructiveText: { color: colors.danger },
+
+	// --- guest ------------------------------------------------------------------------
+	guestActions: { width: "100%", maxWidth: 320, gap: spacing.sm, marginTop: spacing.lg },
+
+	// --- sheets ---------------------------------------------------------------------------
+	sheetTitle: { fontSize: 18, fontWeight: "700", color: colors.text, marginBottom: spacing.sm },
+	sheetBody: { fontSize: 14, lineHeight: 20, color: colors.textMuted, marginBottom: spacing.md },
+	sheetActions: { gap: spacing.sm },
 });

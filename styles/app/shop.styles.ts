@@ -1,319 +1,99 @@
 import { StyleSheet } from "react-native";
 
-import { SHOP_ITEM_WIDTH as ITEM_WIDTH } from "@/constants/layout";
+import { GRID_GUTTER, PRODUCT_GRID_GAP } from "@/constants/layout";
+import { colors, radius, spacing } from "@/constants/theme";
 
 export const styles = StyleSheet.create({
-	container: { flex: 1, backgroundColor: "#FFFFFF" },
-	centerAlignItems: { alignItems: "center" },
-	activeYellowBg: { backgroundColor: "#f4bb26" },
-	activeLabelText: { color: "#000", fontWeight: "700" },
-	flex1PaddingH10: { flex: 1, paddingHorizontal: 10 },
-	marketNameTitle: { fontSize: 18, fontWeight: "700", color: "#000" },
-	subcategoryScrollContent: { alignItems: "center", paddingHorizontal: 8, paddingVertical: 8 },
-	listContentPadding120: { paddingBottom: 120 },
-	emptyStateContainer: { paddingVertical: 40, alignItems: "center" },
-	emptyStateText: { color: "#777", fontSize: 14 },
-	filterScrollContent: { padding: 20 },
-	filterLabel: { marginTop: 20, marginBottom: 5 },
-	blackText: { color: "#000" },
+	safeArea: { flex: 1, backgroundColor: colors.background },
+	container: { flex: 1, backgroundColor: colors.background },
+
+	// --- top bar: back · category chips · filter --------------------------------
+	categoryHeader: {
+		flexDirection: "row",
+		alignItems: "center",
+		paddingHorizontal: spacing.sm,
+		paddingVertical: spacing.sm,
+		gap: spacing.sm,
+		borderBottomWidth: 1,
+		borderBottomColor: colors.border,
+	},
+	categoryBar: { flex: 1 },
+	centerAlignItems: { alignItems: "center", gap: spacing.sm, paddingRight: spacing.sm },
+	flex1PaddingH10: { flex: 1, paddingHorizontal: spacing.sm },
+	marketNameTitle: { fontSize: 18, fontWeight: "700", color: colors.text },
+	filterBtn: {
+		width: 44,
+		height: 44,
+		borderRadius: radius.card,
+		backgroundColor: colors.surfaceAlt,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	filterBtnActive: { backgroundColor: colors.primary },
+	filterBadge: {
+		position: "absolute",
+		top: -4,
+		right: -4,
+		minWidth: 18,
+		height: 18,
+		paddingHorizontal: 4,
+		borderRadius: radius.full,
+		backgroundColor: colors.text,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	filterBadgeText: { color: colors.textOnDark, fontSize: 10, fontWeight: "700" },
+
+	subcategoryBar: { maxHeight: 52 },
+	subcategoryScrollContent: {
+		alignItems: "center",
+		gap: spacing.sm,
+		paddingHorizontal: GRID_GUTTER,
+		paddingVertical: spacing.sm,
+	},
+
+	// --- grid -------------------------------------------------------------------------
+	listContent: {
+		paddingHorizontal: GRID_GUTTER,
+		paddingTop: spacing.md,
+		flexGrow: 1,
+	},
+	skeletonWrap: { paddingTop: spacing.md },
+	// One row of the 3-column grid (FlatList columnWrapper / SectionList row).
+	// flexDirection is explicit because the SectionList path builds its rows by
+	// hand (FlatList's columnWrapper already lays out horizontally).
+	searchRow: { flexDirection: "row", gap: PRODUCT_GRID_GAP, marginBottom: PRODUCT_GRID_GAP },
+	footerLoader: { marginVertical: spacing.md },
+
+	// --- global-search section headers -----------------------------------------------
+	sectionHeader: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: spacing.sm,
+		marginTop: spacing.sm,
+		marginBottom: spacing.md,
+	},
+	sectionHeaderText: {
+		flexShrink: 1,
+		fontSize: 16,
+		fontWeight: "700",
+		color: colors.text,
+	},
+	sectionHeaderCount: { fontSize: 13, color: colors.textMuted },
+
+	// --- voice / multi-term search header ----------------------------------------
 	voiceHeader: {
-		paddingHorizontal: 12,
-		paddingTop: 10,
-		paddingBottom: 4,
+		marginBottom: spacing.md,
+		padding: spacing.md,
+		borderRadius: radius.card,
+		backgroundColor: colors.surface,
 	},
 	voiceHeaderTitleRow: {
 		flexDirection: "row",
 		alignItems: "center",
-		gap: 6,
-		marginBottom: 8,
+		gap: spacing.sm,
+		marginBottom: spacing.sm,
 	},
-	voiceHeaderTitle: {
-		fontSize: 14,
-		fontWeight: "700",
-		color: "#333",
-	},
-	voiceChipsRow: {
-		flexDirection: "row",
-		flexWrap: "wrap",
-		gap: 8,
-	},
-	voiceChip: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 6,
-		backgroundColor: "#fff3d1",
-		borderColor: "#f4bb26",
-		borderWidth: 1,
-		paddingVertical: 5,
-		paddingHorizontal: 12,
-		borderRadius: 16,
-	},
-	voiceChipText: {
-		fontSize: 13,
-		color: "#5f4a08",
-		fontWeight: "600",
-		textTransform: "capitalize",
-	},
-	searchRow: {
-		flexDirection: "row",
-	},
-	sectionHeader: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 6,
-		paddingHorizontal: 12,
-		paddingVertical: 10,
-		marginHorizontal: 8,
-		marginTop: 12,
-		marginBottom: 4,
-		backgroundColor: "#fff8e6",
-		borderRadius: 8,
-	},
-	sectionHeaderText: {
-		flexShrink: 1,
-		fontSize: 15,
-		fontWeight: "700",
-		color: "#333",
-	},
-	sectionHeaderCount: {
-		fontSize: 13,
-		color: "#999",
-		fontWeight: "500",
-	},
-	loader: {
-		flex: 1,
-		justifyContent: "center",
-		alignItems: "center",
-		backgroundColor: "#FFFFFF",
-	},
-	categoryHeader: {
-		flexDirection: "row",
-		alignItems: "center",
-		paddingHorizontal: 8,
-		paddingVertical: 6,
-	},
-	backButton: { marginRight: 6, padding: 4 },
-	categoryBar: { flex: 1 },
-	categoryBtn: {
-		paddingVertical: 6,
-		paddingHorizontal: 14,
-		borderRadius: 20,
-		marginRight: 10,
-	},
-	categoryText: { fontSize: 14, fontWeight: "500", color: "#000000" },
-	subcategoryBar: {
-		backgroundColor: "#fafafa",
-		borderBottomWidth: 1,
-		borderBottomColor: "#eee",
-	},
-	subcategoryBtn: {
-		paddingVertical: 5,
-		paddingHorizontal: 12,
-		borderRadius: 16,
-		marginRight: 8,
-		backgroundColor: "#eee",
-	},
-	subcategoryBtnActive: { backgroundColor: "#f4bb26" },
-	subcategoryText: { fontSize: 13, fontWeight: "500", color: "#333" },
-	grid: { padding: 10 },
-	card: {
-		width: ITEM_WIDTH,
-		margin: 4, // smaller margin for 3 items per row
-		backgroundColor: "#FFFFFF",
-		padding: 8,
-	},
-
-	imageWrapper: {
-		position: "relative",
-		width: "100%",
-		height: 150,
-		marginBottom: 6,
-	},
-	image: { width: "100%", height: "100%" },
-
-	discountBadge: {
-		position: "absolute",
-		top: 8,
-		right: 8,
-		backgroundColor: "#f4bb26",
-		paddingHorizontal: 6,
-		paddingVertical: 2,
-		borderRadius: 4,
-	},
-	discountText: { color: "#FFFFFF", fontSize: 12, fontWeight: "700" },
-	name: { fontSize: 13, fontWeight: "500", marginBottom: 4, color: "#000000" },
-	weight: { fontSize: 11, color: "#888", marginBottom: 4 },
-	priceRow: { flexDirection: "row", alignItems: "center" },
-	oldPrice: {
-		textDecorationLine: "line-through",
-		color: "#000000",
-		marginRight: 6,
-		fontSize: 13,
-	},
-	newPrice: { fontSize: 15, fontWeight: "700", color: "#000000" },
-	basePrice: {
-		textDecorationLine: "line-through",
-		color: "#000000",
-		marginRight: 6,
-		fontSize: 13,
-	},
-	finalPrice: { fontSize: 15, fontWeight: "700", color: "red" },
-	pagination: {
-		flexDirection: "row",
-		justifyContent: "center",
-		alignItems: "center",
-		paddingVertical: 10,
-		backgroundColor: "#FFFFFF",
-	},
-	arrowButton: { padding: 6 },
-
-	// Tabs
-	tabBar: {
-		flexDirection: "row",
-		justifyContent: "space-around",
-		paddingVertical: 12,
-		backgroundColor: "#FFFFFF",
-	},
-	tabButton: { alignItems: "center", justifyContent: "center" },
-	cartBadge: {
-		position: "absolute",
-		right: -6,
-		top: -3,
-		backgroundColor: "red",
-		borderRadius: 8,
-		width: 12,
-		height: 12,
-	},
-	overlay: {
-		position: "absolute",
-		top: 0,
-		left: 0,
-		right: 0,
-		bottom: 0,
-		backgroundColor: "rgba(255,255,255,1)",
-		zIndex: 100,
-		paddingTop: 50,
-	},
-	closeBtn: {
-		position: "absolute",
-		top: 40,
-		right: 20,
-		width: 40,
-		height: 40,
-		borderRadius: 20,
-		justifyContent: "center",
-		alignItems: "center",
-		zIndex: 200,
-	},
-	overlayContentProfile: {
-		paddingTop: 100,
-		paddingHorizontal: 20,
-		alignItems: "flex-start",
-	},
-	overlayContentMenu: {
-		flexGrow: 1,
-		justifyContent: "center",
-		alignItems: "center",
-		paddingHorizontal: 20,
-	},
-	item: { fontSize: 16, marginVertical: 10, color: "#000" },
-	row: { flexDirection: "row", alignItems: "center", marginVertical: 8 },
-	title: { fontSize: 20, fontWeight: "bold", marginBottom: 8 },
-	button: {
-		backgroundColor: "#f4bb26",
-		paddingVertical: 12,
-		paddingHorizontal: 16,
-		borderRadius: 8,
-		marginTop: 10,
-		alignItems: "center",
-	},
-	buttonText: {
-		color: "#000",
-		fontWeight: "bold",
-		fontSize: 16,
-	},
-	checkboxRow: {
-		flexDirection: "row",
-		justifyContent: "space-between",
-		alignItems: "center",
-		paddingVertical: 12,
-		paddingHorizontal: 16,
-		borderRadius: 8,
-		borderWidth: 1,
-		borderColor: "#ccc",
-		marginTop: 10,
-	},
-	checkbox: {
-		width: 20,
-		height: 20,
-		borderRadius: 4,
-		borderWidth: 2,
-		borderColor: "#000",
-	},
-	checkboxActive: {
-		backgroundColor: "#f4bb26",
-		borderColor: "#f4bb26",
-	},
-	qtyRow: {
-		flexDirection: "row",
-		justifyContent: "center",
-		alignItems: "center",
-		marginTop: 6,
-	},
-
-	qtyContainer: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "space-between",
-	},
-
-	qtyBtn: {
-		backgroundColor: "#f4bb26",
-		borderRadius: 4,
-		paddingHorizontal: 10,
-		paddingVertical: 8,
-		marginHorizontal: 4,
-	},
-
-	qtyText: { color: "#000", fontSize: 16, fontWeight: "700" },
-	qtyValue: { marginHorizontal: 4, fontSize: 14, fontWeight: "700" },
-
-	// ✅ Overlay on product image (transparent dark layer)
-	outOfStockOverlay: {
-		position: "absolute",
-		top: 0,
-		left: 0,
-		right: 0,
-		bottom: 0,
-		backgroundColor: "rgba(0,0,0,0.55)",
-		justifyContent: "center",
-		alignItems: "center",
-		zIndex: 10,
-	},
-
-	outOfStockText: {
-		color: "#fff",
-		fontWeight: "700",
-		fontSize: 16,
-		textAlign: "center",
-	},
-
-	// ✅ Overlay for filter screen (white background)
-	filterOverlay: {
-		position: "absolute",
-		top: 0,
-		left: 0,
-		right: 0,
-		bottom: 0,
-		backgroundColor: "rgba(255,255,255,1)",
-		zIndex: 100,
-		paddingTop: 50,
-	},
-
-	input: {},
-
-	safeArea: {
-		flex: 1,
-		backgroundColor: "#fff",
-	},
+	voiceHeaderTitle: { fontSize: 14, fontWeight: "700", color: colors.text },
+	voiceChipsRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
 });

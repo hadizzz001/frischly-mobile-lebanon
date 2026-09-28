@@ -3,7 +3,7 @@ import { Platform, StyleSheet } from "react-native";
 export const styles = StyleSheet.create({
 	wrapper: {
 		borderWidth: 1,
-		borderColor: "#ccc",
+		borderColor: "#d1d5db",
 		borderRadius: 15,
 		justifyContent: "center",
 		overflow: "hidden",
@@ -14,8 +14,8 @@ export const styles = StyleSheet.create({
 		}),
 	},
 	wrapperDisabled: {
-		backgroundColor: "#f2f2f2",
-		borderColor: "#ddd",
+		backgroundColor: "#f8f8f8",
+		borderColor: "#d1d5db",
 	},
 	picker: {
 		width: "100%",

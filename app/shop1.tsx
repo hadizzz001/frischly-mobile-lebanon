@@ -1,6 +1,17 @@
 "use client";
-import { useBooleanValue } from "@/contexts/CartBoolContext";
-import { useCart } from "@/contexts/CartContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
+import type { ViewToken } from "react-native";
+import { ScrollView, SectionList, Text, View } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+
+import ProductCard from "@/components/ProductCard";
+import RegionEmptyState from "@/components/RegionEmptyState";
+import BackButton from "@/components/ui/BackButton";
+import EmptyState from "@/components/ui/EmptyState";
+import { ProductGridSkeleton } from "@/components/ui/Skeleton";
+import { PRODUCT_GRID_COLUMNS, SHOP1_ITEM_WIDTH } from "@/constants/layout";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { AuthService, ProductService } from "@/services/api";
 import { styles } from "@/styles/app/shop1.styles";
@@ -8,49 +19,20 @@ import type { Product, User } from "@/types";
 import { isServedByAdmin } from "@/utils/cityVisibility";
 import { rtlRow } from "@/utils/rtl";
 import { getUserCityAndPin } from "@/utils/userCity";
-import { Feather } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
-import type { ViewToken } from "react-native";
-import {
-    ActivityIndicator,
-    Image,
-    SectionList,
-    Text,
-    TouchableOpacity,
-    View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import type { ProductSection } from "@/types/app/shop1.types";
 
 export default function ShopPage() {
 	const router = useRouter();
+	const insets = useSafeAreaInsets();
 	const { category } = useLocalSearchParams<{ category?: string }>();
-	const { cart, addToCart, removeFromCart } = useCart(); // ✅ Cart context
-	const { isBooleanValue, setBooleanValue } = useBooleanValue();
 	const { t, td, isRTL } = useTranslation();
 
-	const [user, setUser] = useState<User | null>(null);
+	const [, setUser] = useState<User | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [sections, setSections] = useState<ProductSection[]>([]);
-	const [quantities, setQuantities] = useState<Record<string, number>>({});
-	const [showQty, setShowQty] = useState<Record<string, boolean>>({}); // track which products show qty
 	const [currentSectionTitle, setCurrentSectionTitle] = useState("");
-
-	// Keep the +/- quantity UI in sync with the actual cart (also reflects a
-	// cart "restore" when switching markets).
-	useEffect(() => {
-		const nextQuantities: Record<string, number> = {};
-		const nextShowQty: Record<string, boolean> = {};
-		cart.forEach((cartItem) => {
-			nextQuantities[cartItem._id] = cartItem.quantity || 1;
-			nextShowQty[cartItem._id] = true;
-		});
-		setQuantities(nextQuantities);
-		setShowQty(nextShowQty);
-	}, [cart]);
+	const [unservedCity, setUnservedCity] = useState<string | null>(null);
 
 	// Fetch products by category
 	const fetchProducts = async () => {
@@ -61,9 +43,11 @@ export default function ShopPage() {
 			// serves AND whose exact map pin falls inside the admin's configured
 			// delivery-range circle(s), when set. Guests (no city/pin) and an
 			// unconfigured admin still see everything.
+			setUnservedCity(null);
 			const { city, pin } = await getUserCityAndPin();
 			if (!(await isServedByAdmin(city, pin))) {
 				setSections([]);
+				setUnservedCity(city);
 				return;
 			}
 
@@ -89,8 +73,8 @@ export default function ShopPage() {
 				const sectionsData = Object.keys(grouped).map((subName) => {
 					const products = grouped[subName];
 					const rows: Product[][] = [];
-					for (let i = 0; i < products.length; i += 3) {
-						rows.push(products.slice(i, i + 3));
+					for (let i = 0; i < products.length; i += PRODUCT_GRID_COLUMNS) {
+						rows.push(products.slice(i, i + PRODUCT_GRID_COLUMNS));
 					}
 					return {
 						title: subName,
@@ -134,36 +118,6 @@ export default function ShopPage() {
 		checkLogin();
 	}, []);
 
-	const increaseQty = (product: Product) => {
-		const currentQty = quantities[product._id] || 0;
-		// Do not allow increasing beyond stock
-		if (currentQty >= product.stock) return;
-
-		const newQty = currentQty + 1;
-		// Adding from a different market shows a confirm dialog and is applied
-		// asynchronously, so only reflect the change locally when it was added.
-		const result = addToCart(product, newQty);
-		if (result?.added) {
-			setQuantities({ ...quantities, [product._id]: newQty });
-			setShowQty({ ...showQty, [product._id]: true });
-		}
-	};
-
-	const decreaseQty = (product: Product) => {
-		const currentQty = quantities[product._id] || 0;
-		if (currentQty <= 1) {
-			const updatedQuantities = { ...quantities };
-			delete updatedQuantities[product._id];
-			setQuantities(updatedQuantities);
-			removeFromCart(product._id);
-			setShowQty({ ...showQty, [product._id]: false });
-		} else {
-			const newQty = currentQty - 1;
-			setQuantities({ ...quantities, [product._id]: newQty });
-			addToCart(product, newQty);
-		}
-	};
-
 	const onViewableItemsChanged = ({
 		viewableItems,
 	}: {
@@ -187,116 +141,33 @@ export default function ShopPage() {
 		}
 	};
 
-	const renderProduct = (item: Product) => {
-		const basePrice = item.price || 0;
-		const discountPercent = item.discount || 0;
-		const taxPercent = item.tax || 0;
-		const bottleRefund = item.bottlerefund || 0;
+	const renderProduct = (item: Product) => (
+		<ProductCard key={item._id} product={item} width={SHOP1_ITEM_WIDTH} />
+	);
 
-		const discountAmount = (basePrice * discountPercent) / 100;
-		const priceAfterDiscount = basePrice - discountAmount;
-		const taxAmount = (priceAfterDiscount * taxPercent) / 100;
-		const finalPrice = priceAfterDiscount + taxAmount + bottleRefund;
-
-		const isQtyVisible = showQty[item._id] || false;
-
-		return (
-			<TouchableOpacity
-				key={item._id}
-				onPress={() => router.push(`/product/${item._id}`)}
-				activeOpacity={0.8}
-			>
-				<View style={styles.card}>
-					<View style={styles.imageWrapper}>
-						<Image
-							source={{
-								uri: item.picture || "https://via.placeholder.com/150",
-							}}
-							style={styles.image}
-							resizeMode="contain"
-						/>
-						{item.stock === 0 && (
-							<View style={styles.overlay}>
-								<Text style={styles.outOfStockText}>{t("out")}</Text>
-							</View>
-						)}
-						{discountPercent > 0 && (
-							<View style={styles.discountBadge}>
-								<Text style={styles.discountText}>-{discountPercent}%</Text>
-							</View>
-						)}
-					</View>
-
-					<Text style={styles.name} numberOfLines={2}>
-						{td(item.name)}
-					</Text>
-					<Text style={styles.finalPrice}>${finalPrice.toFixed(2)}</Text>
-
-					{/* Add to Cart / Quantity Selector */}
-					<View style={styles.qtyRow}>
-						{item.stock > 0 ? ( // Only show if stock > 0
-							isQtyVisible ? (
-								<>
-									<TouchableOpacity
-										onPress={() => decreaseQty(item)}
-										style={styles.qtyBtn}
-									>
-										<Text style={styles.qtyText}>-</Text>
-									</TouchableOpacity>
-
-									<Text style={styles.qtyValue}>
-										{quantities[item._id] || 1}
-									</Text>
-
-									<TouchableOpacity
-										onPress={() => increaseQty(item)}
-										style={[
-											styles.qtyBtn,
-											quantities[item._id] >= item.stock && { opacity: 0.5 }, // visually disable
-										]}
-										disabled={quantities[item._id] >= item.stock} // actually disable button
-									>
-										<Text style={styles.qtyText}>+</Text>
-									</TouchableOpacity>
-								</>
-							) : (
-								<TouchableOpacity
-									onPress={() => increaseQty(item)}
-									style={[
-										styles.qtyBtn,
-										{ paddingHorizontal: 12, paddingVertical: 6 },
-									]}
-								>
-									<Feather name="shopping-cart" size={20} color="#fff" />
-								</TouchableOpacity>
-							)
-						) : null}
-					</View>
-				</View>
-			</TouchableOpacity>
-		);
-	};
+	const header = (
+		<View style={[styles.header, rtlRow(isRTL)]}>
+			<BackButton />
+			<Text style={styles.headerTitle} numberOfLines={1}>
+				{td(category ?? "")}
+			</Text>
+		</View>
+	);
 
 	if (loading) {
 		return (
-			<View style={styles.loader}>
-				<ActivityIndicator size="large" color="#f4bb26" />
-			</View>
+			<SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
+				{header}
+				<ScrollView contentContainerStyle={styles.skeletonWrap} scrollEnabled={false}>
+					<ProductGridSkeleton count={6} />
+				</ScrollView>
+			</SafeAreaView>
 		);
 	}
 
 	return (
 		<SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
-			{/* Back Button */}
-			<View style={[styles.header, rtlRow(isRTL)]}>
-				<TouchableOpacity
-					onPress={() => router.back()}
-					style={styles.backButton}
-				>
-					<Feather name="chevron-left" size={24} color="#000" />
-				</TouchableOpacity>
-				<Text style={styles.headerTitle}>{td(category)}</Text>
-			</View>
+			{header}
 
 			{/* Floating Sticky Header Alternative */}
 			{currentSectionTitle ? (
@@ -320,7 +191,10 @@ export default function ShopPage() {
 				renderSectionHeader={({ section: { title } }) => (
 					<Text style={styles.subcategoryTitle}>{td(title)}</Text>
 				)}
-				contentContainerStyle={styles.listContentPadding}
+				contentContainerStyle={[
+					styles.listContentPadding,
+					{ paddingBottom: Math.max(insets.bottom, 16) + 96 },
+				]}
 				showsVerticalScrollIndicator={false}
 				initialNumToRender={10}
 				maxToRenderPerBatch={10}
@@ -331,7 +205,17 @@ export default function ShopPage() {
 					itemVisiblePercentThreshold: 50,
 				}}
 				ListEmptyComponent={
-					<Text style={styles.emptyText}>{t("noProductsInCategory")}</Text>
+					unservedCity !== null ? (
+						<RegionEmptyState region={unservedCity} />
+					) : (
+						<EmptyState
+							illustration="search"
+							title={t("noProductsInCategory")}
+							description={t("searchNoResultsBody")}
+							actionLabel={t("browseCategories")}
+							onAction={() => router.push("/menu")}
+						/>
+					)
 				}
 			/>
 		</SafeAreaView>

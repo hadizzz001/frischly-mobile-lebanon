@@ -1,3 +1,4 @@
+import BackButton from "@/components/ui/BackButton";
 import { RIDER_TRACKING_POLL_MS as POLL_MS } from "@/constants/timing";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { ApiError, OrderService } from "@/services/api";
@@ -5,6 +6,7 @@ import type { RiderLocationInfo } from "@/services/api/orderService";
 import { styles } from "@/styles/app/track/[id].styles";
 import type { LatLng, ResolvedLocation } from "@/utils/geocode";
 import { resolveRiderLocation } from "@/utils/geocode";
+import { MAP_WEBVIEW_APP_NAME } from "@/constants/map";
 import { buildMapHtml } from "@/utils/maps/riderMapHtml";
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -189,6 +191,7 @@ export default function TrackOrderScreen() {
 						originWhitelist={["*"]}
 						source={{ html: initialHtml }}
 						style={styles.map}
+						applicationNameForUserAgent={MAP_WEBVIEW_APP_NAME}
 						onLoadEnd={() => {
 							webReadyRef.current = true;
 							const pending = pendingCoordsRef.current;
@@ -267,9 +270,7 @@ export default function TrackOrderScreen() {
 			<Stack.Screen options={{ headerShown: false }} />
 
 			<View style={styles.header}>
-				<TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-					<Feather name="arrow-left" size={22} color="#111" />
-				</TouchableOpacity>
+				<BackButton onPress={() => router.back()} style={styles.backBtn} />
 				<Text style={styles.headerTitle} numberOfLines={1}>
 					{t("trackDriver")}
 					{orderNumber ? ` · #${orderNumber}` : ""}

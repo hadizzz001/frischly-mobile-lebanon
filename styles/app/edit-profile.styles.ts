@@ -35,7 +35,7 @@ export const styles = StyleSheet.create({
 	},
 	syncingText: { color: "#7a6a2e", fontSize: 13, fontWeight: "600", lineHeight: 18, flex: 1, flexWrap: "wrap" },
 	saveBtn: {
-		backgroundColor: "#f4bb26",
+		backgroundColor: "#F59E0B",
 		padding: 16,
 		borderRadius: 12,
 		marginTop: 16,

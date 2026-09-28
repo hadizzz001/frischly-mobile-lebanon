@@ -2,6 +2,7 @@ import { HapticTab } from "@/components/HapticTab";
 import TabBarBackground from "@/components/ui/TabBarBackground";
 import { API_BASE_URL } from "@/constants/api";
 import { globalStyles } from "@/constants/GlobalStyles";
+import { colors } from "@/constants/theme";
 import { VISIBLE_TABS } from "@/constants/navigation";
 import { useCart } from "@/contexts/CartContext";
 import { Feather } from "@expo/vector-icons";
@@ -19,76 +20,59 @@ export default function TabLayout() {
 	const visibleTabs = VISIBLE_TABS;
 	// Check login
 useEffect(() => {
-	const checkLogin = async () => {
-		console.log("🔍 checkLogin started");
+		// Guest launches have NO userData at all: every read below is optional
+		// so an unauthenticated session renders the tabs instead of crashing.
+		const checkLogin = async () => {
+			try {
+				const userData = await AsyncStorage.getItem("userData");
+				const guest = await AsyncStorage.getItem("guest");
 
-		const userData = await AsyncStorage.getItem("userData");
-		const guest = await AsyncStorage.getItem("guest");
+				if (!userData && !guest) {
+					router.replace("/start");
+					return;
+				}
 
-		console.log("📦 userData:", userData);
-		console.log("👤 guest:", guest);
+				const parsedUser = userData ? JSON.parse(userData) : null;
+				const token = parsedUser?.token ?? null;
+				if (!token) {
+					setLoading(false);
+					return;
+				}
 
-		if (!userData && !guest) {
-			console.warn("🚪 No user or guest found → redirecting");
-			router.replace("/start");
-			return;
-		}
-
-		try {
-			const parsedUser = userData ? JSON.parse(userData) : null;
-			const token = parsedUser?.token;
-
-			console.log("🔑 Auth token:", token);
-
-			if (!token) {
-				console.error("⚠️ No token found in userData");
-				setLoading(false);
-				return;
-			}
-
-			// 🔹 Fetch logged-in user
-			console.log("📡 Fetching /api/auth/me");
-
-			const res = await fetch(
-				`${API_BASE_URL}/auth/me`,
-				{
+				// Warm the profile so downstream screens have a fresh copy; a
+				// failure here must never block the tabs.
+				const res = await fetch(`${API_BASE_URL}/auth/me`, {
 					headers: {
 						Authorization: `Bearer ${token}`,
 						"Content-Type": "application/json",
 					},
+				});
+				if (res.ok) {
+					const data = await res.json().catch(() => null);
+					const user = data?.data?.user ?? null;
+					if (user && parsedUser) {
+						await AsyncStorage.setItem(
+							"userData",
+							JSON.stringify({ ...parsedUser, user }),
+						);
+					}
 				}
-			);
-
-			console.log("📨 /me response status:", res.status);
-
-			if (!res.ok) {
-				console.error("❌ Failed to fetch user");
+			} catch (err) {
+				console.error("checkLogin error:", err);
+			} finally {
 				setLoading(false);
-				return;
 			}
+		};
 
-			const data = await res.json();
-			const user = data.data.user;
-
-			console.log("✅ User fetched:", user);
-
-		} catch (err) {
-			console.error("🔥 Network/Fetch error:", err);
-		}
-
-		setLoading(false);
-		console.log("🏁 checkLogin finished");
-	};
-
-	checkLogin();
-}, [router]);
+		checkLogin();
+	}, [router]);
 
  
 
 	if (loading) {
 		return (
 			<View style={styles.loader}>
-				<ActivityIndicator size="large" color="#f4bb26" />
+				<ActivityIndicator size="large" color={colors.primary} />
 			</View>
 		);
 	}
@@ -102,8 +86,8 @@ useEffect(() => {
 			<Tabs
 				screenOptions={{
 					tabBarShowLabel: false,
-					tabBarActiveTintColor: "#000000",
-					tabBarInactiveTintColor: "#f4bb26",
+					tabBarActiveTintColor: colors.text,
+					tabBarInactiveTintColor: colors.textDisabled,
 					headerShown: false,
 					tabBarButton: HapticTab,
 					tabBarBackground: TabBarBackground,

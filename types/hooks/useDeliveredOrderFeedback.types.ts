@@ -1,8 +1,9 @@
 export interface DeliveredOrderFeedback {
 	feedbackOrderId: string | null;
-	/** Shopper tapped "Maybe Later" — snoozes ALL feedback prompts until a
-	 *  genuinely new order is delivered. */
+	/** Shopper cancelled the prompt — the order is permanently marked handled
+	 *  so its prompt is never shown again, even after an app restart. */
 	skipFeedbackModal: () => void;
-	/** Shopper successfully submitted feedback for the current order. */
+	/** Shopper successfully submitted feedback for the current order — same
+	 *  end state as skipping: the prompt is never shown again. */
 	submitFeedbackModal: () => void;
 }

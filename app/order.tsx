@@ -1,13 +1,18 @@
 "use client";
-import LoadingButton from "@/components/LoadingButton";
+import AppBottomSheet from "@/components/ui/AppBottomSheet";
+import BackButton from "@/components/ui/BackButton";
+import EmptyState from "@/components/ui/EmptyState";
+import FormField from "@/components/ui/FormField";
+import PrimaryButton from "@/components/ui/PrimaryButton";
+import { colors, icon } from "@/constants/theme";
 import { useCart } from "@/contexts/CartContext";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { AuthService, OrderService, ProductService } from "@/services/api";
 import type { Order, OrderItem, Product, User } from "@/types";
 import { rtlRow, rtlText } from "@/utils/rtl";
-import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
+import { ChevronDown, ChevronUp, CreditCard, ImageIcon, MapPin, RefreshCw, XCircle } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import {
 	ActivityIndicator,
@@ -15,9 +20,7 @@ import {
 	AppState,
 	FlatList,
 	Image,
-	Modal,
 	Text,
-	TextInput,
 	TouchableOpacity,
 	View,
 } from "react-native";
@@ -337,7 +340,7 @@ export default function TestOrder() {
 					<Image source={{ uri: image }} style={styles.itemImage} />
 				) : (
 					<View style={[styles.itemImage, styles.itemImagePlaceholder]}>
-						<Feather name="image" size={18} color="#c4c4c4" />
+						<ImageIcon size={18} strokeWidth={icon.strokeWidth} color={colors.textDisabled} />
 					</View>
 				)}
 				<View style={styles.itemInfo}>
@@ -391,7 +394,7 @@ export default function TestOrder() {
 								})
 							}
 						>
-							<Feather name="map-pin" size={12} color="#fff" />
+							<MapPin size={14} strokeWidth={icon.strokeWidth} color={colors.primaryText} />
 							<Text style={styles.actionBtnText}>{t("trackShort")}</Text>
 						</TouchableOpacity>
 					)}
@@ -405,7 +408,7 @@ export default function TestOrder() {
 								}
 							}}
 						>
-							<Feather name="credit-card" size={12} color="#fff" />
+							<CreditCard size={14} strokeWidth={icon.strokeWidth} color={colors.primaryText} />
 							<Text style={styles.actionBtnText}>{t("pay")}</Text>
 						</TouchableOpacity>
 					)}
@@ -415,8 +418,8 @@ export default function TestOrder() {
 							style={[styles.actionBtn, styles.cancelBtn]}
 							onPress={() => promptCancelOrder(item._id)}
 						>
-							<Feather name="x-circle" size={12} color="#fff" />
-							<Text style={styles.actionBtnText}>{t("cancel")}</Text>
+							<XCircle size={14} strokeWidth={icon.strokeWidth} color={colors.textOnDark} />
+							<Text style={[styles.actionBtnText, styles.cancelBtnText]}>{t("cancel")}</Text>
 						</TouchableOpacity>
 					)}
 
@@ -427,13 +430,11 @@ export default function TestOrder() {
 							onPress={() => handleRepeatOrder(item)}
 						>
 							{isRepeating ? (
-								<ActivityIndicator size="small" color="#222222" />
+								<ActivityIndicator size="small" color={colors.primaryText} />
 							) : (
 								<>
-									<Feather name="refresh-cw" size={12} color="#222222" />
-									<Text style={[styles.actionBtnText, styles.repeatBtnText]}>
-										{t("repeatOrderShort")}
-									</Text>
+									<RefreshCw size={14} strokeWidth={icon.strokeWidth} color={colors.primaryText} />
+									<Text style={styles.actionBtnText}>{t("repeatOrderShort")}</Text>
 								</>
 							)}
 						</TouchableOpacity>
@@ -445,19 +446,22 @@ export default function TestOrder() {
 	};
 
 	if (loading) {
-		return (
-			<ActivityIndicator
-				size="large"
-				style={styles.loadingIndicator}
-			/>
-		);
+		return <ActivityIndicator size="large" color={colors.primary} style={styles.loadingIndicator} />;
 	}
 
 	if (!orders.length) {
 		return (
-			<View style={styles.container}>
-				<Text>{t("noOrdersFound")}</Text>
-			</View>
+			<SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
+				<View style={styles.container}>
+					<BackButton onPress={() => router.back()} style={styles.backButton} />
+					<EmptyState
+						illustration="basket"
+						title={t("noOrdersFound")}
+						actionLabel={t("continueShopping")}
+						onAction={() => router.push("/shop")}
+					/>
+				</View>
+			</SafeAreaView>
 		);
 	}
 
@@ -522,12 +526,11 @@ export default function TestOrder() {
 						</Text>
 					</View>
 
-					<Feather
-						name={expanded ? "chevron-up" : "chevron-down"}
-						size={20}
-						color="#b5b5b5"
-						style={styles.chevron}
-					/>
+					{expanded ? (
+						<ChevronUp size={icon.size} strokeWidth={icon.strokeWidth} color={colors.textDisabled} style={styles.chevron} />
+					) : (
+						<ChevronDown size={icon.size} strokeWidth={icon.strokeWidth} color={colors.textDisabled} style={styles.chevron} />
+					)}
 				</TouchableOpacity>
 
 				{expanded && renderOrderItem(item)}
@@ -538,12 +541,7 @@ export default function TestOrder() {
 	return (
 		<SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
 			<View style={styles.container}>
-				<TouchableOpacity
-					onPress={() => router.back()}
-					style={styles.backButton}
-				>
-					<Feather name="chevron-left" size={24} color="#000000" />
-				</TouchableOpacity>
+				<BackButton onPress={() => router.back()} style={styles.backButton} />
 				<FlatList
 					data={orders}
 					keyExtractor={(item) => item._id}
@@ -551,52 +549,25 @@ export default function TestOrder() {
 					contentContainerStyle={styles.listContent} // ✅ ensures content not cut off
 				/>
 
-				<Modal
-					animationType="slide"
-					transparent={true}
-					visible={cancelModalVisible}
-					onRequestClose={() => setCancelModalVisible(false)}
-				>
-					<View
-						style={styles.cancelModalOverlay}
-					>
-						<View
-							style={styles.cancelModalCard}
-						>
-							<Text style={styles.cancelModalTitle}>
-								{t("reasonCancellation")}
-							</Text>
-							<TextInput
-								value={cancelReason}
-								onChangeText={setCancelReason}
-								placeholder={t("typeReason")}
-								style={styles.cancelModalInput}
-								multiline
-							/>
-							<View
-								style={styles.cancelModalActions}
-							>
-								<TouchableOpacity
-									onPress={() => setCancelModalVisible(false)}
-									style={styles.cancelModalCancelBtn}
-								>
-									<Text style={styles.cancelModalCancelText}>
-										{t("cancel")}
-									</Text>
-								</TouchableOpacity>
-								<LoadingButton
-									onPress={handleCancel}
-									style={styles.cancelModalSubmitBtn}
-									loadingColor="#fff"
-								>
-									<Text style={styles.cancelModalSubmitText}>
-										{t("submit")}
-									</Text>
-								</LoadingButton>
-							</View>
-						</View>
+				{/* Cancel-order confirmation with a required reason */}
+				<AppBottomSheet visible={cancelModalVisible} onClose={() => setCancelModalVisible(false)}>
+					<Text style={[styles.sheetTitle, rtlText(isRTL)]}>{t("cancelOrder")}</Text>
+					<Text style={[styles.sheetBody, rtlText(isRTL)]}>{t("reasonCancellation")}</Text>
+					<FormField
+						label={t("reasonCancellation")}
+						required
+						value={cancelReason}
+						onChangeText={setCancelReason}
+						placeholder={t("typeReason")}
+						multiline
+						numberOfLines={3}
+						maxLength={300}
+					/>
+					<View style={styles.sheetActions}>
+						<PrimaryButton label={t("cancelOrder")} variant="danger" loading={cancelling} onPress={handleCancel} />
+						<PrimaryButton label={t("cancel")} variant="secondary" onPress={() => setCancelModalVisible(false)} />
 					</View>
-				</Modal>
+				</AppBottomSheet>
 			</View>
 		</SafeAreaView>
 	);

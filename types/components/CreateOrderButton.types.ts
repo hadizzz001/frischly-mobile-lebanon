@@ -20,4 +20,8 @@ export interface CheckoutPageProps {
 	deliveryTime?: string;
 	appliedPromo?: AppliedPromo | null;
 	discountAmount?: number;
+	/** Rider delivery instructions typed at checkout (sent as order notes). */
+	notes?: string;
+	/** Block ordering (e.g. no delivery address yet); shows this label. */
+	disabledReason?: string | null;
 }

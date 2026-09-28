@@ -1,48 +1,65 @@
 "use client";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { Mic, SlidersHorizontal } from "lucide-react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+	ActivityIndicator,
+	FlatList,
+	LayoutAnimation,
+	ScrollView,
+	SectionList,
+	Text,
+	TouchableOpacity,
+	View,
+} from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+
+import FilterSheet from "@/components/FilterSheet";
+import ProductCard from "@/components/ProductCard";
+import RegionEmptyState from "@/components/RegionEmptyState";
+import BackButton from "@/components/ui/BackButton";
+import Chip from "@/components/ui/Chip";
+import EmptyState from "@/components/ui/EmptyState";
+import { ProductGridSkeleton } from "@/components/ui/Skeleton";
+import { PRODUCT_GRID_COLUMNS, SHOP_ITEM_WIDTH } from "@/constants/layout";
+import { SEARCH_STOPWORDS } from "@/constants/search";
+import { colors, icon } from "@/constants/theme";
 import { useTranslation } from "@/contexts/TranslationContext";
 import {
-    AuthService,
-    CategoryService,
-    MarketService,
-    ProductService,
+	AuthService,
+	CategoryService,
+	MarketService,
+	ProductService,
 } from "@/services/api";
 import type { MarketCategory } from "@/services/api/marketService";
 import type { ProductQuery } from "@/services/api/productService";
-import type { Category, Market, Product, Subcategory, User } from "@/types";
-import { rtlRow } from "@/utils/rtl";
-import { Feather } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Picker } from "@react-native-picker/picker";
-import Constants from "expo-constants";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
-
-import { useEffect, useMemo, useState } from "react";
-import {
-    ActivityIndicator,
-    FlatList,
-    Image,
-    ScrollView,
-    SectionList,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from "react-native";
-
-import { useBooleanValue } from "@/contexts/CartBoolContext";
-import { useCart } from "@/contexts/CartContext";
 import { styles } from "@/styles/app/shop.styles";
+import type { Category, Market, Product, Subcategory, User } from "@/types";
+import type { ShopFilters } from "@/types/components/FilterSheet.types";
 import {
-    entityVisibleForCityOrPin,
-    getAdminCities,
-    getAdminDeliveryRegions,
-    isServedByAdmin,
-    isVisibleForCityOrPin,
+	entityVisibleForCityOrPin,
+	getAdminCities,
+	getAdminDeliveryRegions,
+	isServedByAdmin,
+	isVisibleForCityOrPin,
 } from "@/utils/cityVisibility";
+import { tapSelection } from "@/utils/haptics";
+import { rtlRow } from "@/utils/rtl";
 import { getUserCityAndPin } from "@/utils/userCity";
-import { SCREEN_WIDTH as width } from "@/constants/layout";
-import { SEARCH_STOPWORDS } from "@/constants/search";
+
+const DEFAULT_FILTERS = (search: string, category: string): ShopFilters => ({
+	search,
+	category,
+	subcategory: "",
+	shelfNumber: "",
+	sortBy: "price",
+	sortOrder: "desc",
+	priceRange: "",
+	stockLevel: "",
+	discount: false,
+	minDiscount: 5,
+});
 
 export default function ShopPage() {
 	const { t, td, isRTL } = useTranslation();
@@ -58,8 +75,6 @@ export default function ShopPage() {
 		terms?: string;
 	}>();
 
-	console.log("Sear ", searchParams);
-
 	// ✅ discount & category from query params
 	const discountParam = searchParams.discount ?? "";
 	const categoryParam = searchParams.category ?? "";
@@ -67,14 +82,14 @@ export default function ShopPage() {
 	const marketNameParam = searchParams.marketName ?? "";
 	const marketCatParam = searchParams.marketCat ?? "";
 
-	const [menuOpen, setMenuOpen] = useState(false);
-	const [profileOpen, setProfileOpen] = useState(false);
+	const insets = useSafeAreaInsets();
 	const [categories, setCategories] = useState<Category[]>([]);
 	const [products, setProducts] = useState<Product[]>([]);
 	const [loading, setLoading] = useState(true);
-	const { isBooleanValue, setBooleanValue } = useBooleanValue();
-	const [user, setUser] = useState<User | null>(null);
+	const [, setUser] = useState<User | null>(null);
 	const [filterOpen, setFilterOpen] = useState(false);
+	// The shopper's region isn't served by the main store -> region empty state.
+	const [unservedCity, setUnservedCity] = useState<string | null>(null);
 	const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
 	// Each market has its own categories/subcategories (the MarketCategory
 	// collection), fetched from /api/markets/:id/categories.
@@ -101,87 +116,22 @@ export default function ShopPage() {
 	const [hasNextPage, setHasNextPage] = useState(true);
 	const [isFetchingMore, setIsFetchingMore] = useState(false);
 
-	const [filters, setFilters] = useState<{
-		search: string;
-		category: string;
-		subcategory: string;
-		shelfNumber: string;
-		sortBy: string;
-		sortOrder: "asc" | "desc";
-		priceRange: string;
-		stockLevel: string;
-		discount: boolean;
-		minDiscount: number;
-	}>({
-		search: searchParam,
-		category: categoryParam,
-		subcategory: "",
-		shelfNumber: "",
-		sortBy: "price",
-		sortOrder: "desc",
-		priceRange: "",
-		stockLevel: "",
-		discount: false,
-		minDiscount: 5,
-	});
-	// Inside ShopPage component
+	const [filters, setFilters] = useState<ShopFilters>(
+		DEFAULT_FILTERS(searchParam, categoryParam),
+	);
+	// Draft filters edited inside the sheet; committed to `filters` on Apply.
+	const [draft, setDraft] = useState<ShopFilters>(filters);
+	const [matchCount, setMatchCount] = useState<number | null>(null);
+	const [counting, setCounting] = useState(false);
 
-	const { cart, addToCart, removeFromCart } = useCart();
-	const [quantities, setQuantities] = useState<Record<string, number>>({});
-	const [showQty, setShowQty] = useState<Record<string, boolean>>({}); // Track which products show qty
-
-	// Keep the +/- quantity UI in sync with the actual cart (also reflects a
-	// cart "restore" when switching markets).
-	useEffect(() => {
-		const nextQuantities: Record<string, number> = {};
-		const nextShowQty: Record<string, boolean> = {};
-		cart.forEach((cartItem) => {
-			nextQuantities[cartItem._id] = cartItem.quantity || 1;
-			nextShowQty[cartItem._id] = true;
-		});
-		setQuantities(nextQuantities);
-		setShowQty(nextShowQty);
-	}, [cart]);
-
-	const increaseQty = (product: Product) => {
-		const currentQty = quantities[product._id] || 0;
-
-		// ✅ Do not allow exceeding stock
-		if (currentQty >= product.stock) {
-			return; // Stop here if qty == stock
-		}
-
-		const newQty = currentQty + 1;
-		// Adding from a different market shows a confirm dialog and is applied
-		// asynchronously, so only reflect the change locally when it was added.
-		const result = addToCart(product, newQty);
-		if (result?.added) {
-			setQuantities({ ...quantities, [product._id]: newQty });
-			setShowQty({ ...showQty, [product._id]: true });
-		}
-	};
-
-	const decreaseQty = (product: Product) => {
-		const currentQty = quantities[product._id] || 0;
-
-		if (currentQty <= 1) {
-			const updatedQuantities = { ...quantities };
-			delete updatedQuantities[product._id];
-			setQuantities(updatedQuantities);
-			removeFromCart(product._id);
-			setShowQty({ ...showQty, [product._id]: false });
-		} else {
-			const newQty = currentQty - 1;
-			setQuantities({ ...quantities, [product._id]: newQty });
-
-			addToCart(product, newQty);
-		}
-	};
-
-	const token =
-		Constants.expoConfig?.extra?.jwtToken || process.env.EXPO_PUBLIC_JWT_TOKEN;
-
-	const toggleCart = () => setBooleanValue(!isBooleanValue);
+	// How many filters differ from the defaults (badge on the filter button).
+	const activeFilterCount = useMemo(() => {
+		const d = DEFAULT_FILTERS(searchParam, categoryParam);
+		return (["subcategory", "priceRange", "discount"] as const).filter(
+			(k) => filters[k] !== d[k],
+		).length + (filters.sortBy !== d.sortBy || filters.sortOrder !== d.sortOrder ? 1 : 0)
+		+ (filters.category !== d.category ? 1 : 0);
+	}, [filters, searchParam, categoryParam]);
 
 	// ✅ Fetch categories
 	useEffect(() => {
@@ -317,8 +267,8 @@ export default function ShopPage() {
 
 		return ordered.map((g) => {
 			const rows: Product[][] = [];
-			for (let i = 0; i < g.items.length; i += 3) {
-				rows.push(g.items.slice(i, i + 3));
+			for (let i = 0; i < g.items.length; i += PRODUCT_GRID_COLUMNS) {
+				rows.push(g.items.slice(i, i + PRODUCT_GRID_COLUMNS));
 			}
 			return {
 				key: g.key,
@@ -330,15 +280,21 @@ export default function ShopPage() {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [isGlobalSearch, displayedProducts]);
 
-	const fetchProducts = async (nextPage = 1, replace = false) => {
+	const fetchProducts = async (
+		nextPage = 1,
+		replace = false,
+		activeFilters: ShopFilters = filters,
+	) => {
 		try {
-			if (nextPage === 1) setLoading(true);
-			else setIsFetchingMore(true);
+			if (nextPage === 1) {
+				setLoading(true);
+				setUnservedCity(null);
+			} else setIsFetchingMore(true);
 
 			// Recompute the search mode here (not via the render memo) so it's
 			// always correct at call time, e.g. when the filter modal's "Apply"
 			// button calls this with the latest filters.
-			const searchActive = String(filters.search || "").trim().length > 0;
+			const searchActive = String(activeFilters.search || "").trim().length > 0;
 			const globalSearch = !marketParam && !isMultiSearch && searchActive;
 
 			// City + pin are only needed for non-market fetches (main-store gate /
@@ -361,6 +317,7 @@ export default function ShopPage() {
 				if (!(await isServedByAdmin(city, pin))) {
 					if (replace || nextPage === 1) setProducts([]);
 					setHasNextPage(false);
+					setUnservedCity(city);
 					return;
 				}
 			}
@@ -379,21 +336,21 @@ export default function ShopPage() {
 			query.limit = marketParam || globalSearch ? 200 : 12;
 
 			// include filters (NO MANUAL ENCODING)
-			if (filters.search) query.search = filters.search;
-			if (filters.subcategory) query.subcategory = filters.subcategory;
+			if (activeFilters.search) query.search = activeFilters.search;
+			if (activeFilters.subcategory) query.subcategory = activeFilters.subcategory;
 
-			if (filters.sortBy) {
-				query.sortBy = filters.sortBy;
-				query.sortOrder = filters.sortOrder;
+			if (activeFilters.sortBy) {
+				query.sortBy = activeFilters.sortBy;
+				query.sortOrder = activeFilters.sortOrder;
 			}
 
-			if (filters.priceRange) query.priceRange = filters.priceRange;
-			if (filters.stockLevel) query.stockLevel = filters.stockLevel;
+			if (activeFilters.priceRange) query.priceRange = activeFilters.priceRange;
+			if (activeFilters.stockLevel) query.stockLevel = activeFilters.stockLevel;
 
 			// Category can come from the URL (top chips) or the filter modal. It is
 			// sent server-side for main-store/global browsing; the market view
 			// filters by category client-side (see displayedProducts).
-			const effectiveCategory = categoryParam || filters.category;
+			const effectiveCategory = categoryParam || activeFilters.category;
 			if (!marketParam && effectiveCategory) query.category = effectiveCategory;
 
 			// include market filter (mobile: filter products by a specific market)
@@ -409,8 +366,8 @@ export default function ShopPage() {
 
 			// ✅ If discount from URL OR filter toggle
 			let json;
-			if (discountParam === "true" || filters.discount === true) {
-				query.minDiscount = filters.minDiscount || 1;
+			if (discountParam === "true" || activeFilters.discount === true) {
+				query.minDiscount = activeFilters.minDiscount || 1;
 				json = await ProductService.getDiscounted(query);
 			} else {
 				json = await ProductService.list(query);
@@ -440,6 +397,7 @@ export default function ShopPage() {
 				);
 			}
 
+			LayoutAnimation.easeInEaseOut();
 			setProducts((prev) => {
 				if (replace) return newData;
 				const existingIds = new Set(prev.map((p) => p._id));
@@ -732,117 +690,69 @@ export default function ShopPage() {
 		});
 	};
 
-	const renderProduct = ({ item }: { item: Product }) => {
-		const basePrice = item.price || 0;
-		const discountPercent = item.discount || 0;
-		const taxPercent = item.tax || 0;
-		const bottleRefund = item.bottlerefund || 0;
+	const renderProduct = ({ item }: { item: Product }) => (
+		<ProductCard key={item._id} product={item} width={SHOP_ITEM_WIDTH} />
+	);
 
-		const discountAmount = (basePrice * discountPercent) / 100;
-		const priceAfterDiscount = basePrice - discountAmount;
-		const taxAmount = (priceAfterDiscount * taxPercent) / 100;
-		const finalPrice = priceAfterDiscount;
+	// ---- filter sheet: live match count for the draft ------------------------
+	const openFilters = () => {
+		setDraft(filters);
+		setFilterOpen(true);
+	};
+	const countTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+	useEffect(() => {
+		if (!filterOpen) return;
+		if (countTimer.current) clearTimeout(countTimer.current);
+		setCounting(true);
+		countTimer.current = setTimeout(async () => {
+			try {
+				const query: ProductQuery = { page: 1, limit: 1 };
+				if (draft.search) query.search = draft.search;
+				if (draft.subcategory) query.subcategory = draft.subcategory;
+				if (draft.priceRange) query.priceRange = draft.priceRange;
+				const effectiveCategory = categoryParam || draft.category;
+				if (!marketParam && effectiveCategory) query.category = effectiveCategory;
+				if (marketParam) query.market = marketParam;
+				else if (!String(draft.search || "").trim()) query.market = "none";
+				const json =
+					discountParam === "true" || draft.discount
+						? await ProductService.getDiscounted({ ...query, minDiscount: draft.minDiscount || 1 })
+						: await ProductService.list(query);
+				const pagination = (json as { pagination?: { totalProducts?: number; total?: number } })
+					.pagination;
+				const total = Number(pagination?.totalProducts ?? pagination?.total);
+				setMatchCount(Number.isFinite(total) ? total : (Array.isArray(json.data) ? json.data.length : null));
+			} catch {
+				setMatchCount(null);
+			} finally {
+				setCounting(false);
+			}
+		}, 350);
+		return () => {
+			if (countTimer.current) clearTimeout(countTimer.current);
+		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [draft, filterOpen]);
 
-		const isQtyVisible = showQty[item._id] || false;
-
-		return (
-			<View key={item._id} style={styles.card}>
-				<TouchableOpacity
-					onPress={() => router.push(`/product/${item._id}`)}
-					activeOpacity={0.8}
-				>
-					<View style={styles.imageWrapper}>
-						<Image
-							source={{ uri: item.picture }}
-							style={styles.image}
-							resizeMode="contain"
-						/>
-						{item.stock === 0 && (
-							<View style={styles.outOfStockOverlay}>
-								<Text style={styles.outOfStockText}>{t("out")}</Text>
-							</View>
-						)}
-
-						{discountPercent > 0 && (
-							<View style={styles.discountBadge}>
-								<Text style={styles.discountText}>-{discountPercent}%</Text>
-							</View>
-						)}
-					</View>
-
-					<Text style={styles.name} numberOfLines={2}>
-						{td(item.name)}
-					</Text>
-
-					{basePrice !== finalPrice ? (
-						<View style={styles.priceRow}>
-							<Text style={styles.basePrice}>${basePrice.toFixed(2)}</Text>
-							<Text style={styles.finalPrice}>${finalPrice.toFixed(2)}</Text>
-						</View>
-					) : (
-						<View style={styles.priceRow}>
-							<Text style={styles.newPrice}>${finalPrice.toFixed(2)}</Text>
-						</View>
-					)}
-				</TouchableOpacity>
-
-				{/* Add to Cart / Quantity Selector */}
-				{item.stock > 0 && (
-					<View style={styles.qtyRow}>
-						{isQtyVisible ? (
-							<View style={styles.qtyContainer}>
-								<TouchableOpacity
-									onPress={() => decreaseQty(item)}
-									style={styles.qtyBtn}
-								>
-									<Text style={styles.qtyText}>-</Text>
-								</TouchableOpacity>
-
-								<Text style={styles.qtyValue}>{quantities[item._id] || 1}</Text>
-
-								<TouchableOpacity
-									onPress={() => increaseQty(item)}
-									style={styles.qtyBtn}
-								>
-									<Text style={styles.qtyText}>+</Text>
-								</TouchableOpacity>
-							</View>
-						) : (
-							<TouchableOpacity
-								onPress={() => increaseQty(item)}
-								style={[
-									styles.qtyBtn,
-									{ paddingHorizontal: 12, paddingVertical: 6 },
-								]}
-							>
-								<Feather name="shopping-cart" size={20} color="#fff" />
-							</TouchableOpacity>
-						)}
-					</View>
-				)}
-			</View>
-		);
+	const applyFilters = () => {
+		setFilterOpen(false);
+		setFilters(draft);
+		setPage(1);
+		fetchProducts(1, true, draft);
+	};
+	const resetFilters = () => {
+		tapSelection();
+		setDraft(DEFAULT_FILTERS(searchParam, categoryParam));
 	};
 
-	if (loading) {
-		return (
-			<View style={styles.loader}>
-				<ActivityIndicator size="large" color="#f4bb26" />
-			</View>
-		);
-	}
+	const listBottomPadding = { paddingBottom: Math.max(insets.bottom, 16) + 96 };
 
 	return (
 		<SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
 			<View style={styles.container}>
 				{/* Back arrow + Categories */}
 				<View style={styles.categoryHeader}>
-					<TouchableOpacity
-						onPress={() => router.back()}
-						style={styles.backButton}
-					>
-						<Feather name="chevron-left" size={24} color="#000000" />
-					</TouchableOpacity>
+					<BackButton />
 
 					{marketParam ? (
 						marketCats.length > 0 ? (
@@ -852,53 +762,25 @@ export default function ShopPage() {
 								style={styles.categoryBar}
 								contentContainerStyle={styles.centerAlignItems}
 							>
-								{/* All button */}
-								<TouchableOpacity
-									style={[
-										styles.categoryBtn,
-										!marketCatId && styles.activeYellowBg,
-									]}
+								<Chip
+									label={t("all")}
+									selected={!marketCatId}
 									onPress={() => {
 										setMarketCatId("");
 										setMarketSubId("");
 									}}
-								>
-									<Text
-										style={[
-											styles.categoryText,
-											!marketCatId && styles.activeLabelText,
-										]}
-									>
-										{t("all")}
-									</Text>
-								</TouchableOpacity>
-
-								{/* This market's own categories */}
-								{marketCats.map((cat) => {
-									const isSelected = marketCatId === String(cat._id);
-									return (
-										<TouchableOpacity
-											key={cat._id}
-											style={[
-												styles.categoryBtn,
-												isSelected && styles.activeYellowBg,
-											]}
-											onPress={() => {
-												setMarketCatId(String(cat._id));
-												setMarketSubId("");
-											}}
-										>
-											<Text
-												style={[
-													styles.categoryText,
-													isSelected && styles.activeLabelText,
-												]}
-											>
-												{td(cat.name)}
-											</Text>
-										</TouchableOpacity>
-									);
-								})}
+								/>
+								{marketCats.map((cat) => (
+									<Chip
+										key={cat._id}
+										label={td(cat.name)}
+										selected={marketCatId === String(cat._id)}
+										onPress={() => {
+											setMarketCatId(String(cat._id));
+											setMarketSubId("");
+										}}
+									/>
+								))}
 							</ScrollView>
 						) : (
 							<View style={styles.flex1PaddingH10}>
@@ -917,67 +799,41 @@ export default function ShopPage() {
 							style={styles.categoryBar}
 							contentContainerStyle={styles.centerAlignItems}
 						>
-							{/* All button */}
-							<TouchableOpacity
-								style={[
-									styles.categoryBtn,
-									!categoryParam &&
-										discountParam !== "true" && {
-											backgroundColor: "#f4bb26",
-										},
-								]}
+							<Chip
+								label={t("all")}
+								selected={!categoryParam && discountParam !== "true"}
 								onPress={() => router.push("/shop")}
-							>
-								<Text
-									style={[
-										styles.categoryText,
-										!categoryParam &&
-											discountParam !== "true" && {
-												color: "#000",
-												fontWeight: "700",
-											},
-									]}
-								>
-									{t("all")}
-								</Text>
-							</TouchableOpacity>
-
-							{/* Dynamic categories */}
-							{categories.map((cat) => {
-								const isSelected = categoryParam === cat.name;
-								return (
-									<TouchableOpacity
-										key={cat._id}
-										style={[
-											styles.categoryBtn,
-											isSelected && { backgroundColor: "#f4bb26" },
-										]}
-										onPress={() =>
-											router.push(
-												`/shop1?category=${encodeURIComponent(cat.name)}`
-											)
-										}
-									>
-										<Text
-											style={[
-												styles.categoryText,
-												isSelected && { color: "#000", fontWeight: "700" },
-											]}
-										>
-											{td(cat.name)}
-										</Text>
-									</TouchableOpacity>
-								);
-							})}
+							/>
+							{categories.map((cat) => (
+								<Chip
+									key={cat._id}
+									label={td(cat.name)}
+									selected={categoryParam === cat.name}
+									onPress={() =>
+										router.push(`/shop1?category=${encodeURIComponent(cat.name)}`)
+									}
+								/>
+							))}
 						</ScrollView>
 					)}
 
 					{discountParam !== "true" && (
 						<TouchableOpacity
-							style={[styles.categoryBtn, { backgroundColor: "#ddd" }]}
-							onPress={() => setFilterOpen(true)}
+							style={[styles.filterBtn, activeFilterCount > 0 && styles.filterBtnActive]}
+							onPress={openFilters}
+							accessibilityRole="button"
+							accessibilityLabel={t("filters")}
 						>
-							<Feather name="sliders" size={18} color="#000" />
+							<SlidersHorizontal
+								size={icon.size}
+								strokeWidth={icon.strokeWidth}
+								color={activeFilterCount > 0 ? colors.primaryText : colors.text}
+							/>
+							{activeFilterCount > 0 && (
+								<View style={styles.filterBadge}>
+									<Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+								</View>
+							)}
 						</TouchableOpacity>
 					)}
 				</View>
@@ -992,62 +848,39 @@ export default function ShopPage() {
 							style={styles.subcategoryBar}
 							contentContainerStyle={styles.subcategoryScrollContent}
 						>
-							<TouchableOpacity
-								style={[
-									styles.subcategoryBtn,
-									!marketSubId && styles.subcategoryBtnActive,
-								]}
+							<Chip
+								label={t("all")}
+								selected={!marketSubId}
 								onPress={() => setMarketSubId("")}
-							>
-								<Text
-									style={[
-										styles.subcategoryText,
-										!marketSubId && styles.activeLabelText,
-									]}
-								>
-									{t("all")}
-								</Text>
-							</TouchableOpacity>
-
-							{(selectedMarketCat.subcategories || []).map((sub) => {
-								const isSel = marketSubId === String(sub._id);
-								return (
-									<TouchableOpacity
-										key={sub._id}
-										style={[
-											styles.subcategoryBtn,
-											isSel && styles.subcategoryBtnActive,
-										]}
-										onPress={() => setMarketSubId(String(sub._id))}
-									>
-										<Text
-											style={[
-												styles.subcategoryText,
-												isSel && styles.activeLabelText,
-											]}
-										>
-											{td(sub.name)}
-										</Text>
-									</TouchableOpacity>
-								);
-							})}
+							/>
+							{(selectedMarketCat.subcategories || []).map((sub) => (
+								<Chip
+									key={sub._id}
+									label={td(sub.name)}
+									selected={marketSubId === String(sub._id)}
+									onPress={() => setMarketSubId(String(sub._id))}
+								/>
+							))}
 						</ScrollView>
 					)}
 
 				{/* Products Grid */}
-				{isGlobalSearch ? (
+				{loading ? (
+					<ScrollView contentContainerStyle={styles.skeletonWrap} scrollEnabled={false}>
+						<ProductGridSkeleton count={6} />
+					</ScrollView>
+				) : isGlobalSearch ? (
 					/* Global search: group results by market, each under its own
 					   header, so markets don't get condensed together. */
 					<SectionList
 						sections={searchSections}
-						contentContainerStyle={styles.listContentPadding120}
+						contentContainerStyle={[styles.listContent, listBottomPadding]}
 						keyExtractor={(row, index) =>
 							`row-${row[0]?._id || "x"}-${index}`
 						}
 						stickySectionHeadersEnabled={false}
 						renderSectionHeader={({ section }) => (
 							<View style={[styles.sectionHeader, rtlRow(isRTL)]}>
-								<Feather name="shopping-bag" size={15} color="#e0a106" />
 								<Text style={styles.sectionHeaderText} numberOfLines={1}>
 									{td(section.title)}
 								</Text>
@@ -1062,211 +895,84 @@ export default function ShopPage() {
 							</View>
 						)}
 						ListEmptyComponent={
-							!loading ? (
-								<View style={styles.emptyStateContainer}>
-									<Text style={styles.emptyStateText}>
-										{t("searchNoResults")}
-									</Text>
-								</View>
-							) : null
+							<EmptyState
+								illustration="search"
+								title={t("searchNoResults")}
+								description={t("searchNoResultsBody")}
+								actionLabel={t("browseCategories")}
+								onAction={() => router.push("/menu")}
+							/>
 						}
 					/>
 				) : (
 					<FlatList
-						contentContainerStyle={styles.listContentPadding120}
+						// numColumns can't change on a mounted FlatList; keying on it
+						// remounts the list if the column count ever changes.
+						key={`grid-${PRODUCT_GRID_COLUMNS}`}
+						contentContainerStyle={[styles.listContent, listBottomPadding]}
+						columnWrapperStyle={styles.searchRow}
 						data={displayedProducts}
 						keyExtractor={(item) => item._id}
 						renderItem={renderProduct}
-						numColumns={3} // <-- 3 items per row
+						numColumns={PRODUCT_GRID_COLUMNS}
 						onEndReached={marketParam || isMultiSearch ? undefined : loadMore}
-						onEndReachedThreshold={0.3}
+						onEndReachedThreshold={0.4}
 						ListHeaderComponent={
 							isMultiSearch ? (
 								<View style={styles.voiceHeader}>
 									<View style={styles.voiceHeaderTitleRow}>
-										<Feather name="mic" size={16} color="#e0a106" />
+										<Mic size={icon.sizeSmall} strokeWidth={icon.strokeWidth} color={colors.primaryDark} />
 										<Text style={styles.voiceHeaderTitle}>
 											{t("voiceResultsTitle")}
 										</Text>
 									</View>
 									<View style={styles.voiceChipsRow}>
 										{searchTerms.map((term) => (
-											<View key={term} style={styles.voiceChip}>
-												<Text style={styles.voiceChipText}>{term}</Text>
-												<TouchableOpacity
-													onPress={() => removeTerm(term)}
-													hitSlop={8}
-												>
-													<Feather name="x" size={14} color="#8a6d10" />
-												</TouchableOpacity>
-											</View>
+											<Chip
+												key={term}
+												label={term}
+												selected
+												onRemove={() => removeTerm(term)}
+											/>
 										))}
 									</View>
 								</View>
 							) : null
 						}
 						ListEmptyComponent={
-							!loading ? (
-								<View style={styles.emptyStateContainer}>
-									<Text style={styles.emptyStateText}>
-										{isMultiSearch
-											? t("voiceNoResults")
-											: t("noProductsInCategory")}
-									</Text>
-								</View>
-							) : null
+							unservedCity !== null ? (
+								<RegionEmptyState region={unservedCity} />
+							) : (
+								<EmptyState
+									illustration="search"
+									title={isMultiSearch ? t("voiceNoResults") : t("noProductsInCategory")}
+									description={t("searchNoResultsBody")}
+									actionLabel={t("browseCategories")}
+									onAction={() => router.push("/menu")}
+								/>
+							)
 						}
 						ListFooterComponent={
 							isFetchingMore ? (
-								<ActivityIndicator size="small" color="#f4bb26" />
+								<ActivityIndicator size="small" color={colors.primary} style={styles.footerLoader} />
 							) : null
 						}
 					/>
 				)}
 
-				{/* ✅ Filter Overlay */}
-				{filterOpen && (
-					<View style={[styles.filterOverlay, { left: width * 0.3 }]}>
-						{/* Close button */}
-						<TouchableOpacity
-							style={styles.closeBtn}
-							onPress={() => setFilterOpen(false)}
-						>
-							<Feather name="x" size={28} color="#000" />
-						</TouchableOpacity>
-
-						<ScrollView contentContainerStyle={styles.filterScrollContent}>
-							<Text style={styles.title}>{t("filterProducts")}</Text>
-
-							{/* Search Field */}
-							<TextInput
-								placeholder={t("searchPlaceholder")}
-								value={filters.search}
-								onChangeText={(v) => setFilters((p) => ({ ...p, search: v }))}
-								style={styles.input}
-							/>
-
-							{/* Category + Subcategory pickers (main store / global search;
-							   a specific market uses its own category/subcategory chips
-							   above). These apply to search results too, which now
-							   include market products. */}
-							{!marketParam && (
-								<>
-									<Text style={styles.filterLabel}>
-										{t("category")}
-									</Text>
-									<View style={styles.input}>
-										<Picker
-											selectedValue={filters.category}
-											onValueChange={(v) =>
-												setFilters((p) => ({ ...p, category: v }))
-											}
-										>
-											<Picker.Item label={t("allCategories")} value="" />
-											{categories.map((cat) => (
-												<Picker.Item
-													key={cat._id}
-													label={td(cat.name)}
-													value={cat.name}
-												/>
-											))}
-										</Picker>
-									</View>
-
-									<Text style={styles.filterLabel}>
-										{t("subcategory")}
-									</Text>
-									<View style={styles.input}>
-										<Picker
-											selectedValue={filters.subcategory}
-											onValueChange={(v) =>
-												setFilters((p) => ({ ...p, subcategory: v }))
-											}
-										>
-											<Picker.Item label={t("subcategory")} value="" />
-											{subcategories.map((sub) => (
-												<Picker.Item
-													key={sub._id}
-													label={td(sub.name)}
-													value={sub.name}
-												/>
-											))}
-										</Picker>
-									</View>
-								</>
-							)}
-
-							{/* Sort Dropdown */}
-							<Text style={styles.filterLabel}>
-								{t("sortBy")}
-							</Text>
-							<View style={styles.input}>
-								<Picker
-									selectedValue={`${filters.sortBy}_${filters.sortOrder}`}
-									onValueChange={(v) => {
-										const [sortBy, sortOrder] = v.split("_");
-										setFilters((p) => ({ ...p, sortBy, sortOrder: sortOrder as "asc" | "desc" }));
-									}}
-								>
-									<Picker.Item label={t("sortPriceLowHigh")} value="price_asc" />
-									<Picker.Item label={t("sortPriceHighLow")} value="price_desc" />
-									<Picker.Item label={t("sortNameAZ")} value="name_asc" />
-									<Picker.Item label={t("sortNameZA")} value="name_desc" />
-									<Picker.Item label={t("sortNewest")} value="createdAt_desc" />
-									<Picker.Item label={t("sortOldest")} value="createdAt_asc" />
-								</Picker>
-							</View>
-
-							{/* Discount Toggle */}
-							<TouchableOpacity
-								onPress={() =>
-									setFilters((p) => ({ ...p, discount: !p.discount }))
-								}
-								style={styles.checkboxRow}
-							>
-								<Text style={styles.blackText}>{t("onlyDiscounted")}</Text>
-								<View
-									style={[
-										styles.checkbox,
-										filters.discount && styles.checkboxActive,
-									]}
-								/>
-							</TouchableOpacity>
-
-							{/* Price Range Picker */}
-							<Text style={styles.filterLabel}>
-								{t("priceRange")}
-							</Text>
-							<View style={styles.input}>
-								<Picker
-									selectedValue={filters.priceRange}
-									onValueChange={(v) =>
-										setFilters((p) => ({ ...p, priceRange: v }))
-									}
-								>
-									<Picker.Item label={t("allPrices")} value="" />
-									<Picker.Item label={t("price1to20")} value="1-20" />
-									<Picker.Item label={t("price21to50")} value="21-50" />
-									<Picker.Item label={t("price51to100")} value="51-100" />
-									<Picker.Item label={t("price101to200")} value="101-200" />
-									<Picker.Item label={t("price201plus")} value="201-10000" />
-								</Picker>
-							</View>
-
-							{/* Apply Filters Button */}
-							<TouchableOpacity
-								style={styles.button}
-								onPress={() => {
-									setFilterOpen(false);
-									setPage(1);
-									fetchProducts(1, true); // replace products with new filter results
-								}}
-							>
-								<Text style={styles.buttonText}>{t("applyFilter")}</Text>
-							</TouchableOpacity>
-						</ScrollView>
-					</View>
-				)}
+				<FilterSheet
+					visible={filterOpen}
+					onClose={() => setFilterOpen(false)}
+					filters={draft}
+					onChange={setDraft}
+					onApply={applyFilters}
+					onReset={resetFilters}
+					categories={categories}
+					subcategories={subcategories}
+					hideTaxonomy={!!marketParam}
+					matchCount={matchCount}
+					counting={counting}
+				/>
 			</View>
 		</SafeAreaView>
 	);

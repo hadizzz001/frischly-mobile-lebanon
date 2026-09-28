@@ -1,11 +1,13 @@
+import BackButton from "@/components/ui/BackButton";
 import { useCart } from "@/contexts/CartContext";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { OrderService } from "@/services/api";
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
+	BackHandler,
 	Linking,
 	ScrollView,
 	Text,
@@ -69,19 +71,35 @@ export default function CheckoutSuccessPage() {
 		clearCart();
 	}, []);
 
+	// The order is done: leaving this screen always means going home, never
+	// back into the checkout flow. Covers the phone's back button/gesture; the
+	// on-screen back arrow and "Back to home" button do the same below.
+	const goHome = () => router.replace("/");
+
+	useEffect(() => {
+		const subscription = BackHandler.addEventListener(
+			"hardwareBackPress",
+			() => {
+				router.replace("/");
+				return true; // handled — don't pop the stack
+			},
+		);
+		return () => subscription.remove();
+	}, [router]);
+
 	if (loading) return <Text>{t("loading")}</Text>;
 
 	console.log("paymentUrl ", paymentUrl);
 
 	return (
 		<>
+		{/* No swiping back into checkout either. */}
+		<Stack.Screen options={{ headerShown: false, gestureEnabled: false }} />
 		<ScrollView
 			style={styles.scrollContainer}
 			contentContainerStyle={styles.contentContainer}
 		>
-			<TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-				<Feather name="chevron-left" size={24} color="#000000" />
-			</TouchableOpacity>
+			<BackButton onPress={goHome} style={styles.backButton} />
 
 			<View style={styles.inner}>
 				{/* SVG Icon */}
@@ -120,7 +138,7 @@ export default function CheckoutSuccessPage() {
 				{paymentMethod === "cash" ? (
 					<TouchableOpacity
 						style={styles.button}
-						onPress={() => router.push("/")}
+						onPress={goHome}
 					>
 						<Text style={styles.buttonText}>{t("backToHome")}</Text>
 					</TouchableOpacity>

@@ -1,458 +1,314 @@
-import Cart from "@/components/Cart";
+import BackButton from "@/components/ui/BackButton";
 import OutOfStockComponent from "@/components/OutOfStockComponent";
-import QuantitySelector from "@/components/QuantitySelector";
-import { useBooleanValue } from "@/contexts/CartBoolContext";
 import { useCart } from "@/contexts/CartContext";
 import { useTranslation } from "@/contexts/TranslationContext";
-import { AuthService, CategoryService, ProductService } from "@/services/api";
-import type { Category, Product, User } from "@/types";
-import { rtlText } from "@/utils/rtl";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useNavigation, useRoute } from "@react-navigation/native";
-import { Stack, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
-import { Image, Modal, Text, View } from "react-native";
-
+import { useBusyAction } from "@/hooks/useBusyAction";
+import { ProductService } from "@/services/api";
 import { styles } from "@/styles/app/product/[id].styles";
-import { formatWeight } from "@/utils/product";
-import { ScrollView, TouchableOpacity } from "react-native";
-import Swiper from "react-native-swiper";
-import Feather from "react-native-vector-icons/Feather";
+import type { Product } from "@/types";
+import {
+	DEFAULT_USD_TO_LBP_RATE,
+	formatLbp,
+	getUsdToLbpRate,
+} from "@/utils/currency";
+import { formatWeight, getBasePrice, getFinalPrice } from "@/utils/product";
+import { tapLight, tapMedium } from "@/utils/haptics";
+import { rtlText } from "@/utils/rtl";
+import { Feather } from "@expo/vector-icons";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
+import {
+	ActivityIndicator,
+	Image,
+	Modal,
+	ScrollView,
+	Text,
+	TouchableOpacity,
+	View,
+} from "react-native";
 
 export default function ProductPage() {
 	const { t, td, isRTL } = useTranslation();
+	const router = useRouter();
+	const { id } = useLocalSearchParams<{ id: string }>();
+	const { cart, addToCart } = useCart();
+	const { isBusy, anyBusy, run } = useBusyAction();
 
-	const route = useRoute();
-	const navigation = useNavigation();
-	const { id: search } = (route.params as { id?: string }) || {};
-	const [menuOpen, setMenuOpen] = useState(false);
 	const [product, setProduct] = useState<Product | null>(null);
 	const [quantity, setQuantity] = useState(1);
-	const [zoomedImg, setZoomedImg] = useState<string | null>(null);
-	const { cart, addToCart } = useCart();
-	const { isBooleanValue, setBooleanValue } = useBooleanValue();
-	const router = useRouter();
-	const isInCart = cart?.some((item) => item._id === search);
-	const [profileOpen, setProfileOpen] = useState(false);
-	const [categories, setCategories] = useState<Category[]>([]);
-	const [user, setUser] = useState<User | null>(null);
-	const [showModal, setShowModal] = useState(false);
-const [showAgeModal, setShowAgeModal] = useState(false);
+	const [zoomed, setZoomed] = useState(false);
+	// Once this product (at the selected quantity) is in the cart the bottom
+	// button turns into "Checkout"; changing the quantity turns it back into
+	// "Add" so the new quantity can be applied.
+	const [added, setAdded] = useState(false);
+	// Shown next to the USD price; configured by the admin (Dashboard →
+	// Settings → "USD to LBP Exchange Rate"), 90,000 until it loads.
+	const [rate, setRate] = useState(DEFAULT_USD_TO_LBP_RATE);
 
-
-
-	// Fetch product
 	useEffect(() => {
+		let cancelled = false;
 		const fetchData = async () => {
 			try {
-				const res = await ProductService.getById(search as string);
-				if (res?.success && res?.data) {
-					setProduct(res.data);
-				}
+				const res = await ProductService.getById(id as string);
+				if (!cancelled && res?.success && res?.data) setProduct(res.data);
 			} catch (err) {
-				console.error("Fetch error:", err);
+				console.error("Product fetch error:", err);
 			}
 		};
-		fetchData();
-	}, [search]);
-
-	// Fetch categories
-	useEffect(() => {
-		CategoryService.list()
-			.then((res) => setCategories(res.data || []))
-			.catch((err) => console.error(err));
-	}, []);
-
-	// Fetch user info (if logged in)
-	useEffect(() => {
-		const checkLogin = async () => {
-			try {
-				const res = await AuthService.me();
-				const data = res.data as unknown as { user?: User } | User;
-				setUser((data as { user?: User })?.user ?? (data as User));
-			} catch (err) {
-				console.error(err);
-			}
+		if (id) fetchData();
+		return () => {
+			cancelled = true;
 		};
-		checkLogin();
+	}, [id]);
+
+	useEffect(() => {
+		let cancelled = false;
+		getUsdToLbpRate()
+			.then((value) => {
+				if (!cancelled) setRate(value);
+			})
+			.catch(() => {});
+		return () => {
+			cancelled = true;
+		};
 	}, []);
 
-	const handleAddToCart = () => {
-		if (product) addToCart(product, quantity);
+	// Start from whatever is already in the cart so the +/- picks up where the
+	// shopper left off instead of resetting to 1.
+	const cartQuantity =
+		cart.find((c) => String(c._id) === String(id))?.quantity || 0;
+	useEffect(() => {
+		setQuantity(cartQuantity > 0 ? cartQuantity : 1);
+	}, [cartQuantity]);
+
+	if (!product) {
+		return (
+			<View style={styles.center}>
+				<ActivityIndicator size="large" color="#F59E0B" />
+			</View>
+		);
+	}
+
+	// Tax + bottle refund are part of both prices (see utils/product), so the
+	// number here is the one the cart and checkout will use.
+	const basePrice = getBasePrice(product);
+	const discountPercent = Number(product.discount) || 0;
+	const taxPercent = Number(product.tax) || 0;
+	const bottleRefund = Number(product.bottlerefund) || 0;
+	const finalPrice = getFinalPrice(product);
+	const hasDiscount = discountPercent > 0 && finalPrice !== basePrice;
+	const stock = Number(product.stock) || 0;
+	const isOutOfStock = stock <= 0;
+	const weight = formatWeight(product.weight);
+	const lineTotal = finalPrice * quantity;
+
+	// Once the item is in the cart the button stays "Checkout": changing the
+	// quantity updates the cart line straight away instead of flipping the
+	// button back to "Add".
+	const showCheckout = added || cartQuantity > 0;
+
+	const setQuantityTo = (next: number) => {
+		setQuantity(next);
+		if (showCheckout) addToCart(product, next);
 	};
 
-	const toggleCart = () => setBooleanValue(!isBooleanValue);
+	const decrease = () => {
+		tapLight();
+		run("dec", () => setQuantityTo(Math.max(1, quantity - 1)));
+	};
 
-	if (!product) return <Text style={styles.center}>Loading...</Text>;
+	const increase = () => {
+		tapLight();
+		run("inc", () =>
+			setQuantityTo(stock > 0 ? Math.min(stock, quantity + 1) : quantity + 1),
+		);
+	};
 
-	const {
-		_id,
-		name,
-		description,
-		price,
-		discount,
-		stock,
-		stockStatus,
-		picture,
-		subcategory,
-		parentCategory,
-		dimensions,
-		weight,
-		tax,
-		bottlerefund,
-	} = product;
-
-	const isOutOfStock = stock === 0;
-
-
-	const handleGoToCheckout = () => {
-	const has18PlusItem = cart.some(
-		(item) => item?.is18Plus === true
-	);
-
-	if (has18PlusItem) {
-		setShowAgeModal(true);
-		return;
-	}
-
-	router.push("/checkout");
-};
-
-const handleAgeResponse = (response: "yes" | "no") => {
-	setShowAgeModal(false);
-
-	if (response === "yes") {
-		router.push("/checkout");
-	}
-};
-
-
+	const handleAdd = () =>
+		run("add", () => {
+			tapMedium();
+			const result = addToCart(product, quantity);
+			// A different-market add shows its own restore dialog and lands in the
+			// cart only after it is confirmed — the cart check above picks that up.
+			if (result?.added) setAdded(true);
+		});
 
 	return (
 		<View style={styles.root}>
 			<Stack.Screen options={{ headerTitle: "" }} />
-			<TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-				<Feather name="chevron-left" size={24} color="#777" />
-			</TouchableOpacity>
 
-			<ScrollView style={styles.container}>
-				{/* Zoom Modal */}
-				<Modal
-					visible={!!zoomedImg}
-					transparent
-					animationType="fade"
-					onRequestClose={() => setZoomedImg(null)}
-				>
-					<TouchableOpacity
-						style={styles.zoomOverlay}
-						activeOpacity={1}
-						onPress={() => setZoomedImg(null)}
-					>
-						<TouchableOpacity
-							activeOpacity={1}
-							onPress={(e) => e.stopPropagation()}
-							style={styles.zoomContainer}
-						>
-							<Image
-								source={{ uri: zoomedImg || undefined }}
-								style={styles.zoomImage}
-								resizeMode="contain"
-							/>
-						</TouchableOpacity>
-					</TouchableOpacity>
-				</Modal>
+			<BackButton onPress={() => router.back()} style={styles.backButton} />
 
-				{/* Image Swiper */}
-				<Swiper
-					style={styles.swiper}
-					showsPagination
-					loop
-					dotStyle={styles.dot}
-					activeDotStyle={styles.activeDot}
-				>
-					{[picture].map((src, i) => (
-						<View key={i} style={styles.slide}>
-							<TouchableOpacity onPress={() => setZoomedImg(src ?? null)}>
-								<Image
-									source={{ uri: src }}
-									style={styles.swiperImage}
-									resizeMode="contain"
-								/>
-							</TouchableOpacity>
-						</View>
-					))}
-				</Swiper>
+			<ScrollView
+				style={styles.container}
+				contentContainerStyle={styles.scrollContent}
+			>
+				{/* Image on top */}
+				<TouchableOpacity activeOpacity={0.9} onPress={() => setZoomed(true)}>
+					<View style={styles.imageBox}>
+						<Image
+							source={{
+								uri: product.picture || "https://via.placeholder.com/300",
+							}}
+							style={styles.image}
+							resizeMode="contain"
+						/>
+					</View>
+				</TouchableOpacity>
 
-				{/* Product Info */}
 				<View style={styles.info}>
-					<Text style={[styles.title, rtlText(isRTL)]}>{td(name)}</Text>
+					{/* Small red discount box */}
+					{discountPercent > 0 && (
+						<View style={styles.discountBadge}>
+							<Text style={styles.discountBadgeText}>
+								{discountPercent}% {t("off")}
+							</Text>
+						</View>
+					)}
 
-					{!!formatWeight(weight) && (
-						<Text style={[styles.weight, rtlText(isRTL)]}>
-							{formatWeight(weight)}
+					{/* Title */}
+					<Text style={[styles.title, rtlText(isRTL)]}>{td(product.name)}</Text>
+
+					{/* Weight */}
+					{!!weight && (
+						<Text style={[styles.weight, rtlText(isRTL)]}>{weight}</Text>
+					)}
+
+					{/* Other values (tax, bottle refund, ...) */}
+					{taxPercent > 0 && (
+						<Text style={[styles.meta, rtlText(isRTL)]}>
+							{t("tax")}: {taxPercent}%
+						</Text>
+					)}
+					{bottleRefund > 0 && (
+						<Text style={[styles.meta, rtlText(isRTL)]}>
+							{t("bottle")}: ${bottleRefund.toFixed(2)}
 						</Text>
 					)}
 
-					<Text style={rtlText(isRTL)}>{description}</Text>
-
-					{/* Price Calculation */}
-					{(() => {
-						const basePrice = parseFloat(String(price)) || 0;
-						const discountPercent = parseFloat(String(discount)) || 0;
-						const taxPercent = parseFloat(String(tax)) || 0;
-						const bottleRefundValue = parseFloat(String(bottlerefund)) || 0;
-
-						// Discount calculation
-						const discountAmount = (basePrice * discountPercent) / 100;
-						const discountedPrice = basePrice - discountAmount;
-
-						// Tax as percentage of discounted price
-						const taxAmount = (discountedPrice * taxPercent) / 100;
-
-						// Final Price
-						const finalPrice = discountedPrice + taxAmount + bottleRefundValue;
-
-						return (
-							<View style={styles.priceDetails}>
-								<Text style={[styles.basePrice, rtlText(isRTL)]}>
-									{t("baseP")}: ${basePrice.toFixed(2)}
-								</Text>
-								{discountPercent > 0 && (
-									<Text style={[styles.discount, rtlText(isRTL)]}>
-										{t("discount")} ({discountPercent}%): -$
-										{discountAmount.toFixed(2)}
-									</Text>
-								)}
-								{taxPercent > 0 && (
-									<Text style={[styles.tax, rtlText(isRTL)]}>
-										{t("tax")} ({taxPercent}%): +${taxAmount.toFixed(2)}
-									</Text>
-								)}
-								{bottleRefundValue > 0 && (
-									<Text style={[styles.bottleRefund, rtlText(isRTL)]}>
-										{t("bottle")}: +${bottleRefundValue.toFixed(2)}
-									</Text>
-								)}
-								   <Text
-									   style={[
-										   styles.finalPrice,
-										   discountPercent > 0 && styles.redText,
-										   rtlText(isRTL),
-									   ]}
-								   >
-									   {t("fPrice")}: ${finalPrice.toFixed(2)}
-								   </Text>
-							</View>
-						);
-					})()}
-
-					{/* Add to Cart / Checkout */}
-					{isInCart ? (
-						<TouchableOpacity
-							onPress={handleGoToCheckout}
-
-							style={styles.button}
-						>
-							<Text style={styles.buttonText}>{t("goToCheckout")}</Text>
-						</TouchableOpacity>
-					) : (
-						<>
-							<QuantitySelector
-								initialQty={quantity}
-								onChange={setQuantity}
-								productId={_id}
-							/>
-							{!isOutOfStock ? (
-								<TouchableOpacity
-									onPress={handleAddToCart}
-									style={styles.button}
-								>
-									<Text style={styles.buttonText}>{t("aBag")}</Text>
-								</TouchableOpacity>
-							) : (
-								<OutOfStockComponent itemName={name} />
-							)}
-						</>
+					{!!product.description && (
+						<Text style={[styles.description, rtlText(isRTL)]}>
+							{product.description}
+						</Text>
 					)}
+
+					{/* Price on one row: LBP (regular) + USD (thin, same size),
+					    then the old price — LBP and USD both struck through. */}
+					<View style={styles.priceRow}>
+						<Text
+							style={[
+								styles.priceLbp,
+								!hasDiscount && styles.priceNoDiscount,
+							]}
+						>
+							{formatLbp(finalPrice, rate)}
+						</Text>
+						<Text
+							style={[
+								styles.priceUsd,
+								!hasDiscount && styles.priceNoDiscount,
+							]}
+						>
+							${finalPrice.toFixed(2)}
+						</Text>
+						{hasDiscount && (
+							<>
+								<Text style={styles.oldPrice}>
+									{formatLbp(basePrice, rate)}
+								</Text>
+								<Text style={styles.oldPrice}>${basePrice.toFixed(2)}</Text>
+							</>
+						)}
+					</View>
+
+					{isOutOfStock && <OutOfStockComponent itemName={product.name} />}
 				</View>
 			</ScrollView>
 
-			{/* Bottom Tab Bar */}
-			{/* <View style={styles.tabBar}>
-				<TouchableOpacity
-					style={styles.tabButton}
-					onPress={() => router.push("/")}
-				>
-					<Feather name="home" size={24} color="#f4bb26" />
-				</TouchableOpacity>
+			{/* Fixed bottom bar: quantity on the left, add + price on the right.
+			    It sits inside the screen, i.e. above the app-wide bottom nav,
+			    which already handles the safe-area inset. */}
+			<View style={styles.bottomBar}>
+				<View style={styles.bottomBarInner}>
+					<View style={styles.qtyBox}>
+						<TouchableOpacity
+							onPress={decrease}
+							disabled={quantity <= 1 || anyBusy}
+							style={[styles.qtyBtn, quantity <= 1 && styles.qtyBtnDisabled]}
+						>
+							{isBusy("dec") ? (
+								<ActivityIndicator size="small" color="#111" />
+							) : (
+								<Text style={styles.qtyBtnText}>-</Text>
+							)}
+						</TouchableOpacity>
+						<Text style={styles.qtyValue}>{quantity}</Text>
+						<TouchableOpacity
+							onPress={increase}
+							disabled={isOutOfStock || quantity >= stock || anyBusy}
+							style={[
+								styles.qtyBtn,
+								(isOutOfStock || quantity >= stock) && styles.qtyBtnDisabled,
+							]}
+						>
+							{isBusy("inc") ? (
+								<ActivityIndicator size="small" color="#111" />
+							) : (
+								<Text style={styles.qtyBtnText}>+</Text>
+							)}
+						</TouchableOpacity>
+					</View>
 
-				<TouchableOpacity
-					style={styles.tabButton}
-					onPress={() => setMenuOpen(true)}
-				>
-					<Feather name="menu" size={24} color="#f4bb26" />
-				</TouchableOpacity>
-				<TouchableOpacity style={styles.tabButton} onPress={toggleCart}>
-					<Feather name="shopping-cart" size={24} color="#f4bb26" />
-					{cart?.length > 0 && <View style={styles.cartBadge} />}
-				</TouchableOpacity>
-								<TouchableOpacity
-					style={styles.tabButton}
-					onPress={() => setProfileOpen(true)}
-				>
-					<Feather name="user" size={24} color="#f4bb26" />
-				</TouchableOpacity>
-			</View> */}
-
-			{/* Profile Overlay */}
-			{profileOpen && (
-				<View style={styles.overlay}>
 					<TouchableOpacity
-						style={styles.closeBtn}
-						onPress={() => setProfileOpen(false)}
+						onPress={showCheckout ? () => router.push("/checkout") : handleAdd}
+						disabled={isOutOfStock || anyBusy}
+						activeOpacity={0.85}
+						style={[styles.addBtn, isOutOfStock && styles.addBtnDisabled]}
 					>
-						<Feather name="x" size={28} color="#000" />
-					</TouchableOpacity>
-					<ScrollView contentContainerStyle={styles.overlayContentProfile}>
-						<Text style={[styles.title, rtlText(isRTL)]}>{t("myProfile")}</Text>
-						{user ? (
-							<>
-								<Text style={[styles.item, rtlText(isRTL)]}>{t("fullName")}: {user.name}</Text>
-								<Text style={[styles.item, rtlText(isRTL)]}>{t("email")}: {user.email}</Text>
-								<Text style={[styles.item, rtlText(isRTL)]}>{t("phoneNumber")}: {user.phoneNumber}</Text>
-							</>
+						{isBusy("add") ? (
+							<ActivityIndicator size="small" color="#111827" />
 						) : (
-							<Text style={[styles.item, rtlText(isRTL)]}>{t("loadingUser")}</Text>
-						)}
-						<TouchableOpacity
-							style={styles.row}
-							onPress={async () => {
-								await AsyncStorage.removeItem("userData");
-								await AsyncStorage.setItem("guest", "false");
-								setProfileOpen(false);
-								router.replace("/start");
-							}}
-						>
-							<Feather
-								name="log-out"
-								size={20}
-								color="red"
-								style={styles.iconMarginRight}
-							/>
-							<Text style={[styles.item, styles.redText]}>{t("logout")}</Text>
-						</TouchableOpacity>
-						<TouchableOpacity
-							style={styles.row}
-							onPress={async () => {
-								await AsyncStorage.removeItem("userData");
-								await AsyncStorage.setItem("guest", "false");
-								setProfileOpen(false);
-								router.replace("/start");
-							}}
-						>
-							<Feather
-								name="trash-2"
-								size={20}
-								color="red"
-								style={styles.iconMarginRight}
-							/>
-							<Text style={[styles.item, styles.redText]}>
-								{t("requestDeleteAccount")}
+							<Text style={styles.addBtnText} numberOfLines={1}>
+								{isOutOfStock
+									? t("out")
+									: showCheckout
+										? t("checkout")
+										: t("add")}
 							</Text>
-						</TouchableOpacity>
-					</ScrollView>
-				</View>
-			)}
-
-			{/* Menu Overlay */}
-			{menuOpen && (
-				<View style={styles.overlay}>
-					<TouchableOpacity
-						style={styles.closeBtn}
-						onPress={() => setMenuOpen(false)}
-					>
-						<Feather name="x" size={28} color="#000" />
+						)}
+						{!isOutOfStock && (
+							<View style={styles.addBtnPrices}>
+								<Text style={styles.addBtnPriceLbp} numberOfLines={1}>
+									{formatLbp(lineTotal, rate)}
+								</Text>
+								<Text style={styles.addBtnPriceUsd} numberOfLines={1}>
+									${lineTotal.toFixed(2)}
+								</Text>
+							</View>
+						)}
 					</TouchableOpacity>
-					<ScrollView contentContainerStyle={styles.overlayContentMenu}>
-						<Text style={[styles.title, rtlText(isRTL)]}>{t("categories")}</Text>
-						{categories.slice(0, 8).map((cat) => (
-							<TouchableOpacity
-								key={cat._id}
-								onPress={() => {
-									setMenuOpen(false);
-									router.push(`/shop?category=${cat._id}`);
-								}}
-							>
-								<Text style={[styles.item, rtlText(isRTL)]}>{td(cat.name)}</Text>
-							</TouchableOpacity>
-						))}
-						<TouchableOpacity
-							onPress={() => {
-								setMenuOpen(false);
-								router.push("/shop");
-							}}
-						>
-							<Text style={[styles.item, rtlText(isRTL)]}>{t("allCategories")}</Text>
-						</TouchableOpacity>
-					</ScrollView>
 				</View>
-			)}
-
-			{/* Cart Overlay */}
-			{isBooleanValue && (
-				<View style={styles.overlay}>
-					{/* <TouchableOpacity
-						style={styles.closeBtn}
-						onPress={() => setBooleanValue(false)}
-					>
-						<Feather name="x" size={28} color="#000" />
-					</TouchableOpacity> */}
-					<Cart />
-				</View>
-			)}
-
-			<Modal visible={showAgeModal} transparent animationType="slide">
-	<View style={styles.modalBackground}>
-		<View style={styles.modalContainer}>
-			<Text
-				style={styles.ageModalTitle}
-			>
-				{t("ageVerificationTitle")}
-			</Text>
-
-			<Text style={styles.ageModalBody}>
-				{t("ageVerification")}
-			</Text>
-
-			<View style={styles.fullWidth}>
-				{/* YES */}
-				<TouchableOpacity
-					onPress={() => handleAgeResponse("yes")}
-					style={styles.ageYesButton}
-				>
-					<Text
-						style={styles.ageYesButtonText}
-					>
-						{t("yes")}
-					</Text>
-				</TouchableOpacity>
-
-				{/* NO */}
-				<TouchableOpacity
-					onPress={() => handleAgeResponse("no")}
-					style={styles.ageNoButton}
-				>
-					<Text
-						style={styles.ageNoButtonText}
-					>
-						{t("no")}
-					</Text>
-				</TouchableOpacity>
 			</View>
-		</View>
-	</View>
-</Modal>
 
+			{/* Image zoom */}
+			<Modal
+				visible={zoomed}
+				transparent
+				animationType="fade"
+				onRequestClose={() => setZoomed(false)}
+			>
+				<TouchableOpacity
+					style={styles.zoomOverlay}
+					activeOpacity={1}
+					onPress={() => setZoomed(false)}
+				>
+					<Image
+						source={{ uri: product.picture || undefined }}
+						style={styles.zoomImage}
+						resizeMode="contain"
+					/>
+				</TouchableOpacity>
+			</Modal>
 		</View>
 	);
 }

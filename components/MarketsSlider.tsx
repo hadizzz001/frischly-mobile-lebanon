@@ -1,16 +1,17 @@
+import { SECTION_TITLE_ICON_COLOR, SECTION_TITLE_ICON_SIZE } from "@/constants/navigation";
+import { Store } from "lucide-react-native";
 import { MARKETS_SLIDER_SNAP_INTERVAL as SNAP_INTERVAL } from "@/constants/layout";
 import {
 	MARKETS_SLIDER_STEP_DURATION_MS as STEP_DURATION,
 	MARKETS_SLIDER_STEP_PAUSE_MS as STEP_PAUSE,
 } from "@/constants/timing";
 import { useTranslation } from "@/contexts/TranslationContext";
-import { MarketService, ProductService } from "@/services/api";
 import { styles } from "@/styles/components/MarketsSlider.styles";
 import type { Market } from "@/types";
 import type { MarketsSliderProps } from "@/types/components/MarketsSlider.types";
-import { entityVisibleForCityOrPin } from "@/utils/cityVisibility";
 import { rtlRow } from "@/utils/rtl";
 import { getUserCityAndPin } from "@/utils/userCity";
+import { fetchVisibleMarkets } from "@/utils/visibleMarkets";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
@@ -23,7 +24,11 @@ import {
     View,
 } from "react-native";
 
-export default function MarketsSlider({ refreshTrigger }: MarketsSliderProps) {
+export default function MarketsSlider({
+	refreshTrigger,
+	onContent,
+	hideLoader,
+}: MarketsSliderProps) {
 	const { t, isRTL } = useTranslation();
 	const router = useRouter();
 
@@ -42,73 +47,10 @@ export default function MarketsSlider({ refreshTrigger }: MarketsSliderProps) {
 	const fetchMarkets = async () => {
 		try {
 			setLoading(true);
-
-			// Determine the logged-in user's city and exact map pin (guests have
-			// neither) in a single /api/auth/me round-trip so both values are
-			// always consistent with each other.
+			// The logged-in user's city and exact map pin (guests have neither),
+			// read in a single /api/auth/me round-trip so both values agree.
 			const { city, pin } = await getUserCityAndPin();
-
-			// Logged-in user with a city => markets of that city only.
-			// Guest (or no city) => all markets. Passing the shopper's exact pin
-			// lets the server also enforce the market's configured delivery
-			// range (map pin(s)/radius, or named Zone documents) server-side —
-			// this is the authoritative check since only the server can see a
-			// market's private Zone documents.
-			//
-			// When the shopper HAS a pin we additionally ask for the pin-only
-			// list (no city). A market can cover the shopper's exact pin with
-			// its delivery circle while serving a different city name, and the
-			// city-scoped query would never return it. Both lists are merged and
-			// the final "city OR pin-in-range" rule is applied below.
-			const [cityRes, pinRes] = await Promise.all([
-				MarketService.listPublic(city || undefined, pin || undefined),
-				pin ? MarketService.listPublic(undefined, pin) : Promise.resolve(null),
-			]);
-
-			const byId = new Map<string, Market>();
-			for (const list of [cityRes?.data, pinRes?.data]) {
-				if (!Array.isArray(list)) continue;
-				for (const market of list) {
-					if (market?._id) byId.set(String(market._id), market);
-				}
-			}
-			const all = Array.from(byId.values());
-
-			// A market can serve MULTIPLE cities (an array) and/or declare map-pin
-			// delivery circles. It is shown when the shopper's exact pin falls
-			// inside one of its circles, OR — when it has no circles / the shopper
-			// has no pin — when it serves the shopper's city. Guests (no city) and
-			// markets with no restriction stay visible.
-			const visible = all.filter((market) => {
-				const ok = entityVisibleForCityOrPin(market, city, pin);
-				if (!ok && __DEV__) {
-					console.log(
-						`[MarketsSlider] Hiding "${market.name}" — city "${city}" not served and shopper pin`,
-						pin,
-						"is outside its delivery range",
-						market.deliveryRegions
-					);
-				}
-				return ok;
-			});
-
-			// Hide markets that don't have any products yet — no point showing an
-			// empty market on the home page slider.
-			const withItemsFlags = await Promise.all(
-				visible.map(async (market) => {
-					try {
-						const prodRes = await ProductService.list({
-							market: market._id,
-							limit: 1,
-						});
-						return (prodRes.data || []).length > 0;
-					} catch {
-						// If the check fails, don't hide the market over a network hiccup.
-						return true;
-					}
-				})
-			);
-			setMarkets(visible.filter((_, i) => withItemsFlags[i]));
+			setMarkets(await fetchVisibleMarkets(city, pin));
 		} catch (err) {
 			console.error("MarketsSlider fetch error:", err);
 		} finally {
@@ -241,10 +183,16 @@ export default function MarketsSlider({ refreshTrigger }: MarketsSliderProps) {
 		settle();
 	};
 
+	// Tell the home screen whether this section ended up with content.
+	useEffect(() => {
+		if (!loading) onContent?.(markets.length > 0);
+	}, [loading, markets, onContent]);
+
 	if (loading) {
+		if (hideLoader) return null;
 		return (
 			<View style={styles.loaderBox}>
-				<ActivityIndicator size="small" color="#f4bb26" />
+				<ActivityIndicator size="small" color="#F59E0B" />
 			</View>
 		);
 	}
@@ -288,9 +236,15 @@ export default function MarketsSlider({ refreshTrigger }: MarketsSliderProps) {
 	return (
 		<View style={styles.container}>
 			<View style={[styles.header, rtlRow(isRTL)]}>
-				<Text style={styles.headerText}>
-					{t("markets") || "Markets"}
-				</Text>
+				<View style={[styles.headerTitleRow, rtlRow(isRTL)]}>
+					<Text style={styles.headerText}>
+						{t("markets") || "Markets"}
+					</Text>
+					<Store
+						size={SECTION_TITLE_ICON_SIZE}
+						color={SECTION_TITLE_ICON_COLOR}
+					/>
+				</View>
 			</View>
 
 			<View style={styles.viewport}>

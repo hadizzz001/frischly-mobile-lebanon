@@ -1,153 +1,163 @@
 "use client";
 
-import { SCREEN_HEIGHT } from "@/constants/layout";
-import { useTranslation } from "@/contexts/TranslationContext";
-import { AuthService } from "@/services/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
+import { Check, CircleAlert, CircleCheck, Eye, EyeOff } from "lucide-react-native";
 import { useEffect, useState } from "react";
-import { styles } from "@/styles/app/changepass.styles";
-import {
-	ActivityIndicator,
-	Alert,
-	KeyboardAvoidingView,
-	ScrollView,
-	Text,
-	TextInput,
-	TouchableOpacity,
-	View,
-} from "react-native";
+import { Pressable, Text, View } from "react-native";
 
-import type { VisiblePasswordInputProps } from "@/types/app/changepass.types";
-
-// Simple visible password input
-function VisiblePasswordInput({ value, onChangeText, placeholder }: VisiblePasswordInputProps) {
-	return (
-		<View style={styles.inputContainer}>
-			<TextInput
-				value={value}
-				onChangeText={onChangeText}
-				placeholder={placeholder}
-				style={styles.input}
-				autoCapitalize="none"
-				placeholderTextColor="#888"
-			/>
-		</View>
-	);
-}
+import AuthLayout from "@/components/AuthLayout";
+import FormField from "@/components/ui/FormField";
+import PrimaryButton from "@/components/ui/PrimaryButton";
+import { colors, icon } from "@/constants/theme";
+import { useTranslation } from "@/contexts/TranslationContext";
+import { AuthService } from "@/services/api";
+import { styles } from "@/styles/components/AuthLayout.styles";
+import { notifyError, notifySuccess } from "@/utils/haptics";
+import { isStrongPassword, passwordRules } from "@/utils/phone";
 
 export default function ChangePassword() {
 	const { t } = useTranslation();
-
 	const router = useRouter();
-	const [currentPassword, setCurrentPassword] = useState<string>("");
-	const [newPassword, setNewPassword] = useState<string>("");
-	const [confirmPassword, setConfirmPassword] = useState<string>("");
-	const [loading, setLoading] = useState<boolean>(false);
-
-	const screenHeight = SCREEN_HEIGHT;
+	const [currentPassword, setCurrentPassword] = useState("");
+	const [newPassword, setNewPassword] = useState("");
+	const [confirmPassword, setConfirmPassword] = useState("");
+	const [show, setShow] = useState(false);
+	const [loading, setLoading] = useState(false);
+	const [errors, setErrors] = useState<{ current?: string; next?: string; confirm?: string }>({});
+	const [formError, setFormError] = useState<string | null>(null);
+	const [notice, setNotice] = useState<string | null>(null);
 
 	useEffect(() => {
-		const checkLogin = async (): Promise<void> => {
-			const userData = await AsyncStorage.getItem("userData");
+		AsyncStorage.getItem("userData").then((userData) => {
 			if (!userData) router.replace("/start");
-		};
-		checkLogin();
-	}, []);
+		});
+	}, [router]);
+
+	const rules = passwordRules(newPassword);
+	const ruleRows: { key: keyof typeof rules; label: string }[] = [
+		{ key: "length", label: t("passwordRuleLength") },
+		{ key: "upper", label: t("passwordRuleUpper") },
+		{ key: "lower", label: t("passwordRuleLower") },
+		{ key: "number", label: t("passwordRuleNumber") },
+	];
 
 	const handleChangePassword = async (): Promise<void> => {
-		if (!currentPassword || !newPassword || !confirmPassword) {
-			return Alert.alert(t("errorTitle"), t("fillAllFields"));
-		}
-		if (newPassword !== confirmPassword) {
-			return Alert.alert(t("errorTitle"), t("passwordMismatch"));
-		}
+		const next: typeof errors = {};
+		if (!currentPassword) next.current = t("fieldRequired");
+		if (!newPassword) next.next = t("fieldRequired");
+		else if (!isStrongPassword(newPassword)) next.next = t("passwordTooWeak");
+		if (confirmPassword !== newPassword) next.confirm = t("passwordsDontMatch");
+		setErrors(next);
+		setFormError(null);
+		setNotice(null);
+		if (Object.keys(next).length) return notifyError();
 
 		setLoading(true);
 		try {
-			const userData = await AsyncStorage.getItem("userData");
-			const token = userData ? JSON.parse(userData)?.token : null;
-			if (!token)
-				return Alert.alert(t("errorTitle"), t("userNotAuthenticated"));
-
-			const res = await AuthService.changePassword({
-				currentPassword,
-				newPassword,
-			});
-
+			const res = await AuthService.changePassword({ currentPassword, newPassword });
 			if (res?.success) {
-				Alert.alert(t("success"), res.message);
+				notifySuccess();
+				setNotice(res.message || t("success"));
 				setCurrentPassword("");
 				setNewPassword("");
 				setConfirmPassword("");
 			} else {
-				Alert.alert(
-					t("errorTitle"),
-					res?.message || t("failedUpdatePassword")
-				);
+				notifyError();
+				setFormError(res?.message || t("failedUpdatePassword"));
 			}
 		} catch (error) {
 			console.error("Change password error:", error);
-			Alert.alert(t("errorTitle"), t("somethingWrong"));
+			notifyError();
+			setFormError(
+				(error as { payload?: { message?: string } })?.payload?.message || t("somethingWrong"),
+			);
 		} finally {
 			setLoading(false);
 		}
 	};
 
+	const eye = (
+		<Pressable onPress={() => setShow((v) => !v)} style={styles.eyeButton} hitSlop={8} accessibilityRole="button">
+			{show ? (
+				<EyeOff size={icon.size} strokeWidth={icon.strokeWidth} color={colors.textMuted} />
+			) : (
+				<Eye size={icon.size} strokeWidth={icon.strokeWidth} color={colors.textMuted} />
+			)}
+		</Pressable>
+	);
+
 	return (
-		<KeyboardAvoidingView
-			style={styles.flexWhite}
-			behavior="padding"
-		>
-			<ScrollView
-				contentContainerStyle={styles.scrollContent}
-				keyboardShouldPersistTaps="handled"
-			>
-				<View
-					style={[styles.topBanner, { height: screenHeight * 0.4 }]}
-				>
-					<Text style={styles.headerTitle}>
-						{t("changePassword")}
-					</Text>
+		<AuthLayout title={t("changePassword")} subtitle={t("newPasswordBody")} compact showBack hideLanguage>
+			{notice ? (
+				<View style={styles.successBox}>
+					<CircleCheck size={icon.size} strokeWidth={icon.strokeWidth} color={colors.success} />
+					<Text style={styles.boxText}>{notice}</Text>
 				</View>
-
-				<View style={styles.formContainer}>
-					<VisiblePasswordInput
-						value={currentPassword}
-						onChangeText={setCurrentPassword}
-						placeholder={t("currentPassword")}
-					/>
-					<VisiblePasswordInput
-						value={newPassword}
-						onChangeText={setNewPassword}
-						placeholder={t("newPassword")}
-					/>
-					<VisiblePasswordInput
-						value={confirmPassword}
-						onChangeText={setConfirmPassword}
-						placeholder={t("confirmNewPassword")}
-					/>
-
-					<TouchableOpacity
-						onPress={handleChangePassword}
-						disabled={loading}
-						style={[
-							styles.updateButton,
-							{ backgroundColor: loading ? "#cccccc" : "#f4bb26" },
-						]}
-					>
-						{loading ? (
-							<ActivityIndicator size="small" color="#000" />
+			) : null}
+			{formError ? (
+				<View style={styles.errorBox}>
+					<CircleAlert size={icon.size} strokeWidth={icon.strokeWidth} color={colors.danger} />
+					<Text style={styles.boxText}>{formError}</Text>
+				</View>
+			) : null}
+			<FormField
+				label={t("currentPassword")}
+				required
+				value={currentPassword}
+				onChangeText={(v) => {
+					setCurrentPassword(v);
+					if (errors.current) setErrors((e) => ({ ...e, current: undefined }));
+				}}
+				secureTextEntry={!show}
+				autoCapitalize="none"
+				textContentType="password"
+				error={errors.current}
+				right={eye}
+			/>
+			<FormField
+				label={t("newPassword")}
+				required
+				value={newPassword}
+				onChangeText={(v) => {
+					setNewPassword(v);
+					if (errors.next) setErrors((e) => ({ ...e, next: undefined }));
+				}}
+				secureTextEntry={!show}
+				autoCapitalize="none"
+				textContentType="newPassword"
+				error={errors.next}
+				right={eye}
+			/>
+			<View style={styles.rules}>
+				{ruleRows.map((r) => (
+					<View key={r.key} style={styles.ruleRow}>
+						{rules[r.key] ? (
+							<CircleCheck size={icon.sizeSmall} strokeWidth={icon.strokeWidth} color={colors.success} />
 						) : (
-							<Text style={styles.updateButtonText}>
-								{t("updatePassword")}
-							</Text>
+							<Check size={icon.sizeSmall} strokeWidth={icon.strokeWidth} color={colors.textDisabled} />
 						)}
-					</TouchableOpacity>
-				</View>
-
-				<View style={styles.bottomSpacer} />
-			</ScrollView>
-		</KeyboardAvoidingView>
+						<Text style={[styles.ruleText, rules[r.key] && styles.ruleTextOk]}>{r.label}</Text>
+					</View>
+				))}
+			</View>
+			<FormField
+				label={t("confirmNewPassword")}
+				required
+				value={confirmPassword}
+				onChangeText={(v) => {
+					setConfirmPassword(v);
+					if (errors.confirm) setErrors((e) => ({ ...e, confirm: undefined }));
+				}}
+				secureTextEntry={!show}
+				autoCapitalize="none"
+				textContentType="newPassword"
+				returnKeyType="done"
+				onSubmitEditing={handleChangePassword}
+				error={errors.confirm}
+				right={eye}
+			/>
+			<PrimaryButton label={t("updatePassword")} onPress={handleChangePassword} loading={loading} style={styles.primary} />
+		</AuthLayout>
 	);
 }

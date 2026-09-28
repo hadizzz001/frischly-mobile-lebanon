@@ -163,6 +163,10 @@ export interface Market {
 	isOpen?: boolean;
 	rating?: number;
 	deliveryFee?: number;
+	// Dynamic delivery: subtotal at which delivery becomes free (0 = disabled).
+	freeDeliveryThreshold?: number;
+	// Minimum order amount the market accepts (0 = none).
+	minOrderAmount?: number;
 	// Delivery/coverage zone names (references Zone documents with their own
 	// map pin + radius).
 	deliveryZones?: string[];

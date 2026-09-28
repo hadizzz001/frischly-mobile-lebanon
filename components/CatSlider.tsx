@@ -1,3 +1,7 @@
+import { SECTION_TITLE_ICON_COLOR, SECTION_TITLE_ICON_SIZE } from "@/constants/navigation";
+import { ChevronLeft, ChevronRight, LayoutGrid } from "lucide-react-native";
+import { Image } from "expo-image";
+import { colors } from "@/constants/theme";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { CategoryService, MarketService } from "@/services/api";
 import { styles } from "@/styles/components/CatSlider.styles";
@@ -8,19 +12,14 @@ import { rtlRow } from "@/utils/rtl";
 import { getUserCityAndPin } from "@/utils/userCity";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import {
-    ActivityIndicator,
-    Image,
-    Text,
-    TouchableOpacity,
-    View,
-} from "react-native";
-import Feather from "react-native-vector-icons/Feather";
+import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
 
 export default function CategoriesGrid({
 	refreshTrigger,
 	marketId,
 	marketName,
+	onContent,
+	hideLoader,
 }: CategoriesGridProps) {
 	const { t, td, isRTL } = useTranslation();
 
@@ -73,10 +72,16 @@ export default function CategoriesGrid({
 		}
 	}, [refreshTrigger]);
 
+	// Tell the home screen whether this section ended up with content.
+	useEffect(() => {
+		if (!loading) onContent?.(categories.length > 0);
+	}, [loading, categories, onContent]);
+
 	if (loading) {
+		if (hideLoader) return null;
 		return (
 			<View style={styles.loadingContainer}>
-				<ActivityIndicator size="large" color="#f4bb26" />
+				<ActivityIndicator size="large" color={colors.primary} />
 				<Text>{t("loadingCategories")}</Text>
 			</View>
 		);
@@ -91,7 +96,7 @@ export default function CategoriesGrid({
 	const renderCategory = ({ item: category }: { item: Category }) => (
 		<TouchableOpacity
 			key={category._id}
-			onPress={() => router.push(categoryHref(category))}
+			onPress={() => router.push(categoryHref(category) as never)}
 			activeOpacity={0.8}
 			style={styles.card}
 		>
@@ -100,7 +105,8 @@ export default function CategoriesGrid({
 					<Image
 						source={{ uri: category.image }}
 						style={styles.image}
-						resizeMode="contain"
+						contentFit="contain"
+						cachePolicy="memory-disk"
 					/>
 				) : (
 					<Text style={styles.imagePlaceholder}>
@@ -129,16 +135,26 @@ export default function CategoriesGrid({
 	return (
 		<View style={styles.sectionContainer}>
 			<View style={[styles.header, rtlRow(isRTL)]}>
-				<Text style={styles.headerText}>{t("shopByCategory")}</Text>
+				<View style={[styles.headerTitleRow, rtlRow(isRTL)]}>
+					<Text style={styles.headerText}>{t("shopByCategory")}</Text>
+					<LayoutGrid
+						size={SECTION_TITLE_ICON_SIZE}
+						color={SECTION_TITLE_ICON_COLOR}
+					/>
+				</View>
 				<View style={styles.headerRight}>
 					<TouchableOpacity
 						style={styles.allButton}
-						onPress={() => router.push(shopAllHref)}
+						onPress={() => router.push(shopAllHref as never)}
 					>
 						<Text style={styles.allText}>{t("all")}</Text>
 					</TouchableOpacity>
-					<TouchableOpacity onPress={() => router.push(shopAllHref)}>
-						<Feather name="chevron-right" size={24} color="#777" />
+					<TouchableOpacity onPress={() => router.push(shopAllHref as never)} hitSlop={8}>
+						{isRTL ? (
+							<ChevronLeft size={22} strokeWidth={2} color={colors.textSecondary} />
+						) : (
+							<ChevronRight size={22} strokeWidth={2} color={colors.textSecondary} />
+						)}
 					</TouchableOpacity>
 				</View>
 			</View>

@@ -1,10 +1,12 @@
-import { getKitchenCartItems } from "@/components/KitchenSlider";
+import BackButton from "@/components/ui/BackButton";
 import { useCart } from "@/contexts/CartContext";
 import { useTranslation } from "@/contexts/TranslationContext";
+import { useBusyAction } from "@/hooks/useBusyAction";
 import { KitchenService } from "@/services/api";
 import { styles } from "@/styles/app/kitchen/[id].styles";
-import type { Kitchen } from "@/types";
-import { getFinalPrice } from "@/utils/product";
+import type { Kitchen, Product } from "@/types";
+import { getKitchenCartItems, isKitchenInCart } from "@/utils/kitchen";
+import { getBasePrice, getFinalPrice } from "@/utils/product";
 import { Feather } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -23,7 +25,8 @@ export default function KitchenPage() {
 	const { t, td } = useTranslation();
 	const router = useRouter();
 	const { id } = useLocalSearchParams<{ id: string }>();
-	const { addItemsToCart, cart } = useCart();
+	const { addItemsToCart, addToCart, removeFromCart, cart } = useCart();
+	const { isBusy, anyBusy, run } = useBusyAction();
 
 	const [kitchen, setKitchen] = useState<Kitchen | null>(null);
 	const [loading, setLoading] = useState(true);
@@ -44,6 +47,29 @@ export default function KitchenPage() {
 		if (id) fetchKitchen();
 	}, [id]);
 
+	// Per-item add / +/- controls. The kitchen screen used to be view-only, so a
+	// shopper could only take the whole kitchen; these mirror the product cards
+	// on the home page (quantity read straight from the cart).
+	const cartQuantity = (productId: string) =>
+		cart.find((c) => String(c._id) === String(productId))?.quantity || 0;
+
+	const increaseQty = (item: Product) => {
+		const current = cartQuantity(item._id);
+		const stock = Number(item.stock) || 0;
+		if (stock > 0 && current >= stock) return;
+		run(`${current > 0 ? "inc" : "add"}-${item._id}`, () => {
+			addToCart(item, current + 1);
+		});
+	};
+
+	const decreaseQty = (item: Product) => {
+		const current = cartQuantity(item._id);
+		run(`dec-${item._id}`, () => {
+			if (current <= 1) removeFromCart(item._id);
+			else addToCart(item, current - 1);
+		});
+	};
+
 	const handleAddAll = () => {
 		const items = getKitchenCartItems(kitchen);
 
@@ -57,22 +83,24 @@ export default function KitchenPage() {
 		).length;
 		const skipped = totalActive - items.length;
 
-		const result = addItemsToCart(items);
+		run("add-all", () => {
+			const result = addItemsToCart(items);
 
-		// On a different-market conflict, addItemsToCart shows its own restore
-		// dialog, so only show success when items were actually added.
-		if (result?.added) {
-			Alert.alert(
-				t("success"),
-				skipped > 0 ? t("kitchenAddedWithSkipped") : t("kitchenAddedToCart"),
-			);
-		}
+			// On a different-market conflict, addItemsToCart shows its own restore
+			// dialog, so only show success when items were actually added.
+			if (result?.added) {
+				Alert.alert(
+					t("success"),
+					skipped > 0 ? t("kitchenAddedWithSkipped") : t("kitchenAddedToCart"),
+				);
+			}
+		});
 	};
 
 	if (loading) {
 		return (
 			<View style={styles.center}>
-				<ActivityIndicator size="large" color="#f4bb26" />
+				<ActivityIndicator size="large" color="#F59E0B" />
 			</View>
 		);
 	}
@@ -80,9 +108,7 @@ export default function KitchenPage() {
 	if (!kitchen) {
 		return (
 			<SafeAreaView edges={["top"]} style={styles.safeArea}>
-				<TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-					<Feather name="chevron-left" size={24} color="#222" />
-				</TouchableOpacity>
+				<BackButton onPress={() => router.back()} style={styles.backButton} />
 				<View style={styles.center}>
 					<Text style={styles.emptyText}>{t("kitchenNotFound")}</Text>
 				</View>
@@ -95,18 +121,16 @@ export default function KitchenPage() {
 	);
 	const addableItems = getKitchenCartItems(kitchen);
 	const addableCount = addableItems.length;
-	// Once any of this kitchen's items are in the cart, swap the "Add all"
-	// button for a "Go to Checkout" button.
-	const inCart = addableItems.some((it) =>
-		cart.some((c) => c._id === it._id),
-	);
+	// Once this whole kitchen is in the cart, offer a shortcut to checkout.
+	// Derived from the cart, so removing an item (or placing the order) hides it
+	// again straight away — and a kitchen that only shares a product with one
+	// that was added never counts as taken.
+	const inCart = isKitchenInCart(kitchen, cart);
 
 	return (
 		<View style={styles.root}>
 			<Stack.Screen options={{ headerTitle: "" }} />
-			<TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-				<Feather name="chevron-left" size={24} color="#222" />
-			</TouchableOpacity>
+			<BackButton onPress={() => router.back()} style={styles.backButton} />
 
 			<ScrollView contentContainerStyle={styles.scrollContent}>
 				{/* Main image */}
@@ -126,26 +150,33 @@ export default function KitchenPage() {
 
 				<Text style={styles.title}>{td(kitchen.name)}</Text>
 
-				{/* Under the main image: Add all to cart, or Go to Checkout once
-				    the kitchen's items are in the cart. */}
-				{inCart ? (
+				{/* Under the main image: "Add all to cart" stays available (items can
+				    also be added one by one below), and "Go to Checkout" appears
+				    alongside it only while this kitchen's items are in the cart. */}
+				<TouchableOpacity
+					style={[styles.addAllBtn, addableCount === 0 && styles.addAllBtnDisabled]}
+					activeOpacity={0.85}
+					disabled={addableCount === 0 || anyBusy}
+					onPress={handleAddAll}
+				>
+					{isBusy("add-all") ? (
+						<ActivityIndicator size="small" color="#111827" />
+					) : (
+						<>
+							<Feather name="shopping-cart" size={18} color="#111827" />
+							<Text style={styles.addAllBtnText}>{t("addAllToCart")}</Text>
+						</>
+					)}
+				</TouchableOpacity>
+
+				{inCart && (
 					<TouchableOpacity
 						style={styles.checkoutBtn}
 						activeOpacity={0.85}
 						onPress={() => router.push("/checkout")}
 					>
-						<Feather name="credit-card" size={18} color="#fff" />
+						<Feather name="credit-card" size={18} color="#111827" />
 						<Text style={styles.addAllBtnText}>{t("goToCheckout")}</Text>
-					</TouchableOpacity>
-				) : (
-					<TouchableOpacity
-						style={[styles.addAllBtn, addableCount === 0 && styles.addAllBtnDisabled]}
-						activeOpacity={0.85}
-						disabled={addableCount === 0}
-						onPress={handleAddAll}
-					>
-						<Feather name="shopping-cart" size={18} color="#fff" />
-						<Text style={styles.addAllBtnText}>{t("addAllToCart")}</Text>
 					</TouchableOpacity>
 				)}
 
@@ -156,10 +187,11 @@ export default function KitchenPage() {
 					<Text style={styles.emptyText}>{t("kitchenNoItems")}</Text>
 				) : (
 					items.map((item) => {
-						const basePrice = parseFloat(String(item.price)) || 0;
+						const basePrice = getBasePrice(item);
 						const finalPrice = getFinalPrice(item);
 						const hasDiscount = finalPrice !== basePrice;
 						const outOfStock = Number(item.stock || 0) <= 0;
+						const quantity = cartQuantity(item._id);
 
 						return (
 							<View key={item._id} style={styles.itemRow}>
@@ -195,11 +227,60 @@ export default function KitchenPage() {
 									</View>
 								</View>
 
-								{/* Quantity is view-only */}
-								<View style={styles.qtyBox}>
-									<Text style={styles.qtyLabel}>{t("quantity")}</Text>
-									<Text style={styles.qtyValue}>1</Text>
-								</View>
+								{/* Add this single item (or adjust its quantity). */}
+								{!outOfStock && (
+									<View style={styles.qtyBox}>
+										{quantity > 0 ? (
+											<>
+												<TouchableOpacity
+													onPress={() => decreaseQty(item)}
+													disabled={anyBusy}
+													style={styles.qtyBtn}
+												>
+													{isBusy(`dec-${item._id}`) ? (
+														<ActivityIndicator size="small" color="#111827" />
+													) : (
+														<Text style={styles.qtyBtnText}>-</Text>
+													)}
+												</TouchableOpacity>
+												<Text style={styles.qtyValue}>{quantity}</Text>
+												<TouchableOpacity
+													onPress={() => increaseQty(item)}
+													disabled={
+														quantity >= Number(item.stock || 0) || anyBusy
+													}
+													style={[
+														styles.qtyBtn,
+														quantity >= Number(item.stock || 0) &&
+															styles.qtyBtnDisabled,
+													]}
+												>
+													{isBusy(`inc-${item._id}`) ? (
+														<ActivityIndicator size="small" color="#111827" />
+													) : (
+														<Text style={styles.qtyBtnText}>+</Text>
+													)}
+												</TouchableOpacity>
+											</>
+										) : (
+											<TouchableOpacity
+												onPress={() => increaseQty(item)}
+												disabled={anyBusy}
+												style={styles.addBtn}
+											>
+												{isBusy(`add-${item._id}`) ? (
+													<ActivityIndicator size="small" color="#111827" />
+												) : (
+													<Feather
+														name="shopping-cart"
+														size={18}
+														color="#111827"
+													/>
+												)}
+											</TouchableOpacity>
+										)}
+									</View>
+								)}
 							</View>
 						);
 					})

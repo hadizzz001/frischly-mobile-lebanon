@@ -39,6 +39,18 @@ export const AuthService = {
 
 	changePassword: (payload: unknown) =>
 		httpClient.put<null>("/auth/change-password", payload, { auth: true }),
+
+	// --- native password reset (no browser redirect) --------------------------
+	// 1. request a code for the account's email (always 200, never reveals
+	//    whether the email exists);
+	requestPasswordReset: (email: string) =>
+		httpClient.post<null>("/auth/forgot-password", { email }),
+	// 2. exchange the emailed 6-digit code for the one-time reset token;
+	verifyResetCode: (email: string, code: string) =>
+		httpClient.post<{ token: string }>("/auth/verify-reset-code", { email, code }),
+	// 3. set the new password with that token.
+	resetPassword: (token: string, newPassword: string) =>
+		httpClient.post<null>("/auth/reset-password", { token, newPassword }),
 };
 
 export type { AuthPayload };

@@ -22,6 +22,6 @@ export const styles = StyleSheet.create({
 	link: {
 		lineHeight: 30,
 		fontSize: 16,
-		color: "#f4bb26",
+		color: "#F59E0B",
 	},
 });
