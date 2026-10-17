@@ -45,7 +45,7 @@ import {
 	isVisibleForCityOrPin,
 } from "@/utils/cityVisibility";
 import { tapSelection } from "@/utils/haptics";
-import { rtlRow } from "@/utils/rtl";
+import { rtlFlip, rtlRow } from "@/utils/rtl";
 import { getUserCityAndPin } from "@/utils/userCity";
 
 const DEFAULT_FILTERS = (search: string, category: string): ShopFilters => ({
@@ -748,10 +748,12 @@ export default function ShopPage() {
 	const listBottomPadding = { paddingBottom: Math.max(insets.bottom, 16) + 96 };
 
 	return (
-		<SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
+		// No safe-area edges: the global header above this screen already clears
+		// the status bar and the bottom nav below it the home indicator.
+		<SafeAreaView edges={[]} style={styles.safeArea}>
 			<View style={styles.container}>
 				{/* Back arrow + Categories */}
-				<View style={styles.categoryHeader}>
+				<View style={[styles.categoryHeader, rtlRow(isRTL)]}>
 					<BackButton />
 
 					{marketParam ? (
@@ -759,10 +761,11 @@ export default function ShopPage() {
 							<ScrollView
 								horizontal
 								showsHorizontalScrollIndicator={false}
-								style={styles.categoryBar}
+								style={[styles.categoryBar, rtlFlip(isRTL)]}
 								contentContainerStyle={styles.centerAlignItems}
 							>
 								<Chip
+									style={rtlFlip(isRTL)}
 									label={t("all")}
 									selected={!marketCatId}
 									onPress={() => {
@@ -772,6 +775,7 @@ export default function ShopPage() {
 								/>
 								{marketCats.map((cat) => (
 									<Chip
+										style={rtlFlip(isRTL)}
 										key={cat._id}
 										label={td(cat.name)}
 										selected={marketCatId === String(cat._id)}
@@ -796,16 +800,18 @@ export default function ShopPage() {
 						<ScrollView
 							horizontal
 							showsHorizontalScrollIndicator={false}
-							style={styles.categoryBar}
+							style={[styles.categoryBar, rtlFlip(isRTL)]}
 							contentContainerStyle={styles.centerAlignItems}
 						>
 							<Chip
+								style={rtlFlip(isRTL)}
 								label={t("all")}
 								selected={!categoryParam && discountParam !== "true"}
 								onPress={() => router.push("/shop")}
 							/>
 							{categories.map((cat) => (
 								<Chip
+									style={rtlFlip(isRTL)}
 									key={cat._id}
 									label={td(cat.name)}
 									selected={categoryParam === cat.name}
@@ -845,16 +851,18 @@ export default function ShopPage() {
 						<ScrollView
 							horizontal
 							showsHorizontalScrollIndicator={false}
-							style={styles.subcategoryBar}
+							style={[styles.subcategoryBar, rtlFlip(isRTL)]}
 							contentContainerStyle={styles.subcategoryScrollContent}
 						>
 							<Chip
+								style={rtlFlip(isRTL)}
 								label={t("all")}
 								selected={!marketSubId}
 								onPress={() => setMarketSubId("")}
 							/>
 							{(selectedMarketCat.subcategories || []).map((sub) => (
 								<Chip
+									style={rtlFlip(isRTL)}
 									key={sub._id}
 									label={td(sub.name)}
 									selected={marketSubId === String(sub._id)}
@@ -890,7 +898,7 @@ export default function ShopPage() {
 							</View>
 						)}
 						renderItem={({ item: row }) => (
-							<View style={styles.searchRow}>
+							<View style={[styles.searchRow, rtlRow(isRTL)]}>
 								{row.map((p) => renderProduct({ item: p }))}
 							</View>
 						)}
@@ -910,7 +918,7 @@ export default function ShopPage() {
 						// remounts the list if the column count ever changes.
 						key={`grid-${PRODUCT_GRID_COLUMNS}`}
 						contentContainerStyle={[styles.listContent, listBottomPadding]}
-						columnWrapperStyle={styles.searchRow}
+						columnWrapperStyle={[styles.searchRow, rtlRow(isRTL)]}
 						data={displayedProducts}
 						keyExtractor={(item) => item._id}
 						renderItem={renderProduct}

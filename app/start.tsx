@@ -158,7 +158,7 @@ export default function Start() {
 	};
 
 	return (
-		<AuthLayout title={t("welcomeBack")} subtitle={t("loginSubtitle")}>
+		<AuthLayout title={t("welcomeBack")} subtitle={t("loginSubtitle")} animatedLogo>
 			{params.reset === "1" && !formError ? (
 				<View style={styles.successBox}>
 					<CircleCheck size={icon.size} strokeWidth={icon.strokeWidth} color={colors.success} />
@@ -184,6 +184,7 @@ export default function Start() {
 
 			<FormField
 				label={t("phoneOrEmail")}
+				ltr
 				value={identifier}
 				onChangeText={(v) => {
 					setIdentifier(v);

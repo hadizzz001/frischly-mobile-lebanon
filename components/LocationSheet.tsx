@@ -14,10 +14,11 @@
 // points, dynamic sizing — is exactly the kind of thing that makes it close
 // itself). Every failure is shown inline; a save that silently fails looks
 // like "I can't change my city".
+import { BottomSheetTextInput } from "@gorhom/bottom-sheet";
 import { Image } from "expo-image";
 import { Check, LocateFixed, MapPin, Search } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
 import AppBottomSheet from "@/components/ui/AppBottomSheet";
 import PrimaryButton from "@/components/ui/PrimaryButton";
@@ -28,6 +29,7 @@ import { useTranslation } from "@/contexts/TranslationContext";
 import { ApiError, MarketService } from "@/services/api";
 import { styles } from "@/styles/components/LocationSheet.styles";
 import type { LocationSheetProps } from "@/types/components/LocationSheet.types";
+import { rtlText } from "@/utils/rtl";
 import { detectCityFromLocation, getCityCoordinates, getStateForCity } from "@/utils/cityDetection";
 import {
 	entityVisibleForCityOrPin,
@@ -227,8 +229,9 @@ export default function LocationSheet({
 
 			<View style={[styles.searchBox, isRTL && { flexDirection: "row-reverse" }]}>
 				<Search size={icon.size} strokeWidth={icon.strokeWidth} color={colors.textMuted} />
-				<TextInput
-					style={styles.searchInput}
+				{/* The sheet's own input, so the sheet lifts above the keyboard. */}
+				<BottomSheetTextInput
+					style={[styles.searchInput, rtlText(isRTL)]}
 					placeholder={t("searchCity")}
 					placeholderTextColor={colors.textDisabled}
 					value={search}

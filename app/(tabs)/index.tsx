@@ -44,6 +44,7 @@ type HomeMode =
 
 export default function HomeScreen() {
 	const [refreshing, setRefreshing] = useState(false);
+	const [repeatCardVisible, setRepeatCardVisible] = useState(false);
 	const [refreshTrigger, setRefreshTrigger] = useState(0);
 	const [city, setCity] = useState("");
 	const [mode, setMode] = useState<HomeMode>({ kind: "deciding" });
@@ -216,7 +217,9 @@ export default function HomeScreen() {
 		<View style={styles.container}>
 			<ScrollView
 				style={globalStyles.flex1}
-				contentContainerStyle={styles.scrollContent}
+				contentContainerStyle={
+					repeatCardVisible ? styles.scrollContentWithFloatingCard : styles.scrollContent
+				}
 				onScroll={onScroll}
 				scrollEventThrottle={100}
 				refreshControl={
@@ -253,7 +256,8 @@ export default function HomeScreen() {
 				/>
 				<Footer />
 			</ScrollView>
-			<RepeatOrderButton />
+			{/* Floating, closable "Order again" card (once the page has loaded). */}
+			{!isLoading && <RepeatOrderButton onVisibilityChange={setRepeatCardVisible} />}
 			{isLoading && <HomeSkeleton />}
 		</View>
 	);

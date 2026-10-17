@@ -12,6 +12,19 @@ const { width, height } = Dimensions.get("window");
 export const SCREEN_WIDTH: number = width;
 export const SCREEN_HEIGHT: number = height;
 
+// --- Every scrolling page --------------------------------------------------
+// Space left under the last thing on a page (link, card, button) so it never
+// sits flush against the bottom nav or the phone's home indicator.
+export const PAGE_END_SPACE = 64;
+
+// --- components/AuthLayout.tsx -------------------------------------------
+/** Height of the back-button / language-pill row on the auth header. */
+export const AUTH_TOP_BAR_HEIGHT = 40;
+/** Animated logo on the login header, kept smaller on short phones… */
+export const AUTH_LOGO_VIDEO_SIZE = Math.round(Math.min(200, height * 0.24));
+/** …and on the register header, whose long form needs the room. */
+export const AUTH_LOGO_VIDEO_SIZE_COMPACT = Math.round(Math.min(160, height * 0.19));
+
 // --- Shared 3-column product grid ----------------------------------------
 // Every catalog grid (home, market home, shop, search, category, kitchens)
 // shows 3 cards per row: 16px screen gutter on each side + an 8px gap between
@@ -56,6 +69,8 @@ export const MARKETS_SLIDER_ITEM_SPACING = 10;
 export const MARKETS_SLIDER_ITEM_WIDTH = SCREEN_WIDTH / 3 - 16;
 export const MARKETS_SLIDER_SNAP_INTERVAL =
 	MARKETS_SLIDER_ITEM_WIDTH + MARKETS_SLIDER_ITEM_SPACING;
+/** Shape of a store-logo tile; the logos are framed to it (LOGO_TILE_TRANSFORMATION). */
+export const MARKETS_SLIDER_LOGO_ASPECT_RATIO = 5 / 4;
 
 // --- components/ProductCard.tsx ------------------------------------------
 // Product titles are cut to this many characters (a "..." is appended) so the
@@ -74,6 +89,10 @@ export const PRODUCT_LIST_ITEM_WIDTH = PRODUCT_GRID_ITEM_WIDTH;
 // width + PRODUCT_GRID_GAP) so exactly 3 cards fill the row; the rest scroll.
 export const PRODUCT_SLIDE_ITEM_WIDTH = PRODUCT_GRID_ITEM_WIDTH;
 export const PRODUCT_SLIDE_ITEM_HEIGHT = 300; // room for the card's price/save lines + add button
+
+// --- components/RepeatOrderButton.tsx ------------------------------------
+/** Extra space a page keeps at its end while the floating "Order again" card shows. */
+export const REPEAT_ORDER_FLOATING_SPACE = 96;
 
 // --- components/Marquee.tsx ----------------------------------------------
 /** Empty space between the two copies of a marquee's text. */

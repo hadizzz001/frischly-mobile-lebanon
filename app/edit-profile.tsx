@@ -6,7 +6,7 @@ import { useTranslation } from "@/contexts/TranslationContext";
 import { AuthService } from "@/services/api";
 import type { User } from "@/types";
 import { getCityCoordinates, getStateForCity, reverseGeocodePoint } from "@/utils/cityDetection";
-import { rtlText } from "@/utils/rtl";
+import { rtlAlign, rtlRow, rtlText } from "@/utils/rtl";
 import { formatStreetLine } from "@/utils/userAddress";
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -230,7 +230,7 @@ export default function EditProfile() {
 
 	return (
 		<ScrollView style={styles.container}>
-			<BackButton onPress={() => router.back()} style={styles.backButton} />
+			<BackButton onPress={() => router.back()} style={[styles.backButton, rtlAlign(isRTL)]} />
 
 			{(["name", "phoneNumber"] as (keyof ProfileForm)[]).map((key) => (
 				<View key={key} style={styles.fieldGroup}>
@@ -238,7 +238,7 @@ export default function EditProfile() {
 						{key === "phoneNumber" ? t("phoneNumber") : t("fullName")}
 					</Text>
 					<TextInput
-						style={[styles.input, rtlText(isRTL)]}
+						style={[styles.input, key === "phoneNumber" ? styles.inputLTR : rtlText(isRTL)]}
 						value={form[key]}
 						onChangeText={(val) => setForm({ ...form, [key]: val })}
 					/>
@@ -295,7 +295,7 @@ export default function EditProfile() {
 			    drivers can be matched by exact coverage, not just city name. */}
 			<TouchableOpacity
 				onPress={() => setShowMapPicker(true)}
-				style={styles.mapPinButton}
+				style={[styles.mapPinButton, rtlRow(isRTL)]}
 			>
 				<Feather name="map" size={16} color={pin ? "#22a45d" : "#F59E0B"} />
 				<Text

@@ -18,7 +18,7 @@ import Svg, { G, Path } from "react-native-svg";
 import { styles } from "@/styles/app/done.styles";
 
 export default function CheckoutSuccessPage() {
-	const { t } = useTranslation();
+	const { t, isRTL } = useTranslation();
 
 	const { clearCart } = useCart();
 	const router = useRouter();
@@ -99,7 +99,7 @@ export default function CheckoutSuccessPage() {
 			style={styles.scrollContainer}
 			contentContainerStyle={styles.contentContainer}
 		>
-			<BackButton onPress={goHome} style={styles.backButton} />
+			<BackButton onPress={goHome} style={[styles.backButton, isRTL ? styles.backButtonRight : styles.backButtonLeft]} />
 
 			<View style={styles.inner}>
 				{/* SVG Icon */}

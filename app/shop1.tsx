@@ -17,7 +17,7 @@ import { AuthService, ProductService } from "@/services/api";
 import { styles } from "@/styles/app/shop1.styles";
 import type { Product, User } from "@/types";
 import { isServedByAdmin } from "@/utils/cityVisibility";
-import { rtlRow } from "@/utils/rtl";
+import { rtlRow, rtlText } from "@/utils/rtl";
 import { getUserCityAndPin } from "@/utils/userCity";
 
 import type { ProductSection } from "@/types/app/shop1.types";
@@ -148,7 +148,9 @@ export default function ShopPage() {
 	const header = (
 		<View style={[styles.header, rtlRow(isRTL)]}>
 			<BackButton />
-			<Text style={styles.headerTitle} numberOfLines={1}>
+			{/* Explicit right alignment in Arabic: the title sits next to the
+			    back button instead of at the far edge of the row. */}
+			<Text style={[styles.headerTitle, rtlText(isRTL)]} numberOfLines={1}>
 				{td(category ?? "")}
 			</Text>
 		</View>
@@ -156,7 +158,7 @@ export default function ShopPage() {
 
 	if (loading) {
 		return (
-			<SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
+			<SafeAreaView edges={[]} style={styles.safeArea}>
 				{header}
 				<ScrollView contentContainerStyle={styles.skeletonWrap} scrollEnabled={false}>
 					<ProductGridSkeleton count={6} />
@@ -166,13 +168,13 @@ export default function ShopPage() {
 	}
 
 	return (
-		<SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
+		<SafeAreaView edges={[]} style={styles.safeArea}>
 			{header}
 
 			{/* Floating Sticky Header Alternative */}
 			{currentSectionTitle ? (
 				<View style={styles.floatingHeader}>
-					<Text style={styles.floatingHeaderText}>{td(currentSectionTitle)}</Text>
+					<Text style={[styles.floatingHeaderText, rtlText(isRTL)]}>{td(currentSectionTitle)}</Text>
 				</View>
 			) : null}
 
@@ -184,12 +186,12 @@ export default function ShopPage() {
 					return `row-${item[0]?._id || "unknown"}-${index}`;
 				}}
 				renderItem={({ item: row }) => (
-					<View style={styles.row}>
+					<View style={[styles.row, rtlRow(isRTL)]}>
 						{row.map((product) => renderProduct(product))}
 					</View>
 				)}
 				renderSectionHeader={({ section: { title } }) => (
-					<Text style={styles.subcategoryTitle}>{td(title)}</Text>
+					<Text style={[styles.subcategoryTitle, rtlText(isRTL)]}>{td(title)}</Text>
 				)}
 				contentContainerStyle={[
 					styles.listContentPadding,

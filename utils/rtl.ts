@@ -1,44 +1,20 @@
 // utils/rtl.ts
 //
-// Lightweight global RTL text-alignment patch. Rather than hunting down and
-// editing every single <Text>/<TextInput> across the app to add
-// `textAlign: 'right'` when Arabic is active, we patch React Native's Text
-// and TextInput render methods ONCE at app startup so every instance
-// automatically gets a right-aligned, RTL `writingDirection` default whenever
-// Arabic is the active language — while still letting any explicit
-// `textAlign`/`writingDirection` set directly on a component override it
-// (since the caller's own style is applied after this default).
-//
-// This intentionally does NOT call I18nManager.forceRTL/allowRTL: flipping
-// that flag mirrors the entire layout (flexDirection, absolute `left`/`right`,
-// etc.) app-wide and requires a full native reload to take effect safely,
-// which risks breaking many carefully positioned dropdowns/menus that assume
-// LTR layout. Text alignment (the actual ask — "the text should be right to
-// left") is handled here without any of that risk.
+// Layout helpers for Arabic. The app mirrors its layout by hand (it does NOT
+// use I18nManager.forceRTL, which flips every flexDirection and left/right
+// app-wide and needs a native reload). Text alignment is global: in Arabic
+// every Text/TextInput defaults to right-aligned text — see utils/rtlText/,
+// which metro.config.js hands to the app's own code.
 
-import React from "react";
-import { Text, TextInput } from "react-native";
-
-let isRTLGlobal = false;
-let patched = false;
-
-export function setGlobalRTL(rtl: boolean): void {
-	isRTLGlobal = rtl;
-}
-
-export function getGlobalRTL(): boolean {
-	return isRTLGlobal;
-}
+import { StyleSheet } from "react-native";
 
 // ---- Shared layout helpers ----
 //
-// `textAlign: 'right'` (applied globally to every Text above) only has a
-// visible effect when the Text actually fills the available width. Inside a
+// The global right alignment only has a visible effect when a Text actually
+// fills the available width. Inside a
 // `flexDirection: 'row'` container the Text is sized to its content, so the
 // row itself has to be reversed instead. These helpers are used by section
 // headers, list rows and label/value rows across the app.
-
-import { StyleSheet } from "react-native";
 
 export const rtlStyles = StyleSheet.create({
 	// Reverse a `flexDirection: 'row'` container so its children read
@@ -55,6 +31,14 @@ export const rtlStyles = StyleSheet.create({
 	// (e.g. `textAlign: 'center'`) and therefore override the global default.
 	textRight: {
 		textAlign: "right",
+	},
+	// Horizontal mirror. Applied to a horizontal ScrollView AND to each of its
+	// items, it makes the row start at the right edge and scroll leftwards
+	// (the same trick FlatList's `inverted` uses), while the items themselves
+	// still read normally. Scroll offsets keep their meaning, so snapping and
+	// auto-advance code is unchanged.
+	flipX: {
+		transform: [{ scaleX: -1 }],
 	},
 });
 
@@ -75,42 +59,9 @@ export const rtlAlign = (isRTL: boolean) => (isRTL ? rtlStyles.alignRight : null
  */
 export const rtlText = (isRTL: boolean) => (isRTL ? rtlStyles.textRight : null);
 
-
-// Style object handed to every Text/TextInput as its default — real
-// per-component styles (passed second in the array) still win.
-const rtlDefaultStyle = () => ({
-	textAlign: isRTLGlobal ? ("right" as const) : ("left" as const),
-	writingDirection: isRTLGlobal ? ("rtl" as const) : ("ltr" as const),
-});
-
-export function patchTextComponentsForRTL(): void {
-	if (patched) return;
-	patched = true;
-
-	/* eslint-disable @typescript-eslint/no-explicit-any */
-	const AnyText = Text as any;
-	const AnyTextInput = TextInput as any;
-
-	const originalTextRender = AnyText.render;
-	if (typeof originalTextRender === "function") {
-		AnyText.render = function (...args: any[]) {
-			const origin = originalTextRender.apply(this, args);
-			if (!origin) return origin;
-			return React.cloneElement(origin, {
-				style: [rtlDefaultStyle(), origin.props.style],
-			});
-		};
-	}
-
-	const originalTextInputRender = AnyTextInput.render;
-	if (typeof originalTextInputRender === "function") {
-		AnyTextInput.render = function (...args: any[]) {
-			const origin = originalTextInputRender.apply(this, args);
-			if (!origin) return origin;
-			return React.cloneElement(origin, {
-				style: [rtlDefaultStyle(), origin.props.style],
-			});
-		};
-	}
-	/* eslint-enable @typescript-eslint/no-explicit-any */
-}
+/**
+ * Convenience: mirrors a horizontal scroller in Arabic so it starts at the
+ * right and swipes right-to-left. Put it on the ScrollView AND on every item
+ * (the items are mirrored back). FlatLists can use `inverted={isRTL}` instead.
+ */
+export const rtlFlip = (isRTL: boolean) => (isRTL ? rtlStyles.flipX : null);

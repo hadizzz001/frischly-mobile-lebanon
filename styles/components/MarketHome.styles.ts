@@ -1,5 +1,6 @@
 import { StyleSheet } from "react-native";
 
+import { PAGE_END_SPACE, REPEAT_ORDER_FLOATING_SPACE } from "@/constants/layout";
 import { hitSize, colors, radius, spacing } from "@/constants/theme";
 
 // MarketHome (a market's home page, also the home tab when it is the only
@@ -8,7 +9,9 @@ import { hitSize, colors, radius, spacing } from "@/constants/theme";
 // button and the market's logo + name.
 export const styles = StyleSheet.create({
 	root: { flex: 1, backgroundColor: colors.background },
-	scrollContent: { paddingBottom: spacing.xl },
+	scrollContent: { paddingBottom: PAGE_END_SPACE },
+	// While the floating "Order again" card shows, nothing may stay under it.
+	scrollContentWithFloatingCard: { paddingBottom: PAGE_END_SPACE + REPEAT_ORDER_FLOATING_SPACE },
 	// Empty market: the message is the entire page.
 	emptyContent: { flexGrow: 1, justifyContent: "center" },
 

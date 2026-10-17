@@ -1,26 +1,37 @@
 import { StyleSheet } from "react-native";
 
-import { colors, hitSize, radius, shadow, spacing } from "@/constants/theme";
+import { colors, hitSize, icon, radius, shadow, spacing } from "@/constants/theme";
+
+/** Height of the logo / location / bell / language row (the language menu opens right below it). */
+export const HEADER_ROW_HEIGHT = 56;
+
+// Search bar geometry: the mic is a circle concentric with the bar's rounded
+// end, so it can never poke out of the bar's outline.
+const SEARCH_BAR_HEIGHT = 48;
+const MIC_SIZE = 36;
+const MIC_INSET = (SEARCH_BAR_HEIGHT - MIC_SIZE) / 2;
 
 // Two-row Appbar: [logo · location/guest · bell · language] over a full-width
 // search bar with the voice trigger as an inline suffix.
 export const styles = StyleSheet.create({
+	// No zIndex: the language menu lives in its own modal layer now, and a
+	// raised header drew over every bottom sheet's backdrop.
 	topNav: {
 		backgroundColor: colors.background,
 		paddingHorizontal: spacing.md,
 		paddingBottom: spacing.sm,
-		zIndex: 100,
 		borderBottomWidth: 1,
 		borderBottomColor: colors.border,
 	},
 	row: {
 		flexDirection: "row",
 		alignItems: "center",
-		height: 56,
+		height: HEADER_ROW_HEIGHT,
 		gap: spacing.sm,
 	},
 	rowReverse: { flexDirection: "row-reverse" },
-	logo: { width: 44, height: 44 },
+	// As large as the row allows while keeping a little air above and below.
+	logo: { width: 54, height: 54 },
 
 	// --- location pill (signed-in) --------------------------------------------
 	locationButton: {
@@ -59,10 +70,13 @@ export const styles = StyleSheet.create({
 		alignItems: "center",
 		justifyContent: "center",
 	},
+	// Exactly the bell glyph's box, so the badge can be pinned to the glyph.
+	bellGlyph: { width: icon.sizeLarge, height: icon.sizeLarge },
+	// Centred on the glyph's top corner; the white ring separates it from the
+	// bell's outline.
 	badge: {
 		position: "absolute",
-		top: 6,
-		right: 6,
+		top: -7,
 		minWidth: 18,
 		height: 18,
 		paddingHorizontal: 4,
@@ -73,18 +87,26 @@ export const styles = StyleSheet.create({
 		borderWidth: 2,
 		borderColor: colors.background,
 	},
+	badgeEnd: { right: -9 },
+	badgeStart: { left: -9 },
 	badgeText: { fontSize: 10, fontWeight: "700", color: colors.textOnDark, lineHeight: 12 },
 
 	// --- search bar -------------------------------------------------------------
 	searchWrapper: {
 		flexDirection: "row",
 		alignItems: "center",
-		height: 48,
-		borderRadius: radius.sheet,
+		height: SEARCH_BAR_HEIGHT,
+		borderRadius: SEARCH_BAR_HEIGHT / 2,
 		backgroundColor: colors.surfaceAlt,
 		paddingLeft: spacing.md,
-		paddingRight: spacing.xs,
+		paddingRight: MIC_INSET,
 		gap: spacing.sm,
+	},
+	// Arabic: search icon on the right, mic on the left.
+	searchWrapperRTL: {
+		flexDirection: "row-reverse",
+		paddingLeft: MIC_INSET,
+		paddingRight: spacing.md,
 	},
 	searchBox: {
 		flex: 1,
@@ -93,18 +115,18 @@ export const styles = StyleSheet.create({
 		color: colors.text,
 		paddingVertical: 0,
 	},
+	// A flat amber-tinted circle inside the bar (it used to be a white disc with
+	// a drop shadow that stuck out of the bar's rounded outline).
 	micButton: {
-		width: 40,
-		height: 40,
-		borderRadius: radius.full,
+		width: MIC_SIZE,
+		height: MIC_SIZE,
+		borderRadius: MIC_SIZE / 2,
 		alignItems: "center",
 		justifyContent: "center",
-		backgroundColor: colors.background,
-		...shadow.card,
+		backgroundColor: colors.primarySoft,
 	},
 
-	// --- language dropdown ------------------------------------------------------
-	dropdownContainer: { position: "relative" },
+	// --- language menu ----------------------------------------------------------
 	dropdownButton: {
 		flexDirection: "row",
 		alignItems: "center",
@@ -113,24 +135,27 @@ export const styles = StyleSheet.create({
 		paddingHorizontal: spacing.xs,
 	},
 	flag: { width: 22, height: 15, borderRadius: 3 },
+	// Full-screen, transparent: a tap outside the menu closes it.
+	menuBackdrop: { ...StyleSheet.absoluteFillObject },
+	// Positioned by the header (top + the start/end edge) inside its modal.
 	dropdownList: {
 		position: "absolute",
-		top: 48,
-		right: 0,
+		minWidth: 168,
 		backgroundColor: colors.background,
 		borderRadius: radius.card,
+		borderWidth: 1,
+		borderColor: colors.border,
 		...shadow.raised,
-		width: 150,
-		zIndex: 200,
 		paddingVertical: spacing.xs,
 	},
 	dropdownItem: {
 		flexDirection: "row",
 		alignItems: "center",
 		gap: spacing.sm,
-		paddingVertical: 10,
+		minHeight: hitSize,
 		paddingHorizontal: spacing.md,
 	},
+	dropdownItemActive: { backgroundColor: colors.surface },
 	dropdownText: { color: colors.text, fontSize: 14 },
 	dropdownTextActive: { color: colors.primaryDark, fontWeight: "700" },
 });

@@ -3,10 +3,11 @@
 // slider, and the submit button reports how many products match the draft
 // ("Apply Filter (14 Products)") so the shopper never applies into an empty
 // grid blind. "Reset all" in the header clears everything.
+import { BottomSheetTextInput } from "@gorhom/bottom-sheet";
 import MultiSlider from "@ptomasroos/react-native-multi-slider";
 import { Search } from "lucide-react-native";
 import { useMemo } from "react";
-import { Pressable, ScrollView, Switch, Text, TextInput, View } from "react-native";
+import { Pressable, ScrollView, Switch, Text, View } from "react-native";
 
 import AppBottomSheet from "@/components/ui/AppBottomSheet";
 import Chip from "@/components/ui/Chip";
@@ -18,6 +19,7 @@ import { styles } from "@/styles/components/FilterSheet.styles";
 import type { FilterSheetProps, ShopFilters } from "@/types/components/FilterSheet.types";
 import { tapSelection } from "@/utils/haptics";
 import { interpolate } from "@/utils/i18n";
+import { rtlFlip, rtlRow, rtlText } from "@/utils/rtl";
 
 export const PRICE_MIN = 0;
 export const PRICE_MAX = 300;
@@ -53,7 +55,7 @@ export default function FilterSheet({
 	matchCount,
 	counting,
 }: FilterSheetProps) {
-	const { t, td } = useTranslation();
+	const { t, td, isRTL } = useTranslation();
 	const set = (patch: Partial<ShopFilters>) => onChange({ ...filters, ...patch });
 	const [priceMin, priceMax] = useMemo(() => parsePriceRange(filters.priceRange), [filters.priceRange]);
 
@@ -97,10 +99,11 @@ export default function FilterSheet({
 		>
 			{/* Search */}
 			<View style={styles.section}>
-				<View style={styles.searchBox}>
+				<View style={[styles.searchBox, rtlRow(isRTL)]}>
 					<Search size={icon.size} strokeWidth={icon.strokeWidth} color={colors.textMuted} />
-					<TextInput
-						style={styles.searchInput}
+					{/* The sheet's own input, so the sheet lifts above the keyboard. */}
+					<BottomSheetTextInput
+						style={[styles.searchInput, rtlText(isRTL)]}
 						placeholder={t("searchPlaceholder")}
 						placeholderTextColor={colors.textDisabled}
 						value={filters.search}
@@ -115,7 +118,7 @@ export default function FilterSheet({
 				<>
 					<View style={styles.section}>
 						<Text style={styles.sectionTitle}>{t("category")}</Text>
-						<View style={styles.chips}>
+						<View style={[styles.chips, rtlRow(isRTL)]}>
 							<Chip
 								label={t("allCategories")}
 								selected={!filters.category}
@@ -140,6 +143,7 @@ export default function FilterSheet({
 							<ScrollView
 								horizontal
 								showsHorizontalScrollIndicator={false}
+								style={rtlFlip(isRTL)}
 								contentContainerStyle={styles.chipsRow}
 								keyboardShouldPersistTaps="handled"
 							>
@@ -147,10 +151,12 @@ export default function FilterSheet({
 									label={t("all")}
 									selected={!filters.subcategory}
 									onPress={() => set({ subcategory: "" })}
+									style={rtlFlip(isRTL)}
 								/>
 								{visibleSubcategories.map((sub) => (
 									<Chip
 										key={sub._id}
+										style={rtlFlip(isRTL)}
 										label={td(sub.name)}
 										selected={filters.subcategory === sub.name}
 										onPress={() =>
@@ -167,7 +173,7 @@ export default function FilterSheet({
 			{/* Sort */}
 			<View style={styles.section}>
 				<Text style={styles.sectionTitle}>{t("sortBy")}</Text>
-				<View style={styles.chips}>
+				<View style={[styles.chips, rtlRow(isRTL)]}>
 					{SORT_OPTIONS.map((opt) => (
 						<Chip
 							key={opt.key}

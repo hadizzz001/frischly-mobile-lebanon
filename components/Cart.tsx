@@ -11,22 +11,22 @@ import {
 	View,
 } from "react-native";
 import { Swipeable } from "react-native-gesture-handler";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import AppBottomSheet from "@/components/ui/AppBottomSheet";
 import EmptyState from "@/components/ui/EmptyState";
 import PrimaryButton from "@/components/ui/PrimaryButton";
-import { colors, icon } from "@/constants/theme";
+import { colors, icon, spacing } from "@/constants/theme";
 import { MAIN_SOURCE, useCart } from "@/contexts/CartContext";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { useBusyAction } from "@/hooks/useBusyAction";
+import { useGoToCheckout } from "@/hooks/useGoToCheckout";
 import { useUsdToLbpRate } from "@/hooks/useUsdToLbpRate";
 import { ProductService } from "@/services/api";
 import { styles } from "@/styles/components/Cart.styles";
 import type { CartItem } from "@/types";
 import { formatLbp, formatUsd } from "@/utils/currency";
 import { computeDeliveryFee, getDeliveryConfig, type DeliveryConfig } from "@/utils/deliveryFee";
-import { notifyWarning, tapLight, tapMedium } from "@/utils/haptics";
+import { notifyWarning, tapLight } from "@/utils/haptics";
 import { interpolate } from "@/utils/i18n";
 
 // Cart screen body: swipe-to-delete rows with an inline [- n +] stepper, a
@@ -35,11 +35,11 @@ import { interpolate } from "@/utils/i18n";
 export default function Cart() {
 	const { t, td, isRTL } = useTranslation();
 	const router = useRouter();
-	const insets = useSafeAreaInsets();
 	const rate = useUsdToLbpRate();
 	const { cart, removeFromCart, subtotal, addToCart, calculatePriceDetails, clearCart, cartSource } =
 		useCart();
 	const { isBusy, anyBusy, run } = useBusyAction();
+	const { goToCheckout: openCheckout, preparing: preparingCheckout } = useGoToCheckout();
 
 	const [ageCheckOpen, setAgeCheckOpen] = useState(false);
 	const [clearOpen, setClearOpen] = useState(false);
@@ -139,19 +139,20 @@ export default function Cart() {
 		});
 	};
 
+	// The button itself shows the spinner while checkout's data loads (see
+	// useGoToCheckout); checkout then opens complete, with no loading page.
 	const goToCheckout = () => {
 		if (hasUnavailable) return;
 		if (cart.some((item) => item?.is18Plus === true)) {
 			setAgeCheckOpen(true);
 			return;
 		}
-		tapMedium();
-		router.push("/checkout");
+		openCheckout();
 	};
 
 	const confirmAge = (isAdult: boolean) => {
 		setAgeCheckOpen(false);
-		if (isAdult) router.push("/checkout");
+		if (isAdult) openCheckout();
 	};
 
 	// --- rows ------------------------------------------------------------------------------
@@ -300,8 +301,10 @@ export default function Cart() {
 				showsVerticalScrollIndicator={false}
 			/>
 
-			{/* Sticky checkout bar — decoupled from the scroll view. */}
-			<View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 8) + 8 }]}>
+			{/* Sticky checkout bar — decoupled from the scroll view. The bottom
+			    nav right below it already clears the home indicator, so no
+			    safe-area padding is added here (it left a blank band). */}
+			<View style={[styles.footer, { paddingBottom: spacing.sm }]}>
 				{threshold > 0 && (
 					<View style={styles.progressWrap}>
 						<Text style={styles.progressText}>
@@ -344,6 +347,7 @@ export default function Cart() {
 				<PrimaryButton
 					label={hasUnavailable ? t("cartHasOutOfStock") : t("goToCheckout")}
 					onPress={goToCheckout}
+					loading={preparingCheckout}
 					disabled={hasUnavailable || anyBusy}
 					style={styles.checkoutBtn}
 				/>

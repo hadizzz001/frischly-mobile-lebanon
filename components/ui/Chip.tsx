@@ -2,9 +2,11 @@ import { X } from "lucide-react-native";
 import { Pressable, Text } from "react-native";
 
 import { colors, icon } from "@/constants/theme";
+import { useTranslation } from "@/contexts/TranslationContext";
 import { styles } from "@/styles/components/ui/Chip.styles";
 import type { ChipProps } from "@/types/components/ui/Chip.types";
 import { tapSelection } from "@/utils/haptics";
+import { rtlRow } from "@/utils/rtl";
 
 /** Selectable pill — filter options, voice command suggestions, address tags.
  *  Amber only while selected; neutral otherwise. Haptic tick on toggle. */
@@ -17,6 +19,7 @@ export default function Chip({
 	disabled,
 	style,
 }: ChipProps) {
+	const { isRTL } = useTranslation();
 	return (
 		<Pressable
 			accessibilityRole="button"
@@ -28,6 +31,7 @@ export default function Chip({
 			}}
 			style={({ pressed }) => [
 				styles.chip,
+				rtlRow(isRTL),
 				selected && styles.chipSelected,
 				disabled && styles.chipDisabled,
 				pressed && { opacity: 0.8 },

@@ -75,6 +75,8 @@ export const translations = {
 		clearCartConfirm: "Are you sure you want to remove all items from your cart?",
 		repeatOrder: "Repeat Order!",
 		repeatOrderShort: "Repeat",
+		repeatOrderTitle: "Order again",
+		repeatOrderSubtitle: "Add your last order to the cart",
 		repeatOrderAdded: "Your previous order was added to your cart.",
 		repeatOrderAddedWithSkipped:
 			"Available items were added to your cart. Out-of-stock items were skipped.",
@@ -617,6 +619,8 @@ export const translations = {
 		clearCartConfirm: "هل أنت متأكد من إزالة جميع العناصر من سلتك؟",
 		repeatOrder: "إعادة الطلب!",
 		repeatOrderShort: "إعادة",
+		repeatOrderTitle: "اطلب مجدداً",
+		repeatOrderSubtitle: "أضف طلبك الأخير إلى السلة",
 		repeatOrderAdded: "تمت إضافة طلبك السابق إلى السلة.",
 		repeatOrderAddedWithSkipped:
 			"تمت إضافة المنتجات المتوفرة إلى السلة. تم تخطي المنتجات غير المتوفرة.",
@@ -1019,7 +1023,9 @@ export const translations = {
 		registerSubtitle: "الأساسيات فقط — سنطلب عنوان التوصيل عند أول عملية شراء.",
 		fieldRequired: "هذا الحقل مطلوب",
 		invalidEmail: "أدخل بريداً إلكترونياً صالحاً",
-		phoneHint: "8 أرقام، مثال: 70 123456",
+		// ‎ (left-to-right mark) keeps the example number reading "70 123456";
+		// without it the Arabic sentence flips it to "123456 70".
+		phoneHint: "8 أرقام، مثال: ‎70 123456",
 		phoneLabel: "رقم الهاتف",
 		emailLabel: "البريد الإلكتروني",
 		passwordLabel: "كلمة المرور",

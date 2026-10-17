@@ -9,7 +9,9 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRe
 import { Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useTranslation } from "@/contexts/TranslationContext";
 import { styles } from "@/styles/components/ui/AppBottomSheet.styles";
+import { rtlRow } from "@/utils/rtl";
 import type {
 	AppBottomSheetHandle,
 	AppBottomSheetProps,
@@ -36,6 +38,7 @@ const AppBottomSheet = forwardRef<AppBottomSheetHandle, AppBottomSheetProps>(
 	) {
 		const modalRef = useRef<BottomSheetModal>(null);
 		const insets = useSafeAreaInsets();
+		const { isRTL } = useTranslation();
 
 		// Whether the modal is currently presented (or presenting). Calling
 		// `dismiss()` on a BottomSheetModal that was never presented — which is
@@ -85,7 +88,9 @@ const AppBottomSheet = forwardRef<AppBottomSheetHandle, AppBottomSheetProps>(
 
 		const header =
 			title || headerRight ? (
-				<View style={styles.header}>
+				// Mirrored in Arabic: title on the right, the action (e.g. "Reset
+				// all") on the left.
+				<View style={[styles.header, rtlRow(isRTL)]}>
 					{title ? <Text style={styles.title}>{title}</Text> : <View />}
 					{headerRight}
 				</View>
@@ -103,9 +108,15 @@ const AppBottomSheet = forwardRef<AppBottomSheetHandle, AppBottomSheetProps>(
 				backgroundStyle={styles.background}
 				handleIndicatorStyle={styles.handle}
 				enablePanDownToClose
+				// Never slide up under the status bar (tall sheets + keyboard).
+				topInset={insets.top}
 				keyboardBehavior="interactive"
 				keyboardBlurBehavior="restore"
-				android_keyboardInputMode="adjustResize"
+				// The app is edge-to-edge, so Android no longer resizes the
+				// window for the keyboard. In "adjustResize" mode the sheet
+				// waits for a resize that never comes and stays hidden behind
+				// the keyboard; "adjustPan" makes it lift itself above it.
+				android_keyboardInputMode="adjustPan"
 			>
 				{header}
 				{scrollable ? (

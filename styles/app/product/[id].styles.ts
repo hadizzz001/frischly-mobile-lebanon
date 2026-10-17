@@ -18,12 +18,14 @@ export const styles = StyleSheet.create({
 	backButton: {
 		position: "absolute",
 		top: 8,
-		left: 8,
 		zIndex: 10,
 		padding: 6,
 		borderRadius: 20,
 		backgroundColor: "rgba(255,255,255,0.9)",
 	},
+	// Edge of the back button: left in English, right in Arabic.
+	backButtonLeft: { left: 8 },
+	backButtonRight: { right: 8 },
 
 	// Image
 	imageBox: {
@@ -88,6 +90,7 @@ export const styles = StyleSheet.create({
 	bottomBarInner: {
 		flexDirection: "row",
 		alignItems: "center",
+		gap: 12,
 		paddingHorizontal: 16,
 		paddingVertical: 10,
 	},
@@ -99,7 +102,6 @@ export const styles = StyleSheet.create({
 		borderRadius: 10,
 		paddingHorizontal: 4,
 		paddingVertical: 4,
-		marginRight: 12,
 	},
 	qtyBtn: {
 		width: 34,
@@ -121,6 +123,7 @@ export const styles = StyleSheet.create({
 		flexDirection: "row",
 		alignItems: "center",
 		justifyContent: "center",
+		gap: 8,
 		backgroundColor: "#F59E0B",
 		borderRadius: 10,
 		paddingVertical: 14,
@@ -132,7 +135,6 @@ export const styles = StyleSheet.create({
 		flexDirection: "row",
 		alignItems: "center",
 		flexShrink: 1,
-		marginLeft: 8,
 		gap: 5,
 	},
 	addBtnPriceLbp: { color: "#111827", fontSize: 13, fontWeight: "700" },

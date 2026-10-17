@@ -52,6 +52,7 @@ export default function MarketHome({
 
 	const [market, setMarket] = useState<Market | null>(initialMarket ?? null);
 	const [refreshing, setRefreshing] = useState(false);
+	const [repeatCardVisible, setRepeatCardVisible] = useState(false);
 	const [refreshTrigger, setRefreshTrigger] = useState(0);
 
 	// The name/logo in the top bar, unless the caller already passed the
@@ -179,7 +180,9 @@ export default function MarketHome({
 			<View style={globalStyles.flex1}>
 				<ScrollView
 					style={globalStyles.flex1}
-					contentContainerStyle={styles.scrollContent}
+					contentContainerStyle={
+						repeatCardVisible ? styles.scrollContentWithFloatingCard : styles.scrollContent
+					}
 					onScroll={onScroll}
 					scrollEventThrottle={100}
 					refreshControl={
@@ -215,9 +218,10 @@ export default function MarketHome({
 					/>
 					<Footer />
 				</ScrollView>
+				{/* Floating, closable "Order again" card (once the page has loaded). */}
+				{!isLoading && <RepeatOrderButton onVisibilityChange={setRepeatCardVisible} />}
 				{isLoading && <HomeSkeleton variant="market" />}
 			</View>
-			<RepeatOrderButton />
 		</View>
 	);
 }

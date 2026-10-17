@@ -28,7 +28,6 @@ export default function DiscountCarousel({
 	const [discountedProducts, setDiscountedProducts] = useState<Product[]>([]);
 	const [loading, setLoading] = useState<boolean>(true);
 	const flatListRef = useRef<FlatList<Product>>(null);
-	const [currentIndex, setCurrentIndex] = useState<number>(0);
 
 	const fetchDiscountProducts = async () => {
 		try {
@@ -137,7 +136,7 @@ export default function DiscountCarousel({
 						color={SECTION_TITLE_ICON_COLOR}
 					/>
 				</View>
-				<View style={styles.headerRight}>
+				<View style={[styles.headerRight, rtlRow(isRTL)]}>
 					<TouchableOpacity
 						style={styles.allButton}
 						onPress={() => router.push(seeAllHref as never)}
@@ -154,20 +153,18 @@ export default function DiscountCarousel({
 				</View>
 			</View>
 
+			{/* Inverted in Arabic: the first deal sits at the right edge and the
+			    row swipes right-to-left. */}
 			<FlatList
 				ref={flatListRef}
 				data={discountedProducts}
 				horizontal
+				inverted={isRTL}
 				showsHorizontalScrollIndicator={false}
 				keyExtractor={(item) => item._id}
 				renderItem={({ item }) => renderProduct(item)}
 				contentContainerStyle={styles.listContent}
 				ItemSeparatorComponent={() => <View style={styles.separator} />}
-				onScroll={(e) => {
-					const index = Math.round(e.nativeEvent.contentOffset.x / ITEM_WIDTH);
-					setCurrentIndex(index);
-				}}
-				scrollEventThrottle={16}
 			/>
 		</View>
 	);

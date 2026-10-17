@@ -1,5 +1,6 @@
 import { StyleSheet } from "react-native";
 
+import { PAGE_END_SPACE } from "@/constants/layout";
 import { colors, radius, shadow, spacing } from "@/constants/theme";
 
 export const styles = StyleSheet.create({
@@ -18,7 +19,7 @@ export const styles = StyleSheet.create({
 		paddingHorizontal: spacing.md,
 		marginBottom: spacing.sm,
 	},
-	listContent: { paddingHorizontal: spacing.md, paddingBottom: spacing.md, flexGrow: 1 },
+	listContent: { paddingHorizontal: spacing.md, paddingBottom: PAGE_END_SPACE, flexGrow: 1 },
 
 	// --- rows ---------------------------------------------------------------------
 	cartItem: {

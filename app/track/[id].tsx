@@ -266,7 +266,7 @@ export default function TrackOrderScreen() {
 	};
 
 	return (
-		<SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
+		<SafeAreaView style={styles.safe} edges={[]}>
 			<Stack.Screen options={{ headerShown: false }} />
 
 			<View style={styles.header}>

@@ -53,12 +53,15 @@ export default function BottomNav() {
 						accessibilityState={{ selected: active }}
 					>
 						<View style={[styles.iconWrap, active && styles.iconWrapActive]}>
-							<Icon size={icon.sizeLarge} strokeWidth={active ? 2.4 : icon.strokeWidth} color={color} />
-							{tab.key === "cart" && count > 0 && (
-								<View style={styles.cartBadge}>
-									<Text style={styles.cartBadgeText}>{count > 99 ? "99+" : count}</Text>
-								</View>
-							)}
+							{/* Badge pinned to the glyph's top-right corner, not to the pill. */}
+							<View style={styles.glyph}>
+								<Icon size={icon.sizeLarge} strokeWidth={active ? 2.4 : icon.strokeWidth} color={color} />
+								{tab.key === "cart" && count > 0 && (
+									<View style={styles.cartBadge}>
+										<Text style={styles.cartBadgeText}>{count > 99 ? "99+" : count}</Text>
+									</View>
+								)}
+							</View>
 						</View>
 					</Pressable>
 				);

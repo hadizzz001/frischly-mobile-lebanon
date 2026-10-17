@@ -9,6 +9,7 @@ import { useCart } from "@/contexts/CartContext";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { AuthService, OrderService, ProductService } from "@/services/api";
 import type { Order, OrderItem, Product, User } from "@/types";
+import { buildRepeatCartItems } from "@/utils/order";
 import { rtlRow, rtlText } from "@/utils/rtl";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
@@ -36,7 +37,7 @@ export default function TestOrder() {
 	const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({});
 	const [productImages, setProductImages] = useState<Record<string, string | null>>({}); // ✅ Cache for product images
 	const router = useRouter();
-	const { cart, addItemsToCart } = useCart();
+	const { addItemsToCart } = useCart();
 	const [cancelModalVisible, setCancelModalVisible] = useState<boolean>(false);
 	const [cancelReason, setCancelReason] = useState<string>("");
 	const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
@@ -240,18 +241,14 @@ export default function TestOrder() {
 	};
 
 	// -------- Repeat this specific order --------
-	// Adds every item from THIS order to the cart — never items from a
-	// different order. Each product is re-fetched so out-of-stock/deactivated
-	// items are skipped. An order's items always share a single source (main
-	// store or one market) because the cart only ever lets you check out one
-	// source at a time. If that source conflicts with what's already in the
-	// cart, addItemsToCart asks the shopper before replacing anything instead
-	// of silently mixing markets.
-	const getOrderItemProductId = (orderItem: OrderItem): string | undefined => {
-		const product = orderItem?.product;
-		return typeof product === "string" ? product : product?._id;
-	};
-
+	// Adds every item from THIS order to the cart, once per tap — never items
+	// from a different order (see buildRepeatCartItems for the quantity rule).
+	// Each product is re-fetched so out-of-stock/deactivated items are skipped.
+	// An order's items always share a single source (main store or one
+	// market) because the cart only ever lets you check out one source at a
+	// time. If that source conflicts with what's already in the cart,
+	// addItemsToCart asks the shopper before replacing anything instead of
+	// silently mixing markets.
 	const fetchCurrentProduct = async (productId: string): Promise<Product | null> => {
 		try {
 			const res = await ProductService.getById(productId);
@@ -265,8 +262,7 @@ export default function TestOrder() {
 	const handleRepeatOrder = async (order: Order): Promise<void> => {
 		if (repeatingOrderId) return;
 
-		const orderItems = order?.items || [];
-		if (orderItems.length === 0) {
+		if (!order?.items?.length) {
 			Alert.alert(t("errorTitle"), t("repeatOrderNoAvailableItems"));
 			return;
 		}
@@ -274,46 +270,19 @@ export default function TestOrder() {
 		try {
 			setRepeatingOrderId(order._id);
 
-			let addedCount = 0;
-			let skippedCount = 0;
-			const repeatCartItems = [];
-
-			for (const orderItem of orderItems) {
-				const productId = getOrderItemProductId(orderItem);
-				if (!productId) {
-					skippedCount += 1;
-					continue;
-				}
-
-				const product = await fetchCurrentProduct(productId);
-				const stock = Number(product?.stock || 0);
-
-				if (!product || product.isActive === false || stock <= 0) {
-					skippedCount += 1;
-					continue;
-				}
-
-				const existingCartItem = cart.find(
-					(cartItem) => String(cartItem._id) === String(product._id)
-				);
-				const existingQuantity = Number(existingCartItem?.quantity || 0);
-				const requestedQuantity = Number(orderItem.quantity || 1);
-				const quantity = Math.min(existingQuantity + requestedQuantity, stock);
-
-				repeatCartItems.push({ ...product, quantity });
-				addedCount += 1;
-			}
-
-			if (addedCount === 0) {
+			const { items, skipped } = await buildRepeatCartItems(order, fetchCurrentProduct);
+			if (items.length === 0) {
 				Alert.alert(t("errorTitle"), t("repeatOrderNoAvailableItems"));
 				return;
 			}
 
-			addItemsToCart(repeatCartItems);
+			// Not added = the cart asked first (different store) or the shopper
+			// is a guest being sent to sign in — neither is a success.
+			if (!addItemsToCart(items).added) return;
 
 			Alert.alert(
 				t("success"),
-				skippedCount > 0
+				skipped > 0
 					? t("repeatOrderAddedWithSkipped")
 					: t("repeatOrderAdded")
 			);
@@ -383,10 +352,10 @@ export default function TestOrder() {
 				    chips that stay aligned on a single row. Only rendered when at
 				    least one action applies to this order's status. */}
 				{hasActions && (
-				<View style={styles.actionRow}>
+				<View style={[styles.actionRow, rtlRow(isRTL)]}>
 					{canTrack && (
 						<TouchableOpacity
-							style={[styles.actionBtn, styles.trackBtn]}
+							style={[styles.actionBtn, rtlRow(isRTL), styles.trackBtn]}
 							onPress={() =>
 								router.push({
 									pathname: `/track/${item._id}` as never,
@@ -401,7 +370,7 @@ export default function TestOrder() {
 
 					{canPay && (
 						<TouchableOpacity
-							style={[styles.actionBtn, styles.payBtn]}
+							style={[styles.actionBtn, rtlRow(isRTL), styles.payBtn]}
 							onPress={() => {
 								if (item.paymentUrl) {
 									router.push(item.paymentUrl as never);
@@ -415,7 +384,7 @@ export default function TestOrder() {
 
 					{canCancel && (
 						<TouchableOpacity
-							style={[styles.actionBtn, styles.cancelBtn]}
+							style={[styles.actionBtn, rtlRow(isRTL), styles.cancelBtn]}
 							onPress={() => promptCancelOrder(item._id)}
 						>
 							<XCircle size={14} strokeWidth={icon.strokeWidth} color={colors.textOnDark} />
@@ -425,7 +394,7 @@ export default function TestOrder() {
 
 					{canRepeat && (
 						<TouchableOpacity
-							style={[styles.actionBtn, styles.repeatBtn]}
+							style={[styles.actionBtn, rtlRow(isRTL), styles.repeatBtn]}
 							disabled={repeatingOrderId !== null}
 							onPress={() => handleRepeatOrder(item)}
 						>
@@ -449,11 +418,22 @@ export default function TestOrder() {
 		return <ActivityIndicator size="large" color={colors.primary} style={styles.loadingIndicator} />;
 	}
 
+	// Back + title, mirrored in Arabic — a lone back chevron above the list
+	// read as an unexplained empty band under the header.
+	const topBar = (
+		<View style={[styles.topBar, rtlRow(isRTL)]}>
+			<BackButton onPress={() => router.back()} />
+			<Text style={[styles.topBarTitle, rtlText(isRTL)]} numberOfLines={1}>
+				{t("orderHistory")}
+			</Text>
+		</View>
+	);
+
 	if (!orders.length) {
 		return (
-			<SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
+			<SafeAreaView edges={[]} style={styles.safeArea}>
 				<View style={styles.container}>
-					<BackButton onPress={() => router.back()} style={styles.backButton} />
+					{topBar}
 					<EmptyState
 						illustration="basket"
 						title={t("noOrdersFound")}
@@ -539,9 +519,9 @@ export default function TestOrder() {
 	};
 
 	return (
-		<SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
+		<SafeAreaView edges={[]} style={styles.safeArea}>
 			<View style={styles.container}>
-				<BackButton onPress={() => router.back()} style={styles.backButton} />
+				{topBar}
 				<FlatList
 					data={orders}
 					keyExtractor={(item) => item._id}

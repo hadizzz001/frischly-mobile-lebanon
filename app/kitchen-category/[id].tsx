@@ -2,6 +2,7 @@ import BackButton from "@/components/ui/BackButton";
 import { useCart } from "@/contexts/CartContext";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { useBusyAction } from "@/hooks/useBusyAction";
+import { useGoToCheckout } from "@/hooks/useGoToCheckout";
 import type { Kitchen } from "@/types";
 import {
 	getKitchenCartItems,
@@ -38,6 +39,7 @@ export default function KitchenCategoryPage() {
 	}>();
 	const { addItemsToCart, cart } = useCart();
 	const { isBusy, anyBusy, run } = useBusyAction();
+	const { goToCheckout, preparing: preparingCheckout, isPreparing } = useGoToCheckout();
 
 	const [kitchens, setKitchens] = useState<Kitchen[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -118,7 +120,7 @@ export default function KitchenCategoryPage() {
 	return (
 		<View style={styles.root}>
 			<Stack.Screen options={{ headerShown: false }} />
-			<SafeAreaView edges={["top"]} style={styles.safeArea}>
+			<SafeAreaView edges={[]} style={styles.safeArea}>
 				<View style={[styles.topBar, rtlRow(isRTL)]}>
 					<BackButton onPress={() => router.back()} style={styles.backButton} />
 					<Text style={styles.topTitle} numberOfLines={1}>
@@ -136,7 +138,7 @@ export default function KitchenCategoryPage() {
 						<Text style={styles.emptyText}>{t("noKitchensInCategory")}</Text>
 					</View>
 				) : (
-					<ScrollView contentContainerStyle={styles.grid}>
+					<ScrollView contentContainerStyle={[styles.grid, rtlRow(isRTL)]}>
 						{kitchens.map((kitchen) => {
 							const addableItems = getKitchenCartItems(kitchen);
 							const addableCount = addableItems.length;
@@ -177,24 +179,32 @@ export default function KitchenCategoryPage() {
 
 									{inCart ? (
 										<TouchableOpacity
-											style={styles.checkoutBtn}
+											style={[styles.checkoutBtn, rtlRow(isRTL)]}
 											activeOpacity={0.85}
-											onPress={() => router.push("/checkout")}
+											disabled={preparingCheckout}
+											onPress={() => goToCheckout(String(kitchen._id))}
 										>
-											<Feather name="credit-card" size={14} color="#111827" />
-											<Text
-												style={styles.btnText}
-												numberOfLines={1}
-												adjustsFontSizeToFit
-												minimumFontScale={0.7}
-											>
-												{t("goToCheckout")}
-											</Text>
+											{isPreparing(String(kitchen._id)) ? (
+												<ActivityIndicator size="small" color="#111827" />
+											) : (
+												<>
+													<Feather name="credit-card" size={14} color="#111827" />
+													<Text
+														style={styles.btnText}
+														numberOfLines={1}
+														adjustsFontSizeToFit
+														minimumFontScale={0.7}
+													>
+														{t("goToCheckout")}
+													</Text>
+												</>
+											)}
 										</TouchableOpacity>
 									) : (
 										<TouchableOpacity
 											style={[
 												styles.addBtn,
+												rtlRow(isRTL),
 												addableCount === 0 && styles.addBtnDisabled,
 											]}
 											activeOpacity={0.85}

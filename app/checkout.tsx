@@ -1,4 +1,3 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
@@ -12,7 +11,7 @@ import {
 	Text,
 	View,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import OrderComponent from "@/components/CreateOrderButton";
 import IOSDatePickerModal from "@/components/IOSDatePickerModal";
@@ -27,14 +26,20 @@ import { MAIN_SOURCE, useCart } from "@/contexts/CartContext";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { useBusyAction } from "@/hooks/useBusyAction";
 import { useUsdToLbpRate } from "@/hooks/useUsdToLbpRate";
-import { ApiError, AuthService, MarketService, PromoCodeService } from "@/services/api";
+import { ApiError, MarketService, PromoCodeService } from "@/services/api";
 import { styles } from "@/styles/app/checkout.styles";
-import type { Address, User } from "@/types";
+import type { Address } from "@/types";
 import type {
 	AppliedPromo,
 	CheckoutInputs,
 	CheckoutState,
 } from "@/types/app/checkout.types";
+import {
+	clearCheckoutSession,
+	loadCheckoutSession,
+	peekCheckoutSession,
+	type CheckoutSession,
+} from "@/utils/checkoutSession";
 import { formatLbp, formatUsd } from "@/utils/currency";
 import { computeDeliveryFee, getDeliveryConfig, type DeliveryConfig } from "@/utils/deliveryFee";
 import { notifyError, notifySuccess } from "@/utils/haptics";
@@ -44,9 +49,26 @@ import { formatLebanesePhoneInput, isValidLebanesePhone } from "@/utils/phone";
 import { rtlRow, rtlText } from "@/utils/rtl";
 import { formatStreetLine } from "@/utils/userAddress";
 
+// Checkout's form state, filled from the shopper's profile (or empty and
+// loading when there is no session yet).
+const stateFromSession = (session: CheckoutSession | null): CheckoutState => ({
+	loading: !session,
+	user: session?.user ?? null,
+	token: session?.token ?? null,
+	inputs: {
+		name: session?.user.name || "",
+		email: session?.user.email || "",
+		phone: session?.user.phoneNumber || "",
+		country: "LB",
+		state: session?.user.address?.state || "",
+		city: session?.user.address?.city || "",
+		street: session?.user.address?.street || "",
+	},
+	country: "LB",
+});
+
 export default function CheckoutScreen() {
 	const { t, td, isRTL } = useTranslation();
-	const insets = useSafeAreaInsets();
 	const rate = useUsdToLbpRate();
 	const [showModal, setShowModal] = useState<boolean>(false);
 	const [riderNotes, setRiderNotes] = useState("");
@@ -127,99 +149,34 @@ export default function CheckoutScreen() {
 
 	const router = useRouter();
 
-	// ✅ Unified state
-	const [state, setState] = useState<CheckoutState>({
-		loading: true,
-		user: null,
-		token: null,
-		inputs: {
-			name: "",
-			email: "",
-			phone: "",
-			country: "LB",
-			state: "",
-			city: "",
-			street: "",
-		},
-		country: "LB",
-	});
+	// Unified state. The checkout button that opened this screen has already
+	// verified the session and loaded the profile (hooks/useGoToCheckout.ts),
+	// so the page renders complete on its first frame — no "Loading user
+	// info…" page flashing in and out between the cart and here.
+	const [state, setState] = useState<CheckoutState>(() =>
+		stateFromSession(peekCheckoutSession()),
+	);
 
-	// Check login and fetch user
 	useEffect(() => {
-		const checkLogin = async (): Promise<void> => {
-			try {
-				const userData = await AsyncStorage.getItem("userData");
-				const guest = await AsyncStorage.getItem("guest");
+		clearCheckoutSession();
+		if (!state.loading) return;
 
-				// ✅ Guest browsing (explicitly opted in via "Continue as guest") →
-				// go to start to log in before checking out. Logged-in accounts
-				// never set "guest" to "true" (it's "false", or simply never set
-				// for some login paths), so only the explicit "true" value means
-				// guest — matches the check used everywhere else in the app
-				// (CartContext, RepeatOrderButton, userCity, etc).
-				if (guest === "true") {
-					console.log("g = ", guest);
-					console.log("🟡 Guest detected → redirecting to /start");
-					router.replace("/start");
-					return;
-				}
-
-				// ❌ No user and not guest → go to start
-				if (!userData) {
-					console.log("🔴 No user found → redirecting to /start");
-					router.replace("/start");
-					return;
-				}
-
-				// 🟢 Logged user flow
-				const parsedUser = JSON.parse(userData);
-				const token = parsedUser?.token;
-
-				if (!token) {
-					console.log("⚠️ Missing token → redirecting to /start");
-					router.replace("/start");
-					return;
-				}
-
-				let user: User;
-				try {
-					const res = await AuthService.me();
-					const fetchedUser = (res.data as unknown as { user?: User })?.user;
-					if (!fetchedUser) {
-						console.log("⚠️ Failed /me request → redirecting to /start");
-						router.replace("/start");
-						return;
-					}
-					user = fetchedUser;
-				} catch {
-					console.log("⚠️ Failed /me request → redirecting to /start");
-					router.replace("/start");
-					return;
-				}
-
-				setState((prev) => ({
-					...prev,
-					user,
-					token: token,
-					inputs: {
-						name: user.name || "",
-						email: user.email || "",
-						phone: user.phoneNumber || "",
-						country: "LB",
-						state: user.address?.state || "",
-						city: user.address?.city || "",
-						street: user.address?.street || "",
-					},
-					country: "LB",
-					loading: false,
-				}));
-			} catch (err) {
-				console.error("🔥 Error checking login:", err);
+		// Opened some other way: load the session here instead. A guest, a
+		// missing token or a failed /me goes to sign in first.
+		let cancelled = false;
+		loadCheckoutSession().then((session) => {
+			if (cancelled) return;
+			if (!session) {
 				router.replace("/start");
+				return;
 			}
+			setState(stateFromSession(session));
+		});
+		return () => {
+			cancelled = true;
 		};
-
-		checkLogin();
+		// Mount only: `state.loading` is the initial value on purpose.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [router]);
 
 	const calculateTotal = (): string => {
@@ -450,7 +407,7 @@ export default function CheckoutScreen() {
 
 	if (!cart || cart.length === 0) {
 		return (
-			<SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
+			<SafeAreaView edges={["top"]} style={styles.safeArea}>
 				<EmptyState
 					illustration="basket"
 					title={t("cartEmptyTitle")}
@@ -498,6 +455,7 @@ export default function CheckoutScreen() {
 				<FormField
 					label={t("phoneLabel")}
 					prefix="+961"
+					ltr
 					value={state.inputs.phone.replace(/^\+?961/, "").trim()}
 					onChangeText={(v) => handleInput("phone", formatLebanesePhoneInput(v))}
 					keyboardType="phone-pad"
@@ -679,7 +637,8 @@ export default function CheckoutScreen() {
 			</ScrollView>
 
 			{/* --- Sticky order bar ---------------------------------------------- */}
-			<View style={[styles.stickyBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+			{/* The bottom nav under this bar already clears the home indicator. */}
+			<View style={[styles.stickyBar, { paddingBottom: 12 }]}>
 				<View style={[styles.summaryRow, rtlRow(isRTL)]}>
 					<Text style={styles.summaryLabel}>{t("subtotal")}</Text>
 					<Text style={styles.summaryValue}>{formatUsd(Number(subtotal))}</Text>

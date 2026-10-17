@@ -5,6 +5,7 @@ import { colors, radius, shadow } from "@/constants/theme";
 import {
 	MARKETS_SLIDER_ITEM_SPACING as ITEM_SPACING,
 	MARKETS_SLIDER_ITEM_WIDTH as ITEM_WIDTH,
+	MARKETS_SLIDER_LOGO_ASPECT_RATIO as LOGO_ASPECT_RATIO,
 } from "@/constants/layout";
 
 export const styles = StyleSheet.create({
@@ -22,26 +23,29 @@ export const styles = StyleSheet.create({
 		overflow: "hidden",
 		paddingHorizontal: 8,
 	},
+	// Vertical room so the cards' shadows are not clipped by the scroller.
 	track: {
 		flexDirection: "row",
+		paddingVertical: 4,
 	},
+	// The card IS the logo tile: the framed logo (its own background colour,
+	// even margin, 5:4) fills it edge to edge — no grey box around a logo.
 	card: {
 		width: ITEM_WIDTH,
 		marginHorizontal: ITEM_SPACING / 2,
-		alignItems: "center",
 		backgroundColor: colors.background,
 		borderRadius: radius.card,
-		padding: 8,
 		...shadow.card,
 	},
 	imageWrapper: {
 		width: "100%",
-		height: 84,
+		aspectRatio: LOGO_ASPECT_RATIO,
 		justifyContent: "center",
 		alignItems: "center",
-		backgroundColor: colors.surfaceAlt,
-		borderRadius: radius.badge,
-		padding: 8,
+		backgroundColor: colors.background,
+		borderRadius: radius.card,
+		borderWidth: 1,
+		borderColor: colors.border,
 		overflow: "hidden",
 	},
 	image: { width: "100%", height: "100%" },

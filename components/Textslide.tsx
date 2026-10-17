@@ -6,6 +6,7 @@ import type { Announcement } from "@/types";
 import type { NewsTickerProps } from "@/types/components/Textslide.types";
 import { Gift } from "lucide-react-native";
 import { colors } from "@/constants/theme";
+import { rtlRow } from "@/utils/rtl";
 import { useEffect, useState } from "react";
 import {
     Modal,
@@ -54,14 +55,14 @@ export default function NewsTicker({ refreshTrigger }: NewsTickerProps) {
 	return textItems.length > 0 ? (
 		<View style={styles.outerContainer}>
 			<TouchableOpacity
-				style={styles.container}
+				style={[styles.container, rtlRow(isRTL)]}
 				onPress={() => setModalVisible(true)}
 				activeOpacity={0.8}
 			>
 				<View style={styles.iconContainer}>
 					<Gift size={14} strokeWidth={2} color={colors.primaryDark} />
 				</View>
-				<View style={styles.tickerContainer}>
+				<View style={[styles.tickerContainer, isRTL && styles.tickerContainerRTL]}>
 					{/* Two copies, one linear loop, no pause: see components/Marquee. */}
 					<Marquee
 						text={combinedText}

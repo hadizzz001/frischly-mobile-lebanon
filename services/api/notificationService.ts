@@ -1,7 +1,8 @@
 import { httpClient } from "./httpClient";
 
-// Push-notification token registration with the backend. The server stores the
-// Expo push token in the user's `fcmToken` field and delivers via Expo.
+// Push-notification token registration with the backend. The server keeps the
+// Expo push token of every device the account is signed in on and delivers
+// via Expo.
 export const NotificationService = {
 	// Register (or refresh) the current device's Expo push token. Uses the
 	// provided auth token explicitly so it can run outside the app's usual
@@ -13,9 +14,12 @@ export const NotificationService = {
 			{ headers: { Authorization: `Bearer ${authToken}` } },
 		),
 
-	// Drop the token on logout.
-	removeToken: (authToken: string) =>
+	// Drop this device's token on logout. The account keeps one token per
+	// signed-in device, so naming the device leaves the others subscribed
+	// (without it the server forgets every device on the account).
+	removeToken: (authToken: string, fcmToken: string) =>
 		httpClient.delete<null>("/notifications/token", {
 			headers: { Authorization: `Bearer ${authToken}` },
+			body: { fcmToken },
 		}),
 };

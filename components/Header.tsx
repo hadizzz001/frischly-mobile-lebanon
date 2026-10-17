@@ -4,6 +4,7 @@ import { Bell, ChevronDown, MapPin, Mic, Search, UserRound } from "lucide-react-
 import { useEffect, useState } from "react";
 import {
 	DeviceEventEmitter,
+	Modal,
 	Pressable,
 	Text,
 	TextInput,
@@ -15,11 +16,11 @@ import LocationSheet from "@/components/LocationSheet";
 import SearchPlaceholder from "@/components/SearchPlaceholder";
 import { OPEN_CITY_PICKER, OPEN_VOICE_SEARCH, USER_CITY_CHANGED } from "@/constants/events";
 import { LANGUAGE_OPTIONS } from "@/constants/languages";
-import { colors, icon } from "@/constants/theme";
+import { colors, icon, spacing } from "@/constants/theme";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { useUnreadNotifications } from "@/hooks/useUnreadNotifications";
 import { AuthService } from "@/services/api";
-import { styles } from "@/styles/components/Header.styles";
+import { HEADER_ROW_HEIGHT, styles } from "@/styles/components/Header.styles";
 import type { User } from "@/types";
 import { tapLight } from "@/utils/haptics";
 import { formatStreetLine, getCachedAddress, isSignedIn } from "@/utils/userAddress";
@@ -34,7 +35,7 @@ export default function Header() {
 	const unread = useUnreadNotifications();
 
 	const [searchText, setSearchText] = useState("");
-	const [dropdownOpen, setDropdownOpen] = useState(false);
+	const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
 	const [isGuest, setIsGuest] = useState(true);
 	const [userCity, setUserCity] = useState("");
 	// Street/building line for the location sheet — never repeats the city.
@@ -175,50 +176,87 @@ export default function Header() {
 					accessibilityRole="button"
 					accessibilityLabel={t("notifications")}
 				>
-					<Bell size={icon.sizeLarge} strokeWidth={icon.strokeWidth} color={colors.text} />
-					{unread > 0 ? (
-						<View style={styles.badge}>
-							<Text style={styles.badgeText}>{unread > 99 ? "99+" : unread}</Text>
-						</View>
-					) : null}
+					{/* The badge is pinned to the bell glyph's top corner (the
+					    reading-direction end), not to the 44px touch target. */}
+					<View style={styles.bellGlyph}>
+						<Bell size={icon.sizeLarge} strokeWidth={icon.strokeWidth} color={colors.text} />
+						{unread > 0 ? (
+							<View style={[styles.badge, isRTL ? styles.badgeStart : styles.badgeEnd]}>
+								<Text style={styles.badgeText}>{unread > 99 ? "99+" : unread}</Text>
+							</View>
+						) : null}
+					</View>
 				</Pressable>
 
-				<View style={styles.dropdownContainer}>
-					<Pressable
-						style={[styles.dropdownButton, isRTL && styles.rowReverse]}
-						onPress={() => setDropdownOpen((v) => !v)}
-						accessibilityRole="button"
-					>
-						<Image source={{ uri: selectedLang.flag }} style={styles.flag} cachePolicy="memory-disk" />
-						<ChevronDown size={icon.sizeSmall} strokeWidth={icon.strokeWidth} color={colors.textMuted} />
-					</Pressable>
-					{dropdownOpen && (
-						<View style={styles.dropdownList}>
-							{LANGUAGE_OPTIONS.map((lang) => (
-								<Pressable
-									key={lang.code}
-									style={[styles.dropdownItem, isRTL && styles.rowReverse]}
-									onPress={() => {
-										tapLight();
-										switchLanguage(lang.code);
-										setDropdownOpen(false);
-									}}
-								>
-									<Image source={{ uri: lang.flag }} style={styles.flag} cachePolicy="memory-disk" />
-									<Text style={[styles.dropdownText, lang.code === language && styles.dropdownTextActive]}>
-										{lang.name}
-									</Text>
-								</Pressable>
-							))}
-						</View>
-					)}
-				</View>
+				<Pressable
+					style={[styles.dropdownButton, isRTL && styles.rowReverse]}
+					onPress={() => setLanguageMenuOpen(true)}
+					accessibilityRole="button"
+					accessibilityLabel={selectedLang.name}
+				>
+					<Image source={{ uri: selectedLang.flag }} style={styles.flag} cachePolicy="memory-disk" />
+					<ChevronDown size={icon.sizeSmall} strokeWidth={icon.strokeWidth} color={colors.textMuted} />
+				</Pressable>
 			</View>
+
+			{/* Language menu: a popover in its own modal layer, anchored under
+			    the flag at the header's edge (right in English, left in
+			    Arabic). It used to be an absolutely positioned child pinned
+			    with `right: 0`, which in Arabic — where the flag sits at the
+			    left edge — pushed most of it off-screen over the header. A tap
+			    anywhere outside closes it. */}
+			<Modal
+				visible={languageMenuOpen}
+				transparent
+				statusBarTranslucent
+				animationType="fade"
+				onRequestClose={() => setLanguageMenuOpen(false)}
+			>
+				<Pressable
+					style={styles.menuBackdrop}
+					onPress={() => setLanguageMenuOpen(false)}
+					accessibilityRole="button"
+					accessibilityLabel={t("close")}
+				/>
+				<View
+					style={[
+						styles.dropdownList,
+						{ top: insets.top + HEADER_ROW_HEIGHT },
+						isRTL ? { left: spacing.md } : { right: spacing.md },
+					]}
+				>
+					{LANGUAGE_OPTIONS.map((lang) => {
+						const active = lang.code === language;
+						return (
+							<Pressable
+								key={lang.code}
+								style={({ pressed }) => [
+									styles.dropdownItem,
+									isRTL && styles.rowReverse,
+									(pressed || active) && styles.dropdownItemActive,
+								]}
+								onPress={() => {
+									tapLight();
+									setLanguageMenuOpen(false);
+									switchLanguage(lang.code);
+								}}
+								accessibilityRole="button"
+								accessibilityState={{ selected: active }}
+							>
+								<Image source={{ uri: lang.flag }} style={styles.flag} cachePolicy="memory-disk" />
+								<Text style={[styles.dropdownText, active && styles.dropdownTextActive]}>
+									{lang.name}
+								</Text>
+							</Pressable>
+						);
+					})}
+				</View>
+			</Modal>
 
 			{/* Search — the placeholder is an animated suggestion ticker, so the
 			    input itself carries none. The mic is an inline suffix so voice
 			    lives in the primary touch path instead of a floating button. */}
-			<View style={[styles.searchWrapper, isRTL && styles.rowReverse]}>
+			<View style={[styles.searchWrapper, isRTL && styles.searchWrapperRTL]}>
 				<Search size={icon.size} strokeWidth={icon.strokeWidth} color={colors.textMuted} />
 				<TextInput
 					style={styles.searchBox}

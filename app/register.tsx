@@ -26,6 +26,7 @@ import { detectCityFromLocation, getStateForCity } from "@/utils/cityDetection";
 import { formatLocalDate, toCalendarISOString } from "@/utils/date";
 import { notifyError, notifySuccess } from "@/utils/haptics";
 import { formatLebanesePhoneInput, isStrongPassword, passwordRules } from "@/utils/phone";
+import { rtlRow } from "@/utils/rtl";
 import { ensureDefaultCity, resolveGoogleAddress } from "@/utils/userCity";
 
 const APPLE_LOGO = "";
@@ -38,7 +39,7 @@ type Errors = Partial<Record<"name" | "phone" | "email" | "dob" | "password", st
 // Beirut default) so the backend's required address is satisfied, and the
 // shopper sets their real delivery pin at their first checkout.
 export default function Register() {
-	const { t } = useTranslation();
+	const { t, isRTL } = useTranslation();
 	const router = useRouter();
 
 	const [name, setName] = useState("");
@@ -228,7 +229,7 @@ export default function Register() {
 	};
 
 	return (
-		<AuthLayout title={t("createAccountTitle")} subtitle={t("registerSubtitle")} compact showBack>
+		<AuthLayout title={t("createAccountTitle")} subtitle={t("registerSubtitle")} compact showBack animatedLogo>
 			{formError ? (
 				<View style={styles.errorBox}>
 					<CircleAlert size={icon.size} strokeWidth={icon.strokeWidth} color={colors.danger} />
@@ -256,6 +257,7 @@ export default function Register() {
 				label={t("phoneLabel")}
 				required
 				prefix="+961"
+				ltr
 				value={phone}
 				onChangeText={(v) => {
 					setPhone(formatLebanesePhoneInput(v));
@@ -354,7 +356,7 @@ export default function Register() {
 			/>
 			<View style={styles.rules}>
 				{ruleRows.map((r) => (
-					<View key={r.key} style={styles.ruleRow}>
+					<View key={r.key} style={[styles.ruleRow, rtlRow(isRTL)]}>
 						{rules[r.key] ? (
 							<CircleCheck size={icon.sizeSmall} strokeWidth={icon.strokeWidth} color={colors.success} />
 						) : (

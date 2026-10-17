@@ -4,9 +4,13 @@ import { colors, radius, spacing } from "@/constants/theme";
 
 export const styles = StyleSheet.create({
 	loadingIndicator: { flex: 1, justifyContent: "center" },
-	backButton: {
-		marginBottom: 15,
+	topBar: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: spacing.sm,
+		marginBottom: spacing.sm,
 	},
+	topBarTitle: { flex: 1, fontSize: 18, fontWeight: "700", color: colors.text },
 	listContent: {
 		paddingBottom: 120,
 	},

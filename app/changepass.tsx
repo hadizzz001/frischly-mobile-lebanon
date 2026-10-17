@@ -5,19 +5,22 @@ import { useRouter } from "expo-router";
 import { Check, CircleAlert, CircleCheck, Eye, EyeOff } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { Pressable, Text, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 
-import AuthLayout from "@/components/AuthLayout";
+import BackButton from "@/components/ui/BackButton";
 import FormField from "@/components/ui/FormField";
 import PrimaryButton from "@/components/ui/PrimaryButton";
 import { colors, icon } from "@/constants/theme";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { AuthService } from "@/services/api";
+import { styles as pageStyles } from "@/styles/app/changepass.styles";
 import { styles } from "@/styles/components/AuthLayout.styles";
 import { notifyError, notifySuccess } from "@/utils/haptics";
 import { isStrongPassword, passwordRules } from "@/utils/phone";
+import { rtlAlign, rtlRow } from "@/utils/rtl";
 
 export default function ChangePassword() {
-	const { t } = useTranslation();
+	const { t, isRTL } = useTranslation();
 	const router = useRouter();
 	const [currentPassword, setCurrentPassword] = useState("");
 	const [newPassword, setNewPassword] = useState("");
@@ -87,8 +90,20 @@ export default function ChangePassword() {
 		</Pressable>
 	);
 
+	// A signed-in page under the global header, so no logo banner (that frame
+	// belongs to the pre-login auth screens) — just a back button.
 	return (
-		<AuthLayout title={t("changePassword")} subtitle={t("newPasswordBody")} compact showBack hideLanguage>
+		<KeyboardAwareScrollView
+			style={pageStyles.screen}
+			contentContainerStyle={pageStyles.content}
+			keyboardShouldPersistTaps="handled"
+			enableOnAndroid
+			extraScrollHeight={32}
+			showsVerticalScrollIndicator={false}
+		>
+			<BackButton style={[pageStyles.back, rtlAlign(isRTL)]} />
+			<Text style={styles.title}>{t("changePassword")}</Text>
+			<Text style={styles.subtitle}>{t("newPasswordBody")}</Text>
 			{notice ? (
 				<View style={styles.successBox}>
 					<CircleCheck size={icon.size} strokeWidth={icon.strokeWidth} color={colors.success} />
@@ -131,7 +146,7 @@ export default function ChangePassword() {
 			/>
 			<View style={styles.rules}>
 				{ruleRows.map((r) => (
-					<View key={r.key} style={styles.ruleRow}>
+					<View key={r.key} style={[styles.ruleRow, rtlRow(isRTL)]}>
 						{rules[r.key] ? (
 							<CircleCheck size={icon.sizeSmall} strokeWidth={icon.strokeWidth} color={colors.success} />
 						) : (
@@ -158,6 +173,6 @@ export default function ChangePassword() {
 				right={eye}
 			/>
 			<PrimaryButton label={t("updatePassword")} onPress={handleChangePassword} loading={loading} style={styles.primary} />
-		</AuthLayout>
+		</KeyboardAwareScrollView>
 	);
 }

@@ -157,7 +157,7 @@ export default function NotificationsScreen() {
 	};
 
 	return (
-		<SafeAreaView edges={["bottom"]} style={styles.safeArea}>
+		<SafeAreaView edges={[]} style={styles.safeArea}>
 			<View style={[styles.header, isRTL && { flexDirection: "row-reverse" }]}>
 				<BackButton />
 				<Text style={styles.title}>{t("notifications")}</Text>

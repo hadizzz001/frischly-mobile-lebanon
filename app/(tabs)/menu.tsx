@@ -14,9 +14,10 @@ import { useTranslation } from "@/contexts/TranslationContext";
 import { API_BASE_URL } from "@/constants/api";
 import { MENU_NUM_COLUMNS as NUM_COLUMNS } from "@/constants/layout";
 import { styles } from "@/styles/app/(tabs)/menu.styles";
+import { rtlRow } from "@/utils/rtl";
 
 export default function CategoriesGrid() {
-	const { t, td } = useTranslation();
+	const { t, td, isRTL } = useTranslation();
 	const router = useRouter();
 	const [categories, setCategories] = useState([]);
 	const [loading, setLoading] = useState(true);
@@ -76,14 +77,14 @@ export default function CategoriesGrid() {
 	);
 
 	return (
-		<SafeAreaView edges={["bottom"]} style={styles.safeArea}>
+		<SafeAreaView edges={[]} style={styles.safeArea}>
 			<FlatList
 				key={`grid-${NUM_COLUMNS}`}
 				data={categories}
 				renderItem={renderCategory}
 				keyExtractor={(item) => item._id}
 				numColumns={NUM_COLUMNS}
-				columnWrapperStyle={styles.row}
+				columnWrapperStyle={[styles.row, rtlRow(isRTL)]}
 				contentContainerStyle={styles.gridContainer}
 				showsVerticalScrollIndicator={false}
 			/>

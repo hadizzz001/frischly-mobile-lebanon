@@ -1,7 +1,7 @@
 // contexts/TranslationContext.tsx
+import { DirectionContext } from "@/contexts/DirectionContext";
 import { ensureDynamicTranslation, translateDynamic } from "@/utils/dynamicTranslations";
 import { translations } from "@/utils/locales";
-import { patchTextComponentsForRTL, setGlobalRTL } from "@/utils/rtl";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { InteractionManager } from "react-native";
@@ -17,12 +17,6 @@ const TranslationContext = createContext<TranslationContextValue | undefined>(
 );
 
 const DEFAULT_LANGUAGE: Language = "en";
-
-// Patch Text/TextInput once at module load so every instance across the app
-// picks up the right textAlign/writingDirection default as soon as Arabic is
-// active — see utils/rtl.ts for why this approach (vs. I18nManager.forceRTL)
-// was chosen.
-patchTextComponentsForRTL();
 
 const normalizeLanguage = (lang: string | null | undefined): Language => {
   if (lang === "de") return "ar";
@@ -67,12 +61,6 @@ useEffect(() => {
   };
   loadLang();
 }, []);
-
-  // Keep the global RTL text-alignment flag in sync with the active language.
-  useEffect(() => {
-    setGlobalRTL(language === "ar");
-  }, [language]);
-
 
   // Save language when changed. The loader is shown FIRST (its own commit),
   // and the heavy language re-render happens on the next frame, so the spinner
@@ -129,9 +117,14 @@ useEffect(() => {
     [t, td, language, switchLanguage, switching],
   );
 
+  // The direction is its own context: every Text/TextInput reads it to align
+  // right in Arabic (utils/rtlText/), and it only changes with the
+  // language.
   return (
     <TranslationContext.Provider value={value}>
-      {children}
+      <DirectionContext.Provider value={language === "ar"}>
+        {children}
+      </DirectionContext.Provider>
     </TranslationContext.Provider>
   );
 };

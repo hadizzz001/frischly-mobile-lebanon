@@ -10,6 +10,10 @@ import { useRouter } from "expo-router";
 import { useEffect, useRef } from "react";
 import { Platform } from "react-native";
 
+// This device's push token as last registered with the server, so logout can
+// tell the server which of the account's devices to forget.
+const PUSH_TOKEN_STORAGE_KEY = "frischly_push_token_v1";
+
 // Show notifications while the app is in the foreground.
 Notifications.setNotificationHandler({
 	handleNotification: async () => ({
@@ -86,13 +90,12 @@ export async function registerForPushNotificationsAsync(): Promise<
 
 /**
  * Get the Expo push token and send it to the backend (only when logged in).
- * The server stores it in the user's `fcmToken` field and delivers via Expo.
+ * The server adds it to the account's list of devices and delivers via Expo.
  *
- * Always re-sends, even if this device registered before: the server keeps
- * one token per account, so signing in on another phone, logging out there,
- * or restoring a database backup silently replaces or wipes it, and this
- * device has no way to notice. One small request per launch/login is cheap
- * insurance against pushes quietly stopping.
+ * Always re-sends, even if this device registered before: a database restore,
+ * another account signing in on this phone, or an older app build logging out
+ * can drop it server-side, and this device has no way to notice. One small
+ * request per launch/login is cheap insurance against pushes quietly stopping.
  */
 export async function syncPushTokenToServer() {
 	const authToken = await getAuthToken();
@@ -103,6 +106,7 @@ export async function syncPushTokenToServer() {
 
 	try {
 		await NotificationService.registerToken(pushToken, authToken);
+		await AsyncStorage.setItem(PUSH_TOKEN_STORAGE_KEY, pushToken);
 		console.log("✅ Push token registered with server");
 	} catch (err) {
 		console.error("❌ Error sending push token to server:", err);
@@ -110,15 +114,19 @@ export async function syncPushTokenToServer() {
 }
 
 /**
- * Tell the backend to drop the token. Call this on logout.
+ * Tell the backend to forget this device. Call this on logout. The account's
+ * other devices (another phone, the iPad) keep getting notifications.
  */
 export async function removePushTokenFromServer(
 	authToken: string | null | undefined,
 ): Promise<void> {
 	try {
-		if (authToken) {
-			await NotificationService.removeToken(authToken);
+		const pushToken = await AsyncStorage.getItem(PUSH_TOKEN_STORAGE_KEY);
+		// A device that never registered has nothing to remove.
+		if (authToken && pushToken) {
+			await NotificationService.removeToken(authToken, pushToken);
 		}
+		await AsyncStorage.removeItem(PUSH_TOKEN_STORAGE_KEY);
 	} catch (err) {
 		console.error("❌ Error removing push token from server:", err);
 	}

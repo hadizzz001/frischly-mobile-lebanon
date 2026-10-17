@@ -1,9 +1,11 @@
 import { ActivityIndicator, Pressable, Text } from "react-native";
 
 import { colors } from "@/constants/theme";
+import { useTranslation } from "@/contexts/TranslationContext";
 import { styles } from "@/styles/components/ui/PrimaryButton.styles";
 import type { PrimaryButtonProps } from "@/types/components/ui/PrimaryButton.types";
 import { tapMedium } from "@/utils/haptics";
+import { rtlRow } from "@/utils/rtl";
 
 // The app's button. Amber is reserved for conversion points and always carries
 // charcoal text (white-on-amber fails WCAG AA). Spinner matches the text colour.
@@ -18,6 +20,7 @@ export default function PrimaryButton({
 	textStyle,
 	haptic,
 }: PrimaryButtonProps) {
+	const { isRTL } = useTranslation();
 	const isDisabled = disabled || loading;
 	const textColorStyle =
 		variant === "primary"
@@ -46,6 +49,8 @@ export default function PrimaryButton({
 			}}
 			style={({ pressed }) => [
 				styles.base,
+				// Icon on the reading side: right of the label in Arabic.
+				rtlRow(isRTL),
 				styles[variant],
 				isDisabled && styles.disabled,
 				pressed && !isDisabled && { opacity: 0.85 },

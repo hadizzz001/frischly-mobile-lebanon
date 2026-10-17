@@ -20,6 +20,11 @@ export interface FormFieldProps extends Omit<TextInputProps, "style"> {
 	right?: ReactNode;
 	/** Leading lucide icon inside the box. */
 	left?: ReactNode;
+	/**
+	 * Keep the box left-to-right in Arabic too (prefix and icon on the left,
+	 * value left-aligned). For phone numbers, which take Latin digits only.
+	 */
+	ltr?: boolean;
 	/** Render as a tappable field (date picker trigger) instead of an input. */
 	onPressField?: () => void;
 	containerStyle?: StyleProp<ViewStyle>;

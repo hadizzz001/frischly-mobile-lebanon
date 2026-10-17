@@ -5,9 +5,9 @@ import { colors, radius, shadow, spacing } from "@/constants/theme";
 
 // Shared product-card look used by every listing in the app (home grid, hot
 // sale carousel, shop, search, category pages).
-//   surface card (12px radius, soft shadow) -> image on a soft-grey backdrop
-//   -> name -> weight -> dominant price (+ muted USD, struck-through old price)
-//   -> savings -> amber add-to-cart / stepper.
+//   surface card (12px radius, soft shadow) -> framed image tile -> name ->
+//   weight -> dominant price (+ muted USD, struck-through old price) -> amber
+//   add-to-cart / stepper.
 export const styles = StyleSheet.create({
 	card: {
 		width: ITEM_WIDTH,
@@ -16,14 +16,18 @@ export const styles = StyleSheet.create({
 		padding: spacing.sm,
 		...shadow.card,
 	},
+	// The framed picture (CatalogImage) is already a square with an even
+	// margin, padded in its own background colour — so it fills this tile edge
+	// to edge with no inner padding: a white or transparent picture sits on
+	// clean white, a photo keeps its own backdrop, and nothing shows a box
+	// inside a box.
 	imageWrapper: {
 		position: "relative",
 		width: "100%",
 		aspectRatio: 1,
 		marginBottom: spacing.sm,
-		backgroundColor: colors.surfaceAlt,
+		backgroundColor: colors.background,
 		borderRadius: radius.card,
-		padding: spacing.sm,
 		justifyContent: "center",
 		alignItems: "center",
 		overflow: "hidden",
@@ -54,12 +58,14 @@ export const styles = StyleSheet.create({
 	discountBadge: {
 		position: "absolute",
 		top: spacing.sm,
-		left: spacing.sm,
 		backgroundColor: colors.danger,
 		paddingHorizontal: 6,
 		paddingVertical: 3,
 		borderRadius: radius.badge,
 	},
+	// Corner of the badge: top-left in English, top-right in Arabic.
+	discountBadgeLeft: { left: spacing.sm },
+	discountBadgeRight: { right: spacing.sm },
 	discountText: { color: colors.textOnDark, fontSize: 10, fontWeight: "700" },
 
 	// Image + text block. It flexes so the add button sits at the bottom of every
@@ -87,12 +93,6 @@ export const styles = StyleSheet.create({
 		textDecorationLine: "line-through",
 		marginTop: 1,
 	},
-	oldPriceUsd: {
-		fontSize: 11,
-		color: colors.textDisabled,
-		textDecorationLine: "line-through",
-	},
-	savings: { fontSize: 12, lineHeight: 15, fontWeight: "600", color: colors.success, marginTop: 1 },
 
 	// Add to cart: full card width; amber with charcoal text.
 	addBtn: {
@@ -136,8 +136,10 @@ export const styles = StyleSheet.create({
 // the LBP price keeps its full width.
 export const compactStyles = StyleSheet.create({
 	card: { padding: 6 },
-	imageWrapper: { padding: spacing.xs, marginBottom: 6 },
-	discountBadge: { top: spacing.xs, left: spacing.xs, paddingHorizontal: 5, paddingVertical: 2 },
+	imageWrapper: { marginBottom: 6 },
+	discountBadge: { top: spacing.xs, paddingHorizontal: 5, paddingVertical: 2 },
+	discountBadgeLeft: { left: spacing.xs },
+	discountBadgeRight: { right: spacing.xs },
 	discountText: { fontSize: 9 },
 	outOfStockBadge: { left: spacing.xs, right: spacing.xs, bottom: spacing.xs, paddingHorizontal: spacing.xs },
 	outOfStockText: { fontSize: 10 },
@@ -146,7 +148,6 @@ export const compactStyles = StyleSheet.create({
 	price: { fontSize: 13, lineHeight: 17, marginTop: 2 },
 	priceUsd: { fontSize: 11, lineHeight: 14, fontWeight: "500", color: colors.textMuted },
 	oldPrice: { fontSize: 11, lineHeight: 14 },
-	savings: { fontSize: 11, lineHeight: 14 },
 	addBtn: { height: 32, marginTop: 6, gap: 3 },
 	addBtnText: { fontSize: 12 },
 	qtyRow: { height: 32, marginTop: 6 },

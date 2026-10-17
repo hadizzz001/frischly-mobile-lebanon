@@ -1,10 +1,11 @@
 import { StyleSheet } from "react-native";
 
+import { PAGE_END_SPACE } from "@/constants/layout";
 import { colors, radius, shadow, spacing } from "@/constants/theme";
 
 export const styles = StyleSheet.create({
 	container: { flex: 1, backgroundColor: colors.surface },
-	scrollContent: { paddingBottom: spacing.xl, flexGrow: 1 },
+	scrollContent: { paddingBottom: PAGE_END_SPACE, flexGrow: 1 },
 
 	// --- header -------------------------------------------------------------------
 	header: {

@@ -1,8 +1,8 @@
-import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { Minus, Plus, ShoppingCart } from "lucide-react-native";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
+import CatalogImage from "@/components/ui/CatalogImage";
 import {
 	PRODUCT_CARD_COMPACT_MAX_WIDTH,
 	PRODUCT_CARD_NAME_MAX_CHARS,
@@ -15,7 +15,9 @@ import { useBusyAction } from "@/hooks/useBusyAction";
 import { useUsdToLbpRate } from "@/hooks/useUsdToLbpRate";
 import { compactStyles as cs, styles } from "@/styles/components/ProductCard.styles";
 import type { ProductCardProps } from "@/types/components/ProductCard.types";
+import { PRODUCT_TILE_TRANSFORMATION } from "@/utils/cloudinary";
 import { formatLbp, formatUsd } from "@/utils/currency";
+import { rtlRow } from "@/utils/rtl";
 import { tapLight, tapMedium } from "@/utils/haptics";
 import {
 	formatWeight,
@@ -27,9 +29,9 @@ import {
 // THE product card used by every listing in the app (home grid, hot-sale
 // carousel, shop, search results, category pages) — but NOT the product detail
 // page, which has its own bigger layout. Top to bottom:
-//   image (soft-grey backdrop) -> name (2 lines) -> weight -> price in LBP
-//   (USD beside it, old price struck through) -> savings -> add-to-cart /
-//   stepper.
+//   image (framed + centred, see CatalogImage) -> name (2 lines) -> weight ->
+//   price in LBP -> USD -> old price struck through (sale items only) ->
+//   add-to-cart / stepper.
 //
 // The quantity is read straight from the cart, so a card always mirrors what
 // is actually in the cart no matter which screen it is rendered on.
@@ -41,7 +43,7 @@ export default function ProductCard({
 	showCartControls = true,
 	style,
 }: ProductCardProps) {
-	const { t, td } = useTranslation();
+	const { t, td, isRTL } = useTranslation();
 	const router = useRouter();
 	const { cart, addToCart, removeFromCart } = useCart();
 	const rate = useUsdToLbpRate();
@@ -53,7 +55,6 @@ export default function ProductCard({
 	const discountPercent = Number(product.discount) || 0;
 	const finalPrice = getFinalPrice(product);
 	const hasDiscount = discountPercent > 0 && finalPrice !== basePrice;
-	const savings = basePrice - finalPrice;
 	const stock = Number(product.stock) || 0;
 	const outOfStock = stock === 0;
 	const weight = formatWeight(product.weight);
@@ -92,7 +93,8 @@ export default function ProductCard({
 				style={({ pressed }) => [styles.body, pressed && { opacity: 0.85 }]}
 				accessibilityRole="button"
 			>
-				{/* Image — cached, contained, never re-laid-out on load. */}
+				{/* Image — framed so the product sits in the middle of the tile
+				    whatever its canvas; cached, never re-laid-out on load. */}
 				<View
 					style={[
 						styles.imageWrapper,
@@ -100,8 +102,9 @@ export default function ProductCard({
 						imageHeight ? { height: imageHeight, aspectRatio: undefined } : null,
 					]}
 				>
-					<Image
-						source={{ uri: product.picture || undefined }}
+					<CatalogImage
+						uri={product.picture}
+						transformation={PRODUCT_TILE_TRANSFORMATION}
 						style={[styles.image, outOfStock && styles.imageOutOfStock]}
 						contentFit="contain"
 						cachePolicy="memory-disk"
@@ -116,7 +119,15 @@ export default function ProductCard({
 						</View>
 					)}
 					{discountPercent > 0 && (
-						<View style={[styles.discountBadge, c("discountBadge")]}>
+						<View
+							style={[
+								styles.discountBadge,
+								c("discountBadge"),
+								isRTL
+									? compact ? cs.discountBadgeRight : styles.discountBadgeRight
+									: compact ? cs.discountBadgeLeft : styles.discountBadgeLeft,
+							]}
+						>
 							<Text style={[styles.discountText, c("discountText")]}>
 								{compact ? `-${discountPercent}%` : `-${discountPercent}% ${t("off")}`}
 							</Text>
@@ -130,8 +141,12 @@ export default function ProductCard({
 
 				{!!weight && <Text style={[styles.weight, c("weight")]}>{weight}</Text>}
 
-				{/* Selling price dominant; USD tucked beside it (on its own line in
-				    the compact card, where both would not fit side by side). */}
+				{/* At most three short price lines: the selling price in LBP
+				    (dominant), its USD equivalent (beside it, or on its own line in
+				    the compact card), and on sale items the old LBP price struck
+				    through. The "-x%" badge on the image already tells the saving,
+				    so there is no savings line and no second currency on the old
+				    price — together they crowded the small card. */}
 				{compact ? (
 					<>
 						<Text
@@ -161,20 +176,6 @@ export default function ProductCard({
 						minimumFontScale={0.75}
 					>
 						{formatLbp(basePrice, rate)}
-						{!compact && (
-							<Text style={styles.oldPriceUsd}>{`  ${formatUsd(basePrice)}`}</Text>
-						)}
-					</Text>
-				)}
-
-				{hasDiscount && (
-					<Text
-						style={[styles.savings, c("savings")]}
-						numberOfLines={1}
-						adjustsFontSizeToFit={compact}
-						minimumFontScale={0.75}
-					>
-						{t("save")} {formatLbp(savings, rate)}
 					</Text>
 				)}
 			</Pressable>
@@ -215,7 +216,7 @@ export default function ProductCard({
 					<Pressable
 						onPress={increaseQty}
 						disabled={anyBusy}
-						style={({ pressed }) => [styles.addBtn, c("addBtn"), pressed && { opacity: 0.85 }]}
+						style={({ pressed }) => [styles.addBtn, c("addBtn"), rtlRow(isRTL), pressed && { opacity: 0.85 }]}
 						accessibilityRole="button"
 					>
 						{isBusy("add") ? (

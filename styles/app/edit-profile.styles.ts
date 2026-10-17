@@ -6,6 +6,8 @@ export const styles = StyleSheet.create({
 	bottomSpacer: { height: 220 },
 	label: { marginBottom: 4, color: "#555" },
 	input: { borderWidth: 1, padding: 12, borderRadius: 15, borderColor: "#ccc" },
+	// Phone numbers take Latin digits only, so they stay left-to-right in Arabic.
+	inputLTR: { textAlign: "left" },
 	inputDisabled: { backgroundColor: "#f2f2f2", borderColor: "#ddd", color: "#666" },
 	mapPinButton: {
 		flexDirection: "row",

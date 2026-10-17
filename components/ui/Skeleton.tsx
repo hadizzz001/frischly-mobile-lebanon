@@ -1,29 +1,58 @@
-import { useEffect, useRef } from "react";
-import { Animated, Easing, View } from "react-native";
+import { useEffect, useState } from "react";
+import { View } from "react-native";
+import Animated, {
+	cancelAnimation,
+	Easing,
+	makeMutable,
+	useAnimatedStyle,
+	withRepeat,
+	withTiming,
+} from "react-native-reanimated";
 
 import { PRODUCT_CARD_COMPACT_MAX_WIDTH, PRODUCT_GRID_ITEM_WIDTH } from "@/constants/layout";
 import { radius } from "@/constants/theme";
+import { useTranslation } from "@/contexts/TranslationContext";
 import { styles } from "@/styles/components/ui/Skeleton.styles";
 import type {
 	ProductGridSkeletonProps,
 	SkeletonProps,
 } from "@/types/components/ui/Skeleton.types";
+import { rtlRow } from "@/utils/rtl";
 
-// One shimmer loop shared by every Skeleton on screen, so they pulse in sync.
-let shared: Animated.Value | null = null;
-function useShimmer(): Animated.Value {
-	if (!shared) {
-		shared = new Animated.Value(0);
-		Animated.loop(
-			Animated.timing(shared, {
-				toValue: 1,
-				duration: 1200,
-				easing: Easing.inOut(Easing.ease),
-				useNativeDriver: true,
-			}),
-		).start();
-	}
-	return shared;
+/** The shimmer band is this fraction of the block's width (see styles.shimmer). */
+const SHIMMER_WIDTH_RATIO = 0.6;
+/** Travel used until a block has been measured. */
+const FALLBACK_BLOCK_WIDTH = 400;
+/** One sweep across a block. */
+const SHIMMER_SWEEP_MS = 1200;
+
+// One shimmer clock (0 -> 1, repeating) shared by every Skeleton on screen,
+// so they all sweep in sync. It is a Reanimated loop on the UI thread,
+// started when the first Skeleton mounts and stopped when the last one
+// unmounts — like the marquee and the search placeholder. The RN Animated
+// loop it replaces was started only once per app session, and React Native
+// stops a value's animation as soon as nothing is attached to it: after the
+// first loading screen went away, every later skeleton showed a frozen band.
+const shimmerProgress = makeMutable(0);
+let shimmerUsers = 0;
+
+function useShimmerProgress() {
+	useEffect(() => {
+		shimmerUsers += 1;
+		if (shimmerUsers === 1) {
+			shimmerProgress.value = 0;
+			shimmerProgress.value = withRepeat(
+				withTiming(1, { duration: SHIMMER_SWEEP_MS, easing: Easing.inOut(Easing.ease) }),
+				-1,
+				false,
+			);
+		}
+		return () => {
+			shimmerUsers -= 1;
+			if (shimmerUsers === 0) cancelAnimation(shimmerProgress);
+		};
+	}, []);
+	return shimmerProgress;
 }
 
 /** A soft-grey block with a shimmer sweep — the building block for every
@@ -34,12 +63,20 @@ export function Skeleton({
 	borderRadius = radius.badge,
 	style,
 }: SkeletonProps) {
-	const shimmer = useShimmer();
-	const measured = useRef(0);
-	const translateX = shimmer.interpolate({
-		inputRange: [0, 1],
-		outputRange: [-200, 400],
-	});
+	const progress = useShimmerProgress();
+	const { isRTL } = useTranslation();
+	const [blockWidth, setBlockWidth] = useState(0);
+	// The band starts fully hidden off one edge and leaves fully past the
+	// other: left -> right in English, right -> left in Arabic (the reading
+	// direction), whatever the block's width.
+	const travel = blockWidth || FALLBACK_BLOCK_WIDTH;
+	const hiddenStart = -travel * SHIMMER_WIDTH_RATIO;
+	const from = isRTL ? travel : hiddenStart;
+	const to = isRTL ? hiddenStart : travel;
+	const shimmerStyle = useAnimatedStyle(
+		() => ({ transform: [{ translateX: from + (to - from) * progress.value }] }),
+		[from, to],
+	);
 
 	return (
 		<View
@@ -50,13 +87,11 @@ export function Skeleton({
 				style,
 			]}
 			onLayout={(e) => {
-				measured.current = e.nativeEvent.layout.width;
+				const measured = Math.round(e.nativeEvent.layout.width);
+				if (measured !== blockWidth) setBlockWidth(measured);
 			}}
 		>
-			<Animated.View
-				pointerEvents="none"
-				style={[styles.shimmer, { transform: [{ translateX }] }]}
-			/>
+			<Animated.View pointerEvents="none" style={[styles.shimmer, shimmerStyle]} />
 		</View>
 	);
 }
@@ -88,9 +123,11 @@ export function ProductGridSkeleton({
 	cardWidth = PRODUCT_GRID_ITEM_WIDTH,
 	horizontal = false,
 }: ProductGridSkeletonProps) {
+	const { isRTL } = useTranslation();
 	const items = Array.from({ length: count });
 	return (
-		<View style={horizontal ? styles.row : styles.grid}>
+		// Placeholders fill from the right in Arabic, like the real rows.
+		<View style={[horizontal ? styles.row : styles.grid, rtlRow(isRTL)]}>
 			{items.map((_, i) => (
 				<ProductCardSkeleton key={i} width={cardWidth} />
 			))}

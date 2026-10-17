@@ -1,5 +1,6 @@
 import { StyleSheet } from "react-native";
 
+import { PAGE_END_SPACE } from "@/constants/layout";
 import { colors, radius, shadow, spacing } from "@/constants/theme";
 
 export const styles = StyleSheet.create({
@@ -31,7 +32,7 @@ export const styles = StyleSheet.create({
 	tabActive: { borderBottomColor: colors.primary },
 	tabText: { fontSize: 14, fontWeight: "600", color: colors.textMuted },
 	tabTextActive: { color: colors.text },
-	list: { padding: spacing.md, gap: spacing.sm, flexGrow: 1 },
+	list: { padding: spacing.md, paddingBottom: PAGE_END_SPACE, gap: spacing.sm, flexGrow: 1 },
 	card: {
 		flexDirection: "row",
 		gap: spacing.md,

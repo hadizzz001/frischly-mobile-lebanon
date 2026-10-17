@@ -14,6 +14,7 @@ import { styles } from "@/styles/components/ProductList.styles";
 import type { Product } from "@/types";
 import type { ShopPageProps } from "@/types/components/ProductList.types";
 import { isServedByAdmin } from "@/utils/cityVisibility";
+import { rtlRow } from "@/utils/rtl";
 import { getUserCityAndPin } from "@/utils/userCity";
 
 export default function ShopPage({
@@ -24,7 +25,7 @@ export default function ShopPage({
 	hideLoader,
 	loadMoreSignal,
 }: ShopPageProps) {
-	const { t } = useTranslation();
+	const { t, isRTL } = useTranslation();
 	const [products, setProducts] = useState<Product[]>([]);
 	const [loading, setLoading] = useState<boolean>(true);
 	const [loadingMore, setLoadingMore] = useState<boolean>(false);
@@ -151,7 +152,8 @@ export default function ShopPage({
 	// would warn — the parent handles scrolling and paging.
 	return (
 		<View style={styles.container}>
-			<View style={styles.grid}>
+			{/* Fills from the right in Arabic. */}
+			<View style={[styles.grid, rtlRow(isRTL)]}>
 				{products.map((item) => (
 					<ProductCard key={item._id} product={item} width={PRODUCT_GRID_ITEM_WIDTH} />
 				))}

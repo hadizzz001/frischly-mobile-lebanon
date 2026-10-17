@@ -2,11 +2,13 @@ import BackButton from "@/components/ui/BackButton";
 import { useCart } from "@/contexts/CartContext";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { useBusyAction } from "@/hooks/useBusyAction";
+import { useGoToCheckout } from "@/hooks/useGoToCheckout";
 import { KitchenService } from "@/services/api";
 import { styles } from "@/styles/app/kitchen/[id].styles";
 import type { Kitchen, Product } from "@/types";
 import { getKitchenCartItems, isKitchenInCart } from "@/utils/kitchen";
 import { getBasePrice, getFinalPrice } from "@/utils/product";
+import { rtlAlign, rtlRow } from "@/utils/rtl";
 import { Feather } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -22,11 +24,12 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function KitchenPage() {
-	const { t, td } = useTranslation();
+	const { t, td, isRTL } = useTranslation();
 	const router = useRouter();
 	const { id } = useLocalSearchParams<{ id: string }>();
 	const { addItemsToCart, addToCart, removeFromCart, cart } = useCart();
 	const { isBusy, anyBusy, run } = useBusyAction();
+	const { goToCheckout, preparing: preparingCheckout } = useGoToCheckout();
 
 	const [kitchen, setKitchen] = useState<Kitchen | null>(null);
 	const [loading, setLoading] = useState(true);
@@ -107,8 +110,8 @@ export default function KitchenPage() {
 
 	if (!kitchen) {
 		return (
-			<SafeAreaView edges={["top"]} style={styles.safeArea}>
-				<BackButton onPress={() => router.back()} style={styles.backButton} />
+			<SafeAreaView edges={[]} style={styles.safeArea}>
+				<BackButton onPress={() => router.back()} style={[styles.backButton, rtlAlign(isRTL)]} />
 				<View style={styles.center}>
 					<Text style={styles.emptyText}>{t("kitchenNotFound")}</Text>
 				</View>
@@ -130,7 +133,7 @@ export default function KitchenPage() {
 	return (
 		<View style={styles.root}>
 			<Stack.Screen options={{ headerTitle: "" }} />
-			<BackButton onPress={() => router.back()} style={styles.backButton} />
+			<BackButton onPress={() => router.back()} style={[styles.backButton, rtlAlign(isRTL)]} />
 
 			<ScrollView contentContainerStyle={styles.scrollContent}>
 				{/* Main image */}
@@ -154,7 +157,7 @@ export default function KitchenPage() {
 				    also be added one by one below), and "Go to Checkout" appears
 				    alongside it only while this kitchen's items are in the cart. */}
 				<TouchableOpacity
-					style={[styles.addAllBtn, addableCount === 0 && styles.addAllBtnDisabled]}
+					style={[styles.addAllBtn, rtlRow(isRTL), addableCount === 0 && styles.addAllBtnDisabled]}
 					activeOpacity={0.85}
 					disabled={addableCount === 0 || anyBusy}
 					onPress={handleAddAll}
@@ -171,12 +174,19 @@ export default function KitchenPage() {
 
 				{inCart && (
 					<TouchableOpacity
-						style={styles.checkoutBtn}
+						style={[styles.checkoutBtn, rtlRow(isRTL)]}
 						activeOpacity={0.85}
-						onPress={() => router.push("/checkout")}
+						disabled={preparingCheckout}
+						onPress={() => goToCheckout()}
 					>
-						<Feather name="credit-card" size={18} color="#111827" />
-						<Text style={styles.addAllBtnText}>{t("goToCheckout")}</Text>
+						{preparingCheckout ? (
+							<ActivityIndicator size="small" color="#111827" />
+						) : (
+							<>
+								<Feather name="credit-card" size={18} color="#111827" />
+								<Text style={styles.addAllBtnText}>{t("goToCheckout")}</Text>
+							</>
+						)}
 					</TouchableOpacity>
 				)}
 
@@ -194,7 +204,7 @@ export default function KitchenPage() {
 						const quantity = cartQuantity(item._id);
 
 						return (
-							<View key={item._id} style={styles.itemRow}>
+							<View key={item._id} style={[styles.itemRow, rtlRow(isRTL)]}>
 								<View style={styles.itemImageWrapper}>
 									<Image
 										source={{
@@ -215,7 +225,7 @@ export default function KitchenPage() {
 										{td(item.name)}
 									</Text>
 
-									<View style={styles.priceRow}>
+									<View style={[styles.priceRow, rtlRow(isRTL)]}>
 										{hasDiscount && (
 											<Text style={styles.basePrice}>
 												${basePrice.toFixed(2)}

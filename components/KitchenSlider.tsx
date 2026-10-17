@@ -10,7 +10,7 @@ import {
     loadStoreKitchens,
     MAIN_STORE_SCOPE,
 } from "@/utils/kitchen";
-import { rtlRow } from "@/utils/rtl";
+import { rtlFlip, rtlRow } from "@/utils/rtl";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -115,15 +115,18 @@ export default function KitchenSlider({
 				</View>
 			</View>
 
+			{/* Mirrored in Arabic so the row starts at the right edge and swipes
+			    right-to-left (see rtlFlip). */}
 			<ScrollView
 				horizontal
 				showsHorizontalScrollIndicator={false}
+				style={rtlFlip(isRTL)}
 				contentContainerStyle={styles.track}
 			>
 				{categories.map((category) => (
 					<TouchableOpacity
 						key={category._id}
-						style={styles.card}
+						style={[styles.card, rtlFlip(isRTL)]}
 						activeOpacity={0.85}
 						onPress={() => router.push(categoryHref(category) as never)}
 					>

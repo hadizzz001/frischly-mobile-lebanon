@@ -42,7 +42,7 @@ import Animated, {
 // field (pointer events off, so taps still reach the input) and hidden as soon
 // as the shopper types.
 export default function SearchPlaceholder({ visible = true }: SearchPlaceholderProps) {
-	const { t, td } = useTranslation();
+	const { t, td, isRTL } = useTranslation();
 	const offset = useSharedValue(0);
 
 	const count = SEARCH_SUGGESTIONS.length;
@@ -95,11 +95,15 @@ export default function SearchPlaceholder({ visible = true }: SearchPlaceholderP
 	const lines = [...SEARCH_SUGGESTIONS, SEARCH_SUGGESTIONS[0]];
 
 	return (
-		<View pointerEvents="none" style={styles.wrapper}>
+		<View pointerEvents="none" style={[styles.wrapper, isRTL && styles.wrapperRTL]}>
 			<View style={styles.lineBox}>
 				<Animated.View style={animatedStyle}>
 					{lines.map((term, position) => (
-						<Text key={`${term}-${position}`} numberOfLines={1} style={styles.line}>
+						<Text
+							key={`${term}-${position}`}
+							numberOfLines={1}
+							style={[styles.line, isRTL && styles.lineRTL]}
+						>
 							{label(term)}
 						</Text>
 					))}

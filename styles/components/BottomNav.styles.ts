@@ -1,6 +1,6 @@
 import { StyleSheet } from "react-native";
 
-import { colors, radius, shadow } from "@/constants/theme";
+import { colors, icon, radius, shadow } from "@/constants/theme";
 
 export const styles = StyleSheet.create({
 	container: {
@@ -20,10 +20,12 @@ export const styles = StyleSheet.create({
 		justifyContent: "center",
 	},
 	iconWrapActive: { backgroundColor: colors.primarySoft },
+	glyph: { width: icon.sizeLarge, height: icon.sizeLarge },
+	// Centred on the glyph's top-right corner (same placement as the bell's).
 	cartBadge: {
 		position: "absolute",
-		right: 4,
-		top: -4,
+		right: -9,
+		top: -7,
 		minWidth: 18,
 		height: 18,
 		paddingHorizontal: 4,

@@ -44,5 +44,8 @@ export const styles = StyleSheet.create({
 		textTransform: "uppercase",
 		letterSpacing: 2,
 	},
-	backButton: { position: "absolute", top: 40, left: 20, zIndex: 10 },
+	backButton: { position: "absolute", top: 40, zIndex: 10 },
+	// Edge of the back arrow: left in English, right in Arabic.
+	backButtonLeft: { left: 20 },
+	backButtonRight: { right: 20 },
 });

@@ -75,7 +75,7 @@ export default function RootLayout() {
 					<CartProvider>
 						<BooleanProvider>
 							<BottomSheetModalProvider>
-								<View style={styles.container}>
+								<View style={styles.shell} collapsable={false}>
 									{showHeader && <Header />}
 									<Stack screenOptions={{ headerTitle: "", headerShown: false }}>
 										<Stack.Screen name="(tabs)" />
@@ -86,7 +86,11 @@ export default function RootLayout() {
 										<Stack.Screen name="reset-password" />
 										<Stack.Screen name="shop" />
 										<Stack.Screen name="shop1" />
-										<Stack.Screen name="checkout" />
+										{/* No transition: the global header hides on checkout,
+										    and during an animated push the outgoing cart visibly
+										    jumped up into the header's space before checkout slid
+										    in. Swapping in one frame shows no in-between state. */}
+										<Stack.Screen name="checkout" options={{ animation: "none" }} />
 										<Stack.Screen name="order" />
 										<Stack.Screen name="edit-profile" />
 										<Stack.Screen name="done" />

@@ -3,6 +3,7 @@ import OutOfStockComponent from "@/components/OutOfStockComponent";
 import { useCart } from "@/contexts/CartContext";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { useBusyAction } from "@/hooks/useBusyAction";
+import { useGoToCheckout } from "@/hooks/useGoToCheckout";
 import { ProductService } from "@/services/api";
 import { styles } from "@/styles/app/product/[id].styles";
 import type { Product } from "@/types";
@@ -13,7 +14,7 @@ import {
 } from "@/utils/currency";
 import { formatWeight, getBasePrice, getFinalPrice } from "@/utils/product";
 import { tapLight, tapMedium } from "@/utils/haptics";
-import { rtlText } from "@/utils/rtl";
+import { rtlRow, rtlText } from "@/utils/rtl";
 import { Feather } from "@expo/vector-icons";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -33,6 +34,7 @@ export default function ProductPage() {
 	const { id } = useLocalSearchParams<{ id: string }>();
 	const { cart, addToCart } = useCart();
 	const { isBusy, anyBusy, run } = useBusyAction();
+	const { goToCheckout, preparing: preparingCheckout } = useGoToCheckout();
 
 	const [product, setProduct] = useState<Product | null>(null);
 	const [quantity, setQuantity] = useState(1);
@@ -137,7 +139,7 @@ export default function ProductPage() {
 		<View style={styles.root}>
 			<Stack.Screen options={{ headerTitle: "" }} />
 
-			<BackButton onPress={() => router.back()} style={styles.backButton} />
+			<BackButton onPress={() => router.back()} style={[styles.backButton, isRTL ? styles.backButtonRight : styles.backButtonLeft]} />
 
 			<ScrollView
 				style={styles.container}
@@ -194,7 +196,7 @@ export default function ProductPage() {
 
 					{/* Price on one row: LBP (regular) + USD (thin, same size),
 					    then the old price — LBP and USD both struck through. */}
-					<View style={styles.priceRow}>
+					<View style={[styles.priceRow, rtlRow(isRTL)]}>
 						<Text
 							style={[
 								styles.priceLbp,
@@ -225,11 +227,11 @@ export default function ProductPage() {
 				</View>
 			</ScrollView>
 
-			{/* Fixed bottom bar: quantity on the left, add + price on the right.
-			    It sits inside the screen, i.e. above the app-wide bottom nav,
-			    which already handles the safe-area inset. */}
+			{/* Fixed bottom bar: quantity on the left, add + price on the right
+			    (mirrored in Arabic). It sits inside the screen, i.e. above the
+			    app-wide bottom nav, which already handles the safe-area inset. */}
 			<View style={styles.bottomBar}>
-				<View style={styles.bottomBarInner}>
+				<View style={[styles.bottomBarInner, rtlRow(isRTL)]}>
 					<View style={styles.qtyBox}>
 						<TouchableOpacity
 							onPress={decrease}
@@ -260,12 +262,12 @@ export default function ProductPage() {
 					</View>
 
 					<TouchableOpacity
-						onPress={showCheckout ? () => router.push("/checkout") : handleAdd}
-						disabled={isOutOfStock || anyBusy}
+						onPress={showCheckout ? () => goToCheckout() : handleAdd}
+						disabled={isOutOfStock || anyBusy || preparingCheckout}
 						activeOpacity={0.85}
-						style={[styles.addBtn, isOutOfStock && styles.addBtnDisabled]}
+						style={[styles.addBtn, rtlRow(isRTL), isOutOfStock && styles.addBtnDisabled]}
 					>
-						{isBusy("add") ? (
+						{isBusy("add") || preparingCheckout ? (
 							<ActivityIndicator size="small" color="#111827" />
 						) : (
 							<Text style={styles.addBtnText} numberOfLines={1}>
@@ -277,7 +279,7 @@ export default function ProductPage() {
 							</Text>
 						)}
 						{!isOutOfStock && (
-							<View style={styles.addBtnPrices}>
+							<View style={[styles.addBtnPrices, rtlRow(isRTL)]}>
 								<Text style={styles.addBtnPriceLbp} numberOfLines={1}>
 									{formatLbp(lineTotal, rate)}
 								</Text>

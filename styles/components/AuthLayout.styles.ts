@@ -1,5 +1,7 @@
 import { StyleSheet } from "react-native";
 
+import { AUTH_LOGO_VIDEO_BACKGROUND } from "@/constants/brand";
+import { AUTH_TOP_BAR_HEIGHT } from "@/constants/layout";
 import { colors, radius, shadow, spacing } from "@/constants/theme";
 
 export const styles = StyleSheet.create({
@@ -15,14 +17,20 @@ export const styles = StyleSheet.create({
 		overflow: "hidden",
 	},
 	bannerCompact: { paddingBottom: spacing.md },
-	bannerTop: {
+	// Same yellow as the logo clip, so the square video has no visible edge.
+	bannerVideo: { backgroundColor: AUTH_LOGO_VIDEO_BACKGROUND },
+	// back button + language pill, positioned over the banner by AuthLayout
+	topBar: {
 		position: "absolute",
 		left: spacing.md,
 		right: spacing.md,
+		height: AUTH_TOP_BAR_HEIGHT,
 		flexDirection: "row",
 		alignItems: "center",
 		justifyContent: "space-between",
+		zIndex: 10,
 	},
+	topBarRtl: { flexDirection: "row-reverse" },
 	logo: { width: 132, height: 132 },
 	logoCompact: { width: 80, height: 80 },
 	body: {
@@ -33,22 +41,22 @@ export const styles = StyleSheet.create({
 	},
 	title: { fontSize: 24, fontWeight: "700", color: colors.text },
 	subtitle: { fontSize: 14, lineHeight: 20, color: colors.textMuted, marginTop: spacing.xs, marginBottom: spacing.lg },
-	// language pill on the banner
+	// language pill on the banner — solid white so it reads on either yellow
 	langButton: {
 		flexDirection: "row",
 		alignItems: "center",
 		gap: spacing.xs,
-		height: 36,
-		paddingHorizontal: spacing.sm,
+		height: AUTH_TOP_BAR_HEIGHT,
+		paddingHorizontal: 12,
 		borderRadius: radius.badge,
-		backgroundColor: "rgba(255,255,255,0.7)",
+		backgroundColor: colors.background,
+		...shadow.card,
 	},
 	langFlag: { width: 22, height: 15, borderRadius: 3 },
 	langText: { fontSize: 13, fontWeight: "600", color: colors.text },
 	langList: {
 		position: "absolute",
-		top: 44,
-		right: 0,
+		top: AUTH_TOP_BAR_HEIGHT + spacing.xs,
 		width: 150,
 		backgroundColor: colors.background,
 		borderRadius: radius.card,
@@ -56,14 +64,18 @@ export const styles = StyleSheet.create({
 		...shadow.raised,
 		zIndex: 50,
 	},
+	// The list hangs from the pill's outer edge so it never runs off-screen.
+	langListLtr: { right: 0 },
+	langListRtl: { left: 0 },
 	langItem: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: 10, paddingHorizontal: spacing.md },
 	backOnBanner: {
-		width: 40,
-		height: 40,
+		width: AUTH_TOP_BAR_HEIGHT,
+		height: AUTH_TOP_BAR_HEIGHT,
 		borderRadius: radius.full,
-		backgroundColor: "rgba(255,255,255,0.7)",
+		backgroundColor: colors.background,
 		alignItems: "center",
 		justifyContent: "center",
+		...shadow.card,
 	},
 	// shared form bits
 	eyeButton: { padding: spacing.xs },

@@ -1,4 +1,6 @@
+import { useTranslation } from "@/contexts/TranslationContext";
 import { styles } from "@/styles/components/StarRating.styles";
+import { rtlRow } from "@/utils/rtl";
 import { MaterialIcons } from "@expo/vector-icons";
 import { TouchableOpacity, View } from "react-native";
 
@@ -17,10 +19,12 @@ export default function StarRating({
 	emptyColor = "#d9d9d9",
 	style,
 }: StarRatingProps) {
+	const { isRTL } = useTranslation();
 	const stars = [1, 2, 3, 4, 5];
 
+	// Mirrored in Arabic: the first star sits on the right.
 	return (
-		<View style={[styles.row, style]}>
+		<View style={[styles.row, rtlRow(isRTL), style]}>
 			{stars.map((value) => {
 				const filled = value <= rating;
 				const star = (

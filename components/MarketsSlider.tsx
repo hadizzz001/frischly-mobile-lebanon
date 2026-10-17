@@ -1,3 +1,4 @@
+import CatalogImage from "@/components/ui/CatalogImage";
 import { SECTION_TITLE_ICON_COLOR, SECTION_TITLE_ICON_SIZE } from "@/constants/navigation";
 import { Store } from "lucide-react-native";
 import { MARKETS_SLIDER_SNAP_INTERVAL as SNAP_INTERVAL } from "@/constants/layout";
@@ -9,7 +10,8 @@ import { useTranslation } from "@/contexts/TranslationContext";
 import { styles } from "@/styles/components/MarketsSlider.styles";
 import type { Market } from "@/types";
 import type { MarketsSliderProps } from "@/types/components/MarketsSlider.types";
-import { rtlRow } from "@/utils/rtl";
+import { LOGO_TILE_TRANSFORMATION } from "@/utils/cloudinary";
+import { rtlFlip, rtlRow } from "@/utils/rtl";
 import { getUserCityAndPin } from "@/utils/userCity";
 import { fetchVisibleMarkets } from "@/utils/visibleMarkets";
 import { useRouter } from "expo-router";
@@ -17,7 +19,6 @@ import { useEffect, useRef, useState } from "react";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 import {
     ActivityIndicator,
-    Image,
     ScrollView,
     Text,
     TouchableOpacity,
@@ -205,7 +206,7 @@ export default function MarketsSlider({
 		<TouchableOpacity
 			key={`${market._id}-${index}`}
 			activeOpacity={0.8}
-			style={styles.card}
+			style={[styles.card, rtlFlip(isRTL)]}
 			onPress={() =>
 				router.push(
 					`/market/${market._id}?marketName=${encodeURIComponent(
@@ -214,12 +215,20 @@ export default function MarketsSlider({
 				)
 			}
 		>
+			{/* Every logo is re-centred on a 5:4 tile of its own background
+			    colour with an even margin (see utils/cloudinary.ts), so square,
+			    wide, white, black or transparent logos all fill the same frame
+			    instead of floating in it at odd sizes. */}
 			<View style={styles.imageWrapper}>
 				{market.logo ? (
-					<Image
-						source={{ uri: market.logo }}
+					<CatalogImage
+						uri={market.logo}
+						transformation={LOGO_TILE_TRANSFORMATION}
 						style={styles.image}
-						resizeMode="contain"
+						contentFit="contain"
+						cachePolicy="memory-disk"
+						transition={150}
+						recyclingKey={String(market._id)}
 					/>
 				) : (
 					<Text style={styles.placeholder}>
@@ -248,9 +257,12 @@ export default function MarketsSlider({
 			</View>
 
 			<View style={styles.viewport}>
+				{/* Mirrored in Arabic: starts at the right edge and advances
+				    right-to-left, with the same offsets and snapping. */}
 				<ScrollView
 					ref={scrollRef}
 					horizontal
+					style={rtlFlip(isRTL)}
 					showsHorizontalScrollIndicator={false}
 					snapToInterval={SNAP_INTERVAL}
 					decelerationRate="fast"

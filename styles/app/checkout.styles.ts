@@ -1,11 +1,12 @@
 import { StyleSheet } from "react-native";
 
+import { PAGE_END_SPACE } from "@/constants/layout";
 import { colors, radius, shadow, spacing } from "@/constants/theme";
 
 export const styles = StyleSheet.create({
 	safeArea: { flex: 1, backgroundColor: colors.background },
 	container: { flex: 1 },
-	scrollContent: { paddingHorizontal: spacing.md, paddingBottom: spacing.xl },
+	scrollContent: { paddingHorizontal: spacing.md, paddingBottom: PAGE_END_SPACE },
 	flex1: { flex: 1 },
 	loadingContainer: {
 		flex: 1,

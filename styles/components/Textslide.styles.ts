@@ -25,6 +25,8 @@ export const styles = StyleSheet.create({
 		justifyContent: "center",
 		paddingRight: 12,
 	},
+	// Arabic: the gift icon sits on the right, so the free edge is the left.
+	tickerContainerRTL: { paddingRight: 0, paddingLeft: 12 },
 	tickerText: {
 		fontSize: 12,
 		color: "#111827",

@@ -49,6 +49,7 @@ import type {
 	VoiceSearchSheetProps,
 } from "@/types/components/VoiceSearchSheet.types";
 import { tapLight, notifyError, notifySuccess } from "@/utils/haptics";
+import { rtlFlip } from "@/utils/rtl";
 import { findMarketRoute } from "@/utils/voiceMarket";
 import { processVoiceQuery, voiceErrorKey } from "@/utils/voiceSearch";
 
@@ -64,7 +65,7 @@ const EXAMPLE_CHIPS: VoiceExampleChip[] = [
 const BAR_COUNT = 5;
 
 export default function VoiceSearchSheet({ visible, onClose }: VoiceSearchSheetProps) {
-	const { t } = useTranslation();
+	const { t, isRTL } = useTranslation();
 	const router = useRouter();
 	const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
 
@@ -270,14 +271,21 @@ export default function VoiceSearchSheet({ visible, onClose }: VoiceSearchSheetP
 	const chips = (
 		<View style={styles.chipsWrap}>
 			<Text style={styles.chipsTitle}>{t("voiceTryExamples")}</Text>
+			{/* Mirrored in Arabic so the examples start at the right edge. */}
 			<ScrollView
 				horizontal
 				showsHorizontalScrollIndicator={false}
+				style={rtlFlip(isRTL)}
 				contentContainerStyle={styles.chipsRow}
 				keyboardShouldPersistTaps="handled"
 			>
 				{EXAMPLE_CHIPS.map((chip) => (
-					<Chip key={chip.key} label={t(chip.key)} onPress={() => runChip(chip)} />
+					<Chip
+						key={chip.key}
+						label={t(chip.key)}
+						onPress={() => runChip(chip)}
+						style={rtlFlip(isRTL)}
+					/>
 				))}
 			</ScrollView>
 		</View>
