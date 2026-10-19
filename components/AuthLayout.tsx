@@ -12,21 +12,16 @@ import {
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import AuthLogoVideo from "@/components/AuthLogoVideo";
-import { AUTH_LOGO_VIDEO_BACKGROUND, LOGO_TRANSPARENT_URL } from "@/constants/brand";
+import AuthLogoAnimation from "@/components/AuthLogoAnimation";
+import { LOGO_TRANSPARENT_URL } from "@/constants/brand";
 import { LANGUAGE_OPTIONS } from "@/constants/languages";
-import {
-	AUTH_LOGO_VIDEO_SIZE,
-	AUTH_LOGO_VIDEO_SIZE_COMPACT,
-	AUTH_TOP_BAR_HEIGHT,
-	PAGE_END_SPACE,
-} from "@/constants/layout";
+import { AUTH_TOP_BAR_HEIGHT, PAGE_END_SPACE } from "@/constants/layout";
 import { colors, icon, spacing } from "@/constants/theme";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { styles } from "@/styles/components/AuthLayout.styles";
 
 // Shared frame for the auth screens: curved header with the logo (the animated
-// clip on login/register, the transparent cutout on the reset flow), a row with
+// logo on login/register, the transparent cutout on the reset flow), a row with
 // the back button and language pill a clear margin below the status bar, and a
 // keyboard-aware body that scrolls the focused field into view, dismisses the
 // keyboard on tap and leaves room under the last link.
@@ -46,7 +41,7 @@ export default function AuthLayout({
 	compact?: boolean;
 	showBack?: boolean;
 	hideLanguage?: boolean;
-	/** Play the branded logo clip (login / register) instead of the static logo. */
+	/** Play the branded animated logo (login / register) instead of the static logo. */
 	animatedLogo?: boolean;
 }) {
 	const insets = useSafeAreaInsets();
@@ -60,7 +55,6 @@ export default function AuthLayout({
 	// the banner reserves that row's height above the logo so they never overlap.
 	const topBarTop = insets.top + spacing.md;
 	const bannerPaddingTop = topBarTop + AUTH_TOP_BAR_HEIGHT + spacing.sm;
-	const videoSize = compact ? AUTH_LOGO_VIDEO_SIZE_COMPACT : AUTH_LOGO_VIDEO_SIZE;
 
 	const dismiss = () => {
 		Keyboard.dismiss();
@@ -82,11 +76,11 @@ export default function AuthLayout({
 							styles.banner,
 							compact && styles.bannerCompact,
 							{ paddingTop: bannerPaddingTop },
-							animatedLogo && styles.bannerVideo,
+							animatedLogo && styles.bannerAnimated,
 						]}
 					>
 						{animatedLogo ? (
-							<AuthLogoVideo style={{ width: videoSize, height: videoSize }} />
+							<AuthLogoAnimation style={compact ? styles.logoAnimationCompact : styles.logoAnimation} />
 						) : (
 							<Image
 								source={{ uri: LOGO_TRANSPARENT_URL }}

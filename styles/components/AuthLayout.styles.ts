@@ -1,7 +1,11 @@
 import { StyleSheet } from "react-native";
 
-import { AUTH_LOGO_VIDEO_BACKGROUND } from "@/constants/brand";
-import { AUTH_TOP_BAR_HEIGHT } from "@/constants/layout";
+import { AUTH_LOGO_BACKGROUND } from "@/constants/brand";
+import {
+	AUTH_LOGO_ANIMATION_SIZE,
+	AUTH_LOGO_ANIMATION_SIZE_COMPACT,
+	AUTH_TOP_BAR_HEIGHT,
+} from "@/constants/layout";
 import { colors, radius, shadow, spacing } from "@/constants/theme";
 
 export const styles = StyleSheet.create({
@@ -17,8 +21,8 @@ export const styles = StyleSheet.create({
 		overflow: "hidden",
 	},
 	bannerCompact: { paddingBottom: spacing.md },
-	// Same yellow as the logo clip, so the square video has no visible edge.
-	bannerVideo: { backgroundColor: AUTH_LOGO_VIDEO_BACKGROUND },
+	// Same yellow as the animated logo's background, so its square has no visible edge.
+	bannerAnimated: { backgroundColor: AUTH_LOGO_BACKGROUND },
 	// back button + language pill, positioned over the banner by AuthLayout
 	topBar: {
 		position: "absolute",
@@ -33,6 +37,8 @@ export const styles = StyleSheet.create({
 	topBarRtl: { flexDirection: "row-reverse" },
 	logo: { width: 132, height: 132 },
 	logoCompact: { width: 80, height: 80 },
+	logoAnimation: { width: AUTH_LOGO_ANIMATION_SIZE, height: AUTH_LOGO_ANIMATION_SIZE },
+	logoAnimationCompact: { width: AUTH_LOGO_ANIMATION_SIZE_COMPACT, height: AUTH_LOGO_ANIMATION_SIZE_COMPACT },
 	body: {
 		flex: 1,
 		paddingHorizontal: spacing.lg,

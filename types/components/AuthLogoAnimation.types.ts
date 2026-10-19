@@ -1,5 +1,5 @@
 import type { StyleProp, ViewStyle } from "react-native";
 
-export interface AuthLogoVideoProps {
+export interface AuthLogoAnimationProps {
 	style?: StyleProp<ViewStyle>;
 }

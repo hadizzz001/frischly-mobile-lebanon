@@ -12,12 +12,6 @@ export const ORDERS_POLL_MS = 10000;
 /** Refresh the rider's position every 12s. */
 export const RIDER_TRACKING_POLL_MS = 12000;
 
-// --- components/AuthLogoVideo.tsx ----------------------------------------
-// How long to hold before the very first playback starts, and how long to
-// pause again every time the clip finishes before it repeats — so it doesn't
-// loop back-to-back with no breathing room.
-export const AUTH_LOGO_HOLD_MS = 2000;
-
 // --- components/MarketsSlider.tsx ----------------------------------------
 // Auto-slide timing (one market per step).
 export const MARKETS_SLIDER_STEP_DURATION_MS = 900; // ms to move one card

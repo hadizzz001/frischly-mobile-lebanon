@@ -10,15 +10,21 @@ export const MAIN_STORE_NAME = "FreshlyLB";
 export const LOGO_TRANSPARENT_URL =
 	"https://res.cloudinary.com/dxefurewd/image/upload/v1778403318/freshly_1-removebg-preview_mwrt49.png";
 
-// Branded animated logo clip played in the login / register header
-// (components/AuthLogoVideo.tsx).
-export const AUTH_LOGO_VIDEO_URL =
-	"https://res.cloudinary.com/dxefurewd/video/upload/q_auto,f_auto,w_1280,h_720,c_limit/v1783356666/kling_20260707_VIDEO_animate_fa_73_0_online-video-cutter.com_1_uxqfdj.mp4";
+/**
+ * Branded animated logo played in the login / register header
+ * (components/AuthLogoAnimation.tsx), shipped inside the app as an animated
+ * WebP: 600×600 (200pt at @3x), 24 fps, the rest pose held 2 s before every
+ * run (the first one too), looping forever. Made from the original Kling clip:
+ * colours decoded with a fixed matrix (BT.601), background flattened to
+ * AUTH_LOGO_BACKGROUND, wordmark held still, edge fades baked in. Every frame
+ * is an opaque, unblended rectangle, so libwebp, Apple's decoder and Android
+ * all draw it identically.
+ */
+export const AUTH_LOGO_ANIMATION: number = require("@/assets/images/auth-logo.webp");
 
 /**
- * The clip's own yellow, as decoded (#F1BD0A for most of it, #FBBF0D on its
- * first frames). The header behind the clip is painted with it, and
- * AuthLogoVideo fades the clip's edges into it, so the square video blends in
- * instead of showing as a box on the brand amber.
+ * The animated logo's background, exactly: the header behind it is painted
+ * with it, so the square image has no visible edge on any device. Lossy WebP
+ * returns #F4BD0A unchanged (the clip's old #F3BD0A comes back as #F4BD0A).
  */
-export const AUTH_LOGO_VIDEO_BACKGROUND = "#F3BD0A";
+export const AUTH_LOGO_BACKGROUND = "#F4BD0A";

@@ -21,9 +21,9 @@ export const PAGE_END_SPACE = 64;
 /** Height of the back-button / language-pill row on the auth header. */
 export const AUTH_TOP_BAR_HEIGHT = 40;
 /** Animated logo on the login header, kept smaller on short phones… */
-export const AUTH_LOGO_VIDEO_SIZE = Math.round(Math.min(200, height * 0.24));
+export const AUTH_LOGO_ANIMATION_SIZE = Math.round(Math.min(200, height * 0.24));
 /** …and on the register header, whose long form needs the room. */
-export const AUTH_LOGO_VIDEO_SIZE_COMPACT = Math.round(Math.min(160, height * 0.19));
+export const AUTH_LOGO_ANIMATION_SIZE_COMPACT = Math.round(Math.min(160, height * 0.19));
 
 // --- Shared 3-column product grid ----------------------------------------
 // Every catalog grid (home, market home, shop, search, category, kitchens)
