@@ -115,9 +115,12 @@ export default function RootLayout() {
 										onSubmitted={submitFeedbackModal}
 									/>
 									<StatusBar style="dark" />
-									{/* Full-screen loader while the app re-renders in a new language. */}
-									<LanguageSwitchOverlay />
 								</View>
+								{/* Full-screen loader while the app re-renders in a new
+								    language. A plain view (see LanguageSwitchOverlay), so it
+								    sits after the shell: inside it, the bottom nav's Android
+								    elevation would draw over the scrim. */}
+								<LanguageSwitchOverlay />
 							</BottomSheetModalProvider>
 						</BooleanProvider>
 					</CartProvider>

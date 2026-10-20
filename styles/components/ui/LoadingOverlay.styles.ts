@@ -9,6 +9,8 @@ export const styles = StyleSheet.create({
 		alignItems: "center",
 		justifyContent: "center",
 	},
+	// `inline` variant: the scrim fills its parent rather than a modal.
+	inline: { ...StyleSheet.absoluteFillObject },
 	card: {
 		minWidth: 140,
 		paddingVertical: spacing.lg,
